@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Omnicanal WhatsApp</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Columna Izquierda -->
+    <aside id="col-izquierda" class="col">
+      <div class="panel-header">
+        <h2>Bandeja de entrada</h2>
+        <div class="buscador">
+          <input type="search" id="buscador" placeholder="Buscar chats...">
+        </div>
+        <div class="pestanas">
+          <button class="pestana activa" data-pestana="Abierto">Abiertos</button>
+          <button class="pestana" data-pestana="Resuelto">Resueltos</button>
+        </div>
+      </div>
+      <div id="lista-chats" class="lista-chats">
+        <!-- Chats renderizados -->
+      </div>
+    </aside>
+
+    <!-- Columna Central -->
+    <main id="col-central" class="col">
+      <div class="chat-header">
+        <div class="info-chat">
+          <strong id="chat-nombre"></strong>
+          <span id="chat-linea"></span>
+        </div>
+        <div class="toggle-wrapper">
+          <label class="toggle" for="toggle-bot">
+            <input type="checkbox" id="toggle-bot">
+            <span class="slider"></span>
+          </label>
+          <span id="estado-bot">Bot Activo</span>
+        </div>
+      </div>
+      <div id="area-mensajes" class="area-mensajes">
+        <!-- Mensajes -->
+      </div>
+      <div class="composer">
+        <input type="text" id="input-mensaje" placeholder="Escribí un mensaje..." disabled>
+        <button id="btn-enviar" disabled>Enviar</button>
+      </div>
+    </main>
+
+    <!-- Columna Derecha -->
+    <aside id="col-derecha" class="col">
+      <div class="perfil-header">
+        <h3>Perfil del Contacto</h3>
+      </div>
+      <div class="perfil-form">
+        <label for="perfil-nombre">Nombre</label>
+        <input type="text" id="perfil-nombre" value="" placeholder="Nombre">
+        <label for="perfil-telefono">Teléfono</label>
+        <input type="text" id="perfil-telefono" value="" placeholder="Teléfono">
+      </div>
+      <div class="perfil-etiquetas">
+        <h4>Etiquetas</h4>
+        <div id="lista-etiquetas">
+          <!-- Etiquetas -->
+        </div>
+      </div>
+    </aside>
+  </div>
+  <script src="panel.js" defer></script>
+</body>
+</html>

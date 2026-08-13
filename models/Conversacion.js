@@ -1,0 +1,38 @@
+const mongoose = require('mongoose');
+
+const { Schema, Types } = mongoose;
+
+const ConversacionSchema = new Schema(
+  {
+    empresaId: {
+      type: Types.ObjectId,
+      ref: 'Empresa',
+      required: true
+    },
+    contactoId: {
+      type: Types.ObjectId,
+      ref: 'Contacto',
+      required: true
+    },
+    lineaReceptora: {
+      type: String,
+      default: ''
+    },
+    botActivo: {
+      type: Boolean,
+      default: true
+    },
+    estado: {
+      type: String,
+      enum: ['Abierto', 'Resuelto', 'Cerrado'],
+      default: 'Abierto'
+    },
+    ultimoMensaje: {
+      type: String,
+      default: ''
+    }
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model('Conversacion', ConversacionSchema);

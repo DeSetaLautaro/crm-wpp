@@ -231,6 +231,39 @@ function showView(vista) {
   }
 }
 
+function initConfigSidebar() {
+  // Mostrar/ocultar paneles de configuración
+  const configItems = document.querySelectorAll('.config-item[data-panel]');
+  configItems.forEach(item => {
+    item.addEventListener('click', () => {
+      // quitar activo de todos
+      document.querySelectorAll('.config-item[data-panel]').forEach(i => i.classList.remove('activo'));
+      item.classList.add('activo');
+
+      // ocultar todos los paneles
+      document.querySelectorAll('.config-panel').forEach(p => p.classList.add('hidden'));
+
+      // mostrar el panel correspondiente
+      const panelId = item.dataset.panel;
+      const panel = document.getElementById(panelId);
+      if (panel) {
+        panel.classList.remove('hidden');
+      }
+    });
+  });
+
+  // Sliders de tono de comunicación
+  const sliders = document.querySelectorAll('input[type="range"]');
+  sliders.forEach(slider => {
+    slider.addEventListener('input', (e) => {
+      const valorSpan = document.getElementById(slider.id + '-valor');
+      if (valorSpan) {
+        valorSpan.textContent = e.target.value;
+      }
+    });
+  });
+}
+
 function updateVisibilidad() {
   const app = document.getElementById('app');
   if (chatActivoId) {
@@ -261,6 +294,17 @@ function init() {
   // Sidebar: alternar entre Inbox y Configuración
   document.getElementById('btn-inbox').addEventListener('click', () => showView('inbox'));
   document.getElementById('btn-config').addEventListener('click', () => showView('config'));
+
+  // Configuración del Bot
+  initConfigSidebar();
+
+  // Botón para crear nuevo agente (placeholder)
+  const btnNuevoAgente = document.getElementById('btn-nuevo-agente');
+  if (btnNuevoAgente) {
+    btnNuevoAgente.addEventListener('click', () => {
+      console.log('Función para crear nuevo agente próximamente');
+    });
+  }
 
   // Render inicial
   renderTodo();

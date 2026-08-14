@@ -92,45 +92,81 @@
 
       <div id="config-view" class="view hidden">
         <h2>Configuración del Bot</h2>
+        <div class="config-layout">
+          <aside class="config-sidebar">
+            <div class="config-menu">
+              <button class="config-item activo" data-ajustes="generales" data-panel="config-generales">⚙️ Ajustes Generales</button>
+              <p class="config-agentes-titulo">Perfiles de IA</p>
+              <button class="config-item agente" data-ajustes="agente" data-panel="config-bot-ventas">Bot Ventas</button>
+              <button class="config-item agente" data-ajustes="agente" data-panel="config-bot-reclamos">Bot Reclamos</button>
+              <button id="btn-nuevo-agente" class="config-item nuevo-agente">+ Nuevo Agente</button>
+            </div>
+          </aside>
+          <div class="config-content">
+            <!-- Panel Ajustes Generales -->
+            <section id="config-generales" class="config-panel">
+              <h3>Mensaje de Bienvenida</h3>
+              <textarea id="config-bienvenida" rows="3" placeholder="¡Hola! Soy el asistente virtual de tu negocio. ¿En qué puedo ayudarte?"></textarea>
 
-        <div class="config-card">
-          <h3>Mensaje de Bienvenida</h3>
-          <textarea id="config-bienvenida" rows="3" placeholder="¡Hola! Soy el asistente virtual de tu negocio. ¿En qué puedo ayudarte?"></textarea>
-        </div>
+              <h3>Respuestas Rápidas / Atajos</h3>
+              <div class="atajo-form">
+                <input type="text" id="atajo-comando" placeholder="/comando">
+                <input type="text" id="atajo-mensaje" placeholder="Mensaje de respuesta">
+                <button id="atajo-agregar" type="button">Agregar</button>
+              </div>
+              <table id="tabla-atajos" class="atajos-tabla">
+                <thead>
+                  <tr>
+                    <th>Atajo</th>
+                    <th>Mensaje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>/cbu</td>
+                    <td>Te paso el CBU: 000000310009...</td>
+                  </tr>
+                  <tr>
+                    <td>/horarios</td>
+                    <td>Atendemos de lunes a viernes de 9 a 18 hs...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
 
-        <div class="config-card">
-          <h3>Prompt de la Inteligencia Artificial</h3>
-          <textarea id="config-prompt" rows="8" placeholder="Definí la personalidad, el tono y las reglas del bot..."></textarea>
-        </div>
+            <!-- Panel Bot Ventas -->
+            <section id="config-bot-ventas" class="config-panel hidden">
+              <label for="agente-ventas-nombre">Nombre del Agente</label>
+              <input type="text" id="agente-ventas-nombre" value="Bot Ventas">
+              <label for="agente-ventas-prompt">Prompt de Instrucciones</label>
+              <textarea id="agente-ventas-prompt" rows="6">Asistí a los clientes sobre productos y stock.</textarea>
 
-        <div class="config-card">
-          <h3>Respuestas Rápidas / Atajos</h3>
-          <div class="atajo-form">
-            <input type="text" id="atajo-comando" placeholder="/comando">
-            <input type="text" id="atajo-mensaje" placeholder="Mensaje de respuesta">
-            <button id="atajo-agregar" type="button">Agregar</button>
+              <div class="slider-config">
+                <span>Serio / Profesional</span>
+                <input type="range" id="agente-ventas-tono" min="0" max="100" value="40">
+                <span>Amigable / Informal</span>
+                <span id="agente-ventas-tono-valor">40</span>
+              </div>
+              <button class="btn-guardar-agente">Guardar Agente</button>
+            </section>
+
+            <!-- Panel Bot Reclamos -->
+            <section id="config-bot-reclamos" class="config-panel hidden">
+              <label for="agente-reclamos-nombre">Nombre del Agente</label>
+              <input type="text" id="agente-reclamos-nombre" value="Bot Reclamos">
+              <label for="agente-reclamos-prompt">Prompt de Instrucciones</label>
+              <textarea id="agente-reclamos-prompt" rows="6">Gestioná reclamos y derivá al humano cuando sea necesario.</textarea>
+
+              <div class="slider-config">
+                <span>Serio / Profesional</span>
+                <input type="range" id="agente-reclamos-tono" min="0" max="100" value="70">
+                <span>Amigable / Informal</span>
+                <span id="agente-reclamos-tono-valor">70</span>
+              </div>
+              <button class="btn-guardar-agente">Guardar Agente</button>
+            </section>
           </div>
-          <table id="tabla-atajos" class="atajos-tabla">
-            <thead>
-              <tr>
-                <th>Atajo</th>
-                <th>Mensaje</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>/cbu</td>
-                <td>Te paso el CBU: 000000310009...</td>
-              </tr>
-              <tr>
-                <td>/horarios</td>
-                <td>Atendemos de lunes a viernes de 9 a 18 hs...</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
-
-        <button id="btn-guardar-config" class="btn-guardar-config">Guardar Cambios</button>
       </div>
     </div>
   </div>

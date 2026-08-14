@@ -73,20 +73,58 @@
         <!-- Columna Derecha -->
         <aside id="col-derecha" class="col">
           <div class="perfil-header">
-            <h3>Perfil del Contacto</h3>
+            <div class="perfil-avatar" id="perfil-avatar">M</div>
+            <div class="perfil-datos">
+              <span class="perfil-nombre" id="perfil-nombre-texto">Martina</span>
+              <span class="perfil-telefono" id="perfil-telefono-texto">5491100000001</span>
+            </div>
+            <div class="perfil-acciones">
+              <button class="perfil-accion" title="Bloquear">🚫</button>
+              <button class="perfil-accion" title="Llamar">📞</button>
+              <button class="perfil-accion" title="Más">⋯</button>
+            </div>
           </div>
-          <div class="perfil-form">
-            <label for="perfil-nombre">Nombre</label>
-            <input type="text" id="perfil-nombre" value="" placeholder="Nombre">
-            <label for="perfil-telefono">Teléfono</label>
-            <input type="text" id="perfil-telefono" value="" placeholder="Teléfono">
-          </div>
+
           <div class="perfil-etiquetas">
-            <h4>Etiquetas</h4>
+            <div class="perfil-seccion-titulo">Etiquetas</div>
             <div id="lista-etiquetas">
               <!-- Etiquetas -->
             </div>
           </div>
+
+          <div class="perfil-detalles">
+            <div class="perfil-seccion-titulo">Detalles del Cliente</div>
+            <div class="detalle-item">
+              <span class="detalle-la">Dirección</span>
+              <span class="detalle-va">Calle Falsa 123</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-la">Email</span>
+              <span class="detalle-va">cliente@email.com</span>
+            </div>
+          </div>
+
+          <div class="perfil-notas">
+            <div class="perfil-seccion-titulo">Notas Internas</div>
+            <textarea id="nota-interna-textarea" rows="3" placeholder="Escribí una nota invisible para el cliente..."></textarea>
+            <button id="guardar-nota" type="button">Guardar Nota</button>
+          </div>
+
+          <div class="perfil-archivos">
+            <div class="perfil-seccion-titulo">Archivos Compartidos</div>
+            <div class="archivos-grid">
+              <div class="archivo-miniatura"></div>
+              <div class="archivo-miniatura"></div>
+              <div class="archivo-miniatura"></div>
+              <div class="archivo-miniatura"></div>
+              <div class="archivo-miniatura"></div>
+              <div class="archivo-miniatura"></div>
+            </div>
+          </div>
+
+          <!-- Campos ocultos para compatibilidad con panel.js -->
+          <input type="hidden" id="perfil-nombre" value="">
+          <input type="hidden" id="perfil-telefono" value="">
         </aside>
       </div>
 

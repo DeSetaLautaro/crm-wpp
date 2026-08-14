@@ -190,8 +190,17 @@ function renderChatActivo() {
 }
 
 function renderPerfil(contacto) {
-  document.getElementById('perfil-nombre').value = contacto.nombre || '';
-  document.getElementById('perfil-telefono').value = contacto.telefono || '';
+  const nombre = contacto.nombre || '';
+  const telefono = contacto.telefono || '';
+
+  document.getElementById('perfil-nombre').value = nombre;
+  document.getElementById('perfil-telefono').value = telefono;
+  const nombreTexto = document.getElementById('perfil-nombre-texto');
+  if (nombreTexto) nombreTexto.textContent = nombre;
+  const telefonoTexto = document.getElementById('perfil-telefono-texto');
+  if (telefonoTexto) telefonoTexto.textContent = telefono;
+  const avatar = document.getElementById('perfil-avatar');
+  if (avatar) avatar.textContent = (nombre || '?').charAt(0).toUpperCase();
 
   const contEtiquetas = document.getElementById('lista-etiquetas');
   if (contacto.etiquetas.length === 0) {

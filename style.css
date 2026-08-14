@@ -463,44 +463,35 @@ body {
 
 /* ===== Slim Sidebar ===== */
 #slim-sidebar {
-  width: 70px;
+  width: 50px;
   flex-shrink: 0;
-  background: #1F2937;
-  color: #D1D5DB;
+  background: #F3F4F6;
+  color: #6B7280;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 0;
-}
-
-.logo {
-  font-size: 2rem;
-  margin-bottom: 20px;
+  padding: 8px 0;
 }
 
 .sidebar-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.sidebar-footer {
-  margin-top: auto;
+  gap: 8px;
 }
 
 .sidebar-btn {
   background: transparent;
   border: none;
-  color: #D1D5DB;
-  font-size: 1.5rem;
+  color: #4B5563;
+  font-size: 1.4rem;
   cursor: pointer;
-  padding: 8px;
+  padding: 6px;
   border-radius: 8px;
   transition: background 0.2s, color 0.2s;
 }
 
 .sidebar-btn:hover {
-  background: #374151;
+  background: #E5E7EB;
 }
 
 .sidebar-btn.activo {

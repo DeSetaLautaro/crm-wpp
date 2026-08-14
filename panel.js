@@ -89,7 +89,7 @@ const MOCK_MENSAJES = [
 
 // ===== Estado global =====
 let pestanaActiva = 'Abierto';
-let chatActivoId = MOCK_CONVERSACIONES[0]._id;
+let chatActivoId = null;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -199,6 +199,16 @@ function renderPerfil(contacto) {
 function renderTodo() {
   renderListaChats();
   renderChatActivo();
+  updateVisibilidad();
+}
+
+function updateVisibilidad() {
+  const app = document.getElementById('app');
+  if (chatActivoId) {
+    app.classList.remove('sin-chat');
+  } else {
+    app.classList.add('sin-chat');
+  }
 }
 
 // ===== Eventos =====

@@ -112,6 +112,14 @@ body {
   background: #EFF6FF;
 }
 
+.chat-item.requiere-atencion {
+  background: #fff4f4;
+}
+
+.chat-item.requiere-atencion .chat-item-ultimo {
+  font-weight: 700;
+}
+
 .chat-item-avatar {
   width: 40px;
   height: 40px;
@@ -176,11 +184,14 @@ body {
 }
 
 .chat-item-indicador.activo {
-  background: #10B981;
+  background: #D1FAE5;
+  border: 1px solid #10B981;
 }
 
-.chat-item-indicador.pausado {
+.chat-item-indicador.requiere-atencion-ind {
   background: #EF4444;
+  border: 2px solid #B91C1C;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.2);
 }
 
 /* ===== Columna central ===== */

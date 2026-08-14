@@ -120,11 +120,12 @@ function renderListaChats() {
   container.innerHTML = filtrados.map(conv => {
     const contacto = getContactoPorId(conv.contactoId);
     const inicial = (contacto.nombre || '?').charAt(0).toUpperCase();
-    const indicadorClase = conv.botActivo ? 'activo' : 'pausado';
+    const requiereAtencionClase = !conv.botActivo ? 'requiere-atencion' : '';
+    const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
     const activaClase = conv._id === chatActivoId ? 'activo' : '';
 
     return `
-      <div class="chat-item ${activaClase}" data-conv-id="${conv._id}">
+      <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
         <div class="chat-item-avatar">${inicial}</div>
         <div class="chat-item-contenido">
           <div class="chat-item-titulo">

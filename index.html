@@ -8,75 +8,135 @@
 </head>
 <body>
   <div id="app">
-    <!-- Columna Izquierda -->
-    <aside id="col-izquierda" class="col">
-      <div class="panel-header">
-        <h2>Bandeja de entrada</h2>
-        <div class="buscador">
-          <input type="search" id="buscador" placeholder="Buscar chats...">
-        </div>
-        <div class="pestanas">
-          <button class="pestana" data-pestana="todos">Todos</button>
-          <button class="pestana activa" data-pestana="pendientes">
-            Pendientes
-            <span class="pestana-alerta"></span>
-          </button>
-          <button class="pestana" data-pestana="resueltos">Resueltos</button>
-        </div>
+    <!-- Slim Sidebar -->
+    <nav id="slim-sidebar">
+      <div class="logo">🧊</div>
+      <div class="sidebar-buttons">
+        <button id="btn-inbox" class="sidebar-btn activo" title="Bandeja"><span>💬</span></button>
+        <button id="btn-config" class="sidebar-btn" title="Configuración"><span>⚙️</span></button>
       </div>
-      <div id="lista-chats" class="lista-chats">
-        <!-- Chats renderizados -->
+      <div class="sidebar-footer">
+        <button id="btn-logout" class="sidebar-btn" title="Cerrar sesión"><span>🚪</span></button>
       </div>
-    </aside>
+    </nav>
 
-    <!-- Vista Vacía -->
-    <div id="empty-state" class="empty-state">
-      <div class="empty-state-icon">💬</div>
-      <p>Aquí se mostrará el chat que selecciones</p>
+    <!-- Área de trabajo -->
+    <div id="workspace">
+      <div id="inbox-view" class="view">
+        <!-- Columna Izquierda -->
+        <aside id="col-izquierda" class="col">
+          <div class="panel-header">
+            <h2>Bandeja de entrada</h2>
+            <div class="buscador">
+              <input type="search" id="buscador" placeholder="Buscar chats...">
+            </div>
+            <div class="pestanas">
+              <button class="pestana" data-pestana="todos">Todos</button>
+              <button class="pestana activa" data-pestana="pendientes">
+                Pendientes
+                <span class="pestana-alerta"></span>
+              </button>
+              <button class="pestana" data-pestana="resueltos">Resueltos</button>
+            </div>
+          </div>
+          <div id="lista-chats" class="lista-chats">
+            <!-- Chats renderizados -->
+          </div>
+        </aside>
+
+        <!-- Vista Vacía -->
+        <div id="empty-state" class="empty-state">
+          <div class="empty-state-icon">💬</div>
+          <p>Aquí se mostrará el chat que selecciones</p>
+        </div>
+
+        <!-- Columna Central -->
+        <main id="col-central" class="col">
+          <div class="chat-header">
+            <div class="info-chat">
+              <strong id="chat-nombre"></strong>
+              <span id="chat-linea"></span>
+            </div>
+            <div class="toggle-wrapper">
+              <label class="toggle" for="toggle-bot">
+                <input type="checkbox" id="toggle-bot">
+                <span class="slider"></span>
+              </label>
+              <span id="estado-bot">Bot Activo</span>
+            </div>
+          </div>
+          <div id="area-mensajes" class="area-mensajes">
+            <!-- Mensajes -->
+          </div>
+          <div class="composer">
+            <input type="text" id="input-mensaje" placeholder="Escribí un mensaje..." disabled>
+            <button id="btn-enviar" disabled>Enviar</button>
+          </div>
+        </main>
+
+        <!-- Columna Derecha -->
+        <aside id="col-derecha" class="col">
+          <div class="perfil-header">
+            <h3>Perfil del Contacto</h3>
+          </div>
+          <div class="perfil-form">
+            <label for="perfil-nombre">Nombre</label>
+            <input type="text" id="perfil-nombre" value="" placeholder="Nombre">
+            <label for="perfil-telefono">Teléfono</label>
+            <input type="text" id="perfil-telefono" value="" placeholder="Teléfono">
+          </div>
+          <div class="perfil-etiquetas">
+            <h4>Etiquetas</h4>
+            <div id="lista-etiquetas">
+              <!-- Etiquetas -->
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div id="config-view" class="view hidden">
+        <h2>Configuración del Bot</h2>
+
+        <div class="config-card">
+          <h3>Mensaje de Bienvenida</h3>
+          <textarea id="config-bienvenida" rows="3" placeholder="¡Hola! Soy el asistente virtual de tu negocio. ¿En qué puedo ayudarte?"></textarea>
+        </div>
+
+        <div class="config-card">
+          <h3>Prompt de la Inteligencia Artificial</h3>
+          <textarea id="config-prompt" rows="8" placeholder="Definí la personalidad, el tono y las reglas del bot..."></textarea>
+        </div>
+
+        <div class="config-card">
+          <h3>Respuestas Rápidas / Atajos</h3>
+          <div class="atajo-form">
+            <input type="text" id="atajo-comando" placeholder="/comando">
+            <input type="text" id="atajo-mensaje" placeholder="Mensaje de respuesta">
+            <button id="atajo-agregar" type="button">Agregar</button>
+          </div>
+          <table id="tabla-atajos" class="atajos-tabla">
+            <thead>
+              <tr>
+                <th>Atajo</th>
+                <th>Mensaje</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>/cbu</td>
+                <td>Te paso el CBU: 000000310009...</td>
+              </tr>
+              <tr>
+                <td>/horarios</td>
+                <td>Atendemos de lunes a viernes de 9 a 18 hs...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <button id="btn-guardar-config" class="btn-guardar-config">Guardar Cambios</button>
+      </div>
     </div>
-
-    <!-- Columna Central -->
-    <main id="col-central" class="col">
-      <div class="chat-header">
-        <div class="info-chat">
-          <strong id="chat-nombre"></strong>
-          <span id="chat-linea"></span>
-        </div>
-        <div class="toggle-wrapper">
-          <label class="toggle" for="toggle-bot">
-            <input type="checkbox" id="toggle-bot">
-            <span class="slider"></span>
-          </label>
-          <span id="estado-bot">Bot Activo</span>
-        </div>
-      </div>
-      <div id="area-mensajes" class="area-mensajes">
-        <!-- Mensajes -->
-      </div>
-      <div class="composer">
-        <input type="text" id="input-mensaje" placeholder="Escribí un mensaje..." disabled>
-        <button id="btn-enviar" disabled>Enviar</button>
-      </div>
-    </main>
-
-    <!-- Columna Derecha -->
-    <aside id="col-derecha" class="col">
-      <div class="perfil-header">
-        <h3>Perfil del Contacto</h3>
-      </div>
-      <div class="perfil-form">
-        <label for="perfil-nombre">Nombre</label>
-        <input type="text" id="perfil-nombre" value="" placeholder="Nombre">
-        <label for="perfil-telefono">Teléfono</label>
-        <input type="text" id="perfil-telefono" value="" placeholder="Teléfono">
-      </div>
-      <div class="perfil-etiquetas">
-        <h4>Etiquetas</h4>
-        <div id="lista-etiquetas">
-          <!-- Etiquetas -->
-        </div>
-      </div>
-    </aside>
   </div>
   <script src="panel.js" defer></script>
 </body>

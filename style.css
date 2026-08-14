@@ -16,11 +16,10 @@ body {
 
 /* ===== Layout principal ===== */
 #app {
-  display: grid;
-  grid-template-columns: 25% 50% 25%;
-  grid-template-rows: 100vh;
-  gap: 0;
-  position: relative;
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .col {
@@ -460,4 +459,188 @@ body {
 #app.sin-chat #col-central,
 #app.sin-chat #col-derecha {
   display: none;
+}
+
+/* ===== Slim Sidebar ===== */
+#slim-sidebar {
+  width: 70px;
+  flex-shrink: 0;
+  background: #1F2937;
+  color: #D1D5DB;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.logo {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.sidebar-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+}
+
+.sidebar-btn {
+  background: transparent;
+  border: none;
+  color: #D1D5DB;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar-btn:hover {
+  background: #374151;
+}
+
+.sidebar-btn.activo {
+  background: #2563EB;
+  color: white;
+}
+
+/* ===== Workspace ===== */
+#workspace {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  display: flex;
+}
+
+#inbox-view {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 25% 50% 25%;
+  grid-template-rows: 100%;
+  overflow: hidden;
+}
+
+#config-view {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px;
+  background: #F9FAFB;
+  overflow-y: auto;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ===== Configuración del Bot ===== */
+#config-view h2 {
+  font-size: 1.5rem;
+  color: #1F2937;
+  margin-bottom: 20px;
+}
+
+.config-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.config-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.config-card textarea {
+  width: 100%;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+
+.config-card textarea:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.atajo-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.atajo-form input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.atajo-form button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #2563EB;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.atajo-form button:hover {
+  background: #1D4ED8;
+}
+
+.atajos-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.atajos-tabla th,
+.atajos-tabla td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.atajos-tabla th {
+  font-weight: 600;
+  color: #6B7280;
+  background: #F9FAFB;
+}
+
+.btn-guardar-config {
+  align-self: flex-start;
+  padding: 12px 32px;
+  border: none;
+  border-radius: 8px;
+  background: #2563EB;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-guardar-config:hover {
+  background: #1D4ED8;
 }

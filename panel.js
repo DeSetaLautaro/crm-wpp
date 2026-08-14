@@ -211,6 +211,26 @@ function renderTodo() {
   updateVisibilidad();
 }
 
+// ===== Alternancia de vistas (Sidebar) =====
+function showView(vista) {
+  const inboxView = document.getElementById('inbox-view');
+  const configView = document.getElementById('config-view');
+  const btnInbox = document.getElementById('btn-inbox');
+  const btnConfig = document.getElementById('btn-config');
+
+  if (vista === 'inbox') {
+    inboxView.classList.remove('hidden');
+    configView.classList.add('hidden');
+    btnInbox.classList.add('activo');
+    btnConfig.classList.remove('activo');
+  } else {
+    inboxView.classList.add('hidden');
+    configView.classList.remove('hidden');
+    btnInbox.classList.remove('activo');
+    btnConfig.classList.add('activo');
+  }
+}
+
 function updateVisibilidad() {
   const app = document.getElementById('app');
   if (chatActivoId) {
@@ -237,6 +257,10 @@ function init() {
     const estado = e.target.checked ? 'Bot Activo' : 'Pausado';
     document.getElementById('estado-bot').textContent = estado;
   });
+
+  // Sidebar: alternar entre Inbox y Configuración
+  document.getElementById('btn-inbox').addEventListener('click', () => showView('inbox'));
+  document.getElementById('btn-config').addEventListener('click', () => showView('config'));
 
   // Render inicial
   renderTodo();

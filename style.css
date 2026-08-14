@@ -81,6 +81,18 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.pestana-alerta {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #EF4444;
+  display: inline-block;
 }
 
 .pestana:hover {

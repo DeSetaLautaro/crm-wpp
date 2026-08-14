@@ -16,8 +16,12 @@
           <input type="search" id="buscador" placeholder="Buscar chats...">
         </div>
         <div class="pestanas">
-          <button class="pestana activa" data-pestana="Abierto">Abiertos</button>
-          <button class="pestana" data-pestana="Resuelto">Resueltos</button>
+          <button class="pestana" data-pestana="todos">Todos</button>
+          <button class="pestana activa" data-pestana="pendientes">
+            Pendientes
+            <span class="pestana-alerta"></span>
+          </button>
+          <button class="pestana" data-pestana="resueltos">Resueltos</button>
         </div>
       </div>
       <div id="lista-chats" class="lista-chats">

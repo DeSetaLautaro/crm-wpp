@@ -88,7 +88,7 @@ const MOCK_MENSAJES = [
 ];
 
 // ===== Estado global =====
-let pestanaActiva = 'Abierto';
+let pestanaActiva = 'pendientes';
 let chatActivoId = null;
 
 // ===== Helpers =====
@@ -115,7 +115,16 @@ function formatearFechaTooltip(fecha) {
 // ===== Renderers =====
 function renderListaChats() {
   const container = document.getElementById('lista-chats');
-  const filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === pestanaActiva);
+  let filtrados;
+  if (pestanaActiva === 'todos') {
+    filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === 'Abierto');
+  } else if (pestanaActiva === 'pendientes') {
+    filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === 'Abierto' && !c.botActivo);
+  } else if (pestanaActiva === 'resueltos') {
+    filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === 'Resuelto');
+  } else {
+    filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === 'Abierto');
+  }
 
   container.innerHTML = filtrados.map(conv => {
     const contacto = getContactoPorId(conv.contactoId);

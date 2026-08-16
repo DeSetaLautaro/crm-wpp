@@ -183,7 +183,7 @@ function renderChatActivo() {
   areaMensajes.innerHTML = mensajes.map(msg => {
     let claseBurbuja = '';
     if (msg.remitente === 'cliente') claseBurbuja = 'bubble-cliente';
-    else if (msg.remitente === 'bot' || msg.remitente === 'humano') claseBurbuja = 'bubble-humano';
+    else if (msg.remitente === 'bot' || msg.remitente === 'humano' || msg.remitente === 'ia') claseBurbuja = 'bubble-humano';
     else if (msg.remitente === 'nota_interna') claseBurbuja = 'bubble-nota';
 
     return `<div class="bubble ${claseBurbuja}">${msg.contenido}</div>`;

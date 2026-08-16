@@ -94,7 +94,10 @@ const recibirMensaje = async (req, res) => {
     if (process.env.GEMINI_API_KEY) {
       try {
         const menuTexto = productos.length
-          ? productos.map(p => `- ${p.nombre} ($${p.precio})`).join('\n')
+          ? productos.map(p => {
+              const detalleExtras = p.toppings?.length ? ` (extras: ${p.toppings.join(', ')})` : '';
+              return `- ${p.nombre} ($${p.precio})${detalleExtras}`;
+            }).join('\n')
           : 'No hay productos cargados en el catálogo.';
 
         const prompt = `Sos el asistente virtual de ${empresa.nombre}. Respondé de forma breve y amable a los clientes.
@@ -119,7 +122,7 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
     if (respuestaIA) {
       await Mensaje.create({
         conversacionId: conversacion._id,
-        remitente: 'bot',
+        remitente: 'ia',
         contenido: respuestaIA
       });
 

@@ -24,6 +24,10 @@ const ProductoSchema = new Schema(
     descripcion: {
       type: String,
       default: ''
+    },
+    toppings: {
+      type: [String],
+      default: []
     }
   },
   { timestamps: true }

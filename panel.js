@@ -94,6 +94,8 @@ let MENSAJES = [...MOCK_MENSAJES];
 
 let pestanaActiva = 'pendientes';
 let chatActivoId = null;
+let socket = null;
+let miEmpresaId = null;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -365,6 +367,18 @@ async function cargarConversaciones() {
       chatActivoId = CONVERSACIONES[0]._id;
     }
 
+    // Conectar a Socket.io si aún no estamos conectados
+    if (typeof io !== 'undefined' && !socket) {
+      socket = io();
+      setupSocketListeners();
+    }
+
+    const primeraEmpresa = convsApi[0] && (convsApi[0].empresaId || convsApi[0].parrillaId);
+    if (socket && primeraEmpresa && primeraEmpresa !== miEmpresaId) {
+      miEmpresaId = primeraEmpresa;
+      socket.emit('join', miEmpresaId);
+    }
+
     renderTodo();
   } catch (error) {
     console.error('Error al cargar conversaciones:', error);
@@ -374,6 +388,40 @@ async function cargarConversaciones() {
     MENSAJES = [...MOCK_MENSAJES];
     renderTodo();
   }
+}
+
+function setupSocketListeners() {
+  if (!socket) return;
+  socket.on('mensaje-nuevo', (payload) => {
+    const { conversacionId, mensaje, conversacion } = payload;
+
+    // Agregar mensaje a la colección local
+    MENSAJES.push({
+      conversacionId: conversacionId,
+      remitente: mensaje.remitente,
+      contenido: mensaje.contenido,
+      fecha: new Date(mensaje.fecha)
+    });
+
+    // Actualizar la conversación local
+    const convLocal = CONVERSACIONES.find(c => c._id === conversacionId);
+    if (convLocal) {
+      convLocal.ultimoMensaje = (conversacion && conversacion.ultimoMensaje) || mensaje.contenido;
+      convLocal.ultimaFecha = (conversacion && conversacion.updatedAt)
+        ? new Date(conversacion.updatedAt)
+        : new Date();
+
+      if (chatActivoId === conversacionId) {
+        renderChatActivo();
+        const area = document.getElementById('area-mensajes');
+        if (area) area.scrollTop = area.scrollHeight;
+      }
+      renderListaChats();
+    } else {
+      // Puede ser una conversación nueva, recargamos para obtenerla completa
+      cargarConversaciones();
+    }
+  });
 }
 
 // ===== Eventos =====

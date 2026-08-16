@@ -88,6 +88,24 @@ const recibirMensaje = async (req, res) => {
 
     await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
 
+    // Emitir mensaje entrante a los clientes conectados
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresa._id.toString()).emit('mensaje-nuevo', {
+        conversacionId: conversacion._id,
+        mensaje: {
+          remitente: 'cliente',
+          contenido: textoMensaje,
+          fecha: new Date()
+        },
+        conversacion: {
+          _id: conversacion._id,
+          ultimoMensaje: textoMensaje,
+          updatedAt: new Date()
+        }
+      });
+    }
+
     // ===== Generar respuesta con Gemini =====
     let respuestaIA = null;
 
@@ -127,6 +145,23 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
       });
 
       await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: respuestaIA });
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(empresa._id.toString()).emit('mensaje-nuevo', {
+          conversacionId: conversacion._id,
+          mensaje: {
+            remitente: 'ia',
+            contenido: respuestaIA,
+            fecha: new Date()
+          },
+          conversacion: {
+            _id: conversacion._id,
+            ultimoMensaje: respuestaIA,
+            updatedAt: new Date()
+          }
+        });
+      }
     }
 
     console.log("✅ [10] ¡ÉXITO! Mensaje guardado perfectamente en MongoDB.");

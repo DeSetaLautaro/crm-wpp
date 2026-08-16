@@ -110,7 +110,7 @@ Mensaje del cliente: "${textoMensaje}"
 Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si no encontrás la información en el catálogo, ofrecé contactar a un humano.`;
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
 
         const result = await model.generateContent(prompt);
         respuestaIA = result.response.text().trim();

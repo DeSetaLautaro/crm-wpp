@@ -2,7 +2,7 @@
 // CRM Omnicanal WhatsApp - Frontend Vanilla JS
 // ============================================================
 
-const USAR_MOCK_DATA = true;
+const USAR_MOCK_DATA = false;
 
 // ===== Mock Data =====
 // Basado en la estructura de los modelos definidos en proyecto.md

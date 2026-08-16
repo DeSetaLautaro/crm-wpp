@@ -1,7 +1,9 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Empresa = require('../models/Empresa');
 const Contacto = require('../models/Contacto');
 const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
+const Producto = require('../models/Producto');
 
 const verificarWebhook = (req, res) => {
   const mode = req.query['hub.mode'];
@@ -55,6 +57,8 @@ const recibirMensaje = async (req, res) => {
         return res.sendStatus(200);
     }
     console.log(`🏢 [6] ¡Empresa encontrada!: ${empresa.nombre}`);
+    
+    const productos = await Producto.find({ empresaId: empresa._id }).lean();
 
     let contacto = await Contacto.findOne({ empresaId: empresa._id, telefono: telefonoCliente });
     if (!contacto) {
@@ -83,6 +87,44 @@ const recibirMensaje = async (req, res) => {
     });
 
     await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
+
+    // ===== Generar respuesta con Gemini =====
+    let respuestaIA = null;
+
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const menuTexto = productos.length
+          ? productos.map(p => `- ${p.nombre} ($${p.precio})`).join('\n')
+          : 'No hay productos cargados en el catálogo.';
+
+        const prompt = `Sos el asistente virtual de ${empresa.nombre}. Respondé de forma breve y amable a los clientes.
+
+Catálogo actual:
+${menuTexto}
+
+Mensaje del cliente: "${textoMensaje}"
+
+Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si no encontrás la información en el catálogo, ofrecé contactar a un humano.`;
+
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+        const result = await model.generateContent(prompt);
+        respuestaIA = result.response.text().trim();
+      } catch (err) {
+        console.error("❌ Error al generar respuesta con Gemini:", err);
+      }
+    }
+
+    if (respuestaIA) {
+      await Mensaje.create({
+        conversacionId: conversacion._id,
+        remitente: 'bot',
+        contenido: respuestaIA
+      });
+
+      await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: respuestaIA });
+    }
 
     console.log("✅ [10] ¡ÉXITO! Mensaje guardado perfectamente en MongoDB.");
     return res.sendStatus(200);

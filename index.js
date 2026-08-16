@@ -4,10 +4,15 @@ const express = require('express');
 const mongoose = require('mongoose');
 
 const whatsappRoutes = require('./routes/whatsappRoutes');
+const auth = require('./middlewares/auth');
+const { obtenerConversaciones } = require('./controllers/conversacionesController');
 
 const app = express();
 
 app.use(express.json());
+
+// Endpoint para listar conversaciones de la Parrilla (protegido)
+app.get('/api/conversaciones', auth, obtenerConversaciones);
 
 app.use('/api/whatsapp', whatsappRoutes);
 

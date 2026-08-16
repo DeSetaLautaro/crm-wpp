@@ -88,20 +88,24 @@ const MOCK_MENSAJES = [
 ];
 
 // ===== Estado global =====
+let CONTACTOS = [...MOCK_CONTACTOS];
+let CONVERSACIONES = [...MOCK_CONVERSACIONES];
+let MENSAJES = [...MOCK_MENSAJES];
+
 let pestanaActiva = 'pendientes';
 let chatActivoId = null;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
-  return MOCK_CONTACTOS.find(c => c._id === id);
+  return CONTACTOS.find(c => c._id === id);
 }
 
 function getConversacionPorId(id) {
-  return MOCK_CONVERSACIONES.find(c => c._id === id);
+  return CONVERSACIONES.find(c => c._id === id);
 }
 
 function getMensajesDeConversacion(convId) {
-  return MOCK_MENSAJES.filter(m => m.conversacionId === convId);
+  return MENSAJES.filter(m => m.conversacionId === convId);
 }
 
 function formatearHora(fecha) {
@@ -117,13 +121,13 @@ function renderListaChats() {
   const container = document.getElementById('lista-chats');
   let filtrados;
   if (pestanaActiva === 'todos') {
-    filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === 'Abierto');
+    filtrados = CONVERSACIONES.filter(c => c.estado === 'Abierto');
   } else if (pestanaActiva === 'pendientes') {
-    filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === 'Abierto' && !c.botActivo);
+    filtrados = CONVERSACIONES.filter(c => c.estado === 'Abierto' && !c.botActivo);
   } else if (pestanaActiva === 'resueltos') {
-    filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === 'Resuelto');
+    filtrados = CONVERSACIONES.filter(c => c.estado === 'Resuelto');
   } else {
-    filtrados = MOCK_CONVERSACIONES.filter(c => c.estado === 'Abierto');
+    filtrados = CONVERSACIONES.filter(c => c.estado === 'Abierto');
   }
 
   container.innerHTML = filtrados.map(conv => {
@@ -282,6 +286,96 @@ function updateVisibilidad() {
   }
 }
 
+// ===== Carga de conversaciones desde API =====
+async function cargarConversaciones() {
+  if (USAR_MOCK_DATA) {
+    // Modo mock: usamos los arrays definidos arriba
+    CONVERSACIONES = [...MOCK_CONVERSACIONES];
+    CONTACTOS = [...MOCK_CONTACTOS];
+    MENSAJES = [...MOCK_MENSAJES];
+    if (!chatActivoId && CONVERSACIONES.length > 0) {
+      chatActivoId = CONVERSACIONES[0]._id;
+    }
+    renderTodo();
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token') || '';
+    const res = await fetch('/api/conversaciones', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    const data = await res.json();
+    const convsApi = data.conversaciones || [];
+
+    const contactosMap = new Map();
+    const mensajesAll = [];
+
+    const conversacionesLocal = convsApi.map(conv => {
+      const contacto = conv.contactoId || {};
+      const cId = contacto._id || conv.contactoId;
+      const nombre = contacto.nombre || '';
+      const telefono = contacto.telefono || '';
+
+      if (!contactosMap.has(cId)) {
+        contactosMap.set(cId, {
+          _id: cId,
+          empresaId: conv.empresaId,
+          telefono,
+          nombre,
+          etiquetas: []
+        });
+      }
+
+      if (conv.mensajes) {
+        conv.mensajes.forEach(m => {
+          mensajesAll.push({
+            conversacionId: conv._id,
+            remitente: m.remitente,
+            contenido: m.contenido,
+            fecha: m.fecha ? new Date(m.fecha) : new Date()
+          });
+        });
+      }
+
+      return {
+        _id: conv._id,
+        empresaId: conv.empresaId,
+        contactoId: cId,
+        lineaReceptora: conv.lineaReceptora || '',
+        botActivo: conv.botActivo ?? true,
+        estado: conv.estado || 'Abierto',
+        ultimoMensaje: conv.ultimoMensaje || '',
+        ultimaFecha: conv.updatedAt ? new Date(conv.updatedAt) : new Date()
+      };
+    });
+
+    CONTACTOS = Array.from(contactosMap.values());
+    CONVERSACIONES = conversacionesLocal;
+    MENSAJES = mensajesAll;
+
+    if (!chatActivoId && CONVERSACIONES.length > 0) {
+      chatActivoId = CONVERSACIONES[0]._id;
+    }
+
+    renderTodo();
+  } catch (error) {
+    console.error('Error al cargar conversaciones:', error);
+    // Fallback a mock data para que la pantalla no quede vacía
+    CONVERSACIONES = [...MOCK_CONVERSACIONES];
+    CONTACTOS = [...MOCK_CONTACTOS];
+    MENSAJES = [...MOCK_MENSAJES];
+    renderTodo();
+  }
+}
+
 // ===== Eventos =====
 function init() {
   // Pestañas
@@ -315,8 +409,8 @@ function init() {
     });
   }
 
-  // Render inicial
-  renderTodo();
+  // Cargar conversaciones (fetch o mock)
+  cargarConversaciones();
 }
 
 document.addEventListener('DOMContentLoaded', init);

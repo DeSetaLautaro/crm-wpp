@@ -17,54 +17,54 @@ const verificarWebhook = (req, res) => {
 
 const recibirMensaje = async (req, res) => {
   try {
+    console.log("🔔 [1] ¡DING DONG! Facebook mandó algo al webhook");
+
     const entry = req.body?.entry?.[0];
     const change = entry?.changes?.[0];
     const value = change?.value;
 
-    if (!value) return res.sendStatus(200);
+    if (!value) {
+        console.log("🛑 [2] Falla: No hay 'value' en el mensaje de Facebook.");
+        return res.sendStatus(200);
+    }
 
     const metadata = value?.metadata || {};
-
-    // ID del número de WhatsApp que recibió el mensaje
     const whatsappPhoneId = metadata?.phone_number_id || metadata?.display_phone_number || '';
     const mensaje = value?.messages?.[0];
 
-    // Si no hay mensaje (ej: actualización de estado), ignoramos
-    if (!mensaje) return res.sendStatus(200);
+    if (!mensaje) {
+        console.log("🛑 [2] Falla: Es una actualización de estado (ej. mensaje leído), no es un mensaje de texto.");
+        return res.sendStatus(200);
+    }
 
     const telefonoCliente = mensaje?.from || '';
     const textoMensaje = mensaje?.text?.body || '';
 
+    console.log(`🔍 [3] Datos extraídos -> Cliente: ${telefonoCliente} | Mi Local ID: ${whatsappPhoneId} | Texto: ${textoMensaje}`);
+
     if (!whatsappPhoneId || !telefonoCliente || !textoMensaje) {
+      console.log("🛑 [4] Falla: Faltan datos clave (Teléfono, ID o Texto).");
       return res.sendStatus(200);
     }
 
-    // Buscar la empresa dueña de esa línea
-    const empresa = await Empresa.findOne({ whatsappPhoneId });
-    if (!empresa) return res.sendStatus(200);
+    console.log(`⚙️ [5] Buscando empresa en MongoDB con whatsappPhoneId: '${whatsappPhoneId}'`);
+    const empresa = await Empresa.findOne({ whatsappPhoneId: whatsappPhoneId });
+    
+    if (!empresa) {
+        console.log("❌ [ERROR GRAVE] La base de datos no encontró ninguna empresa con ese número de ID.");
+        return res.sendStatus(200);
+    }
+    console.log(`🏢 [6] ¡Empresa encontrada!: ${empresa.nombre}`);
 
-    // Buscar o crear el contacto del cliente
-    let contacto = await Contacto.findOne({
-      empresaId: empresa._id,
-      telefono: telefonoCliente
-    });
-
+    let contacto = await Contacto.findOne({ empresaId: empresa._id, telefono: telefonoCliente });
     if (!contacto) {
-      contacto = await Contacto.create({
-        empresaId: empresa._id,
-        telefono: telefonoCliente,
-        nombre: ''
-      });
+      console.log("👤 [7] Creando nuevo contacto...");
+      contacto = await Contacto.create({ empresaId: empresa._id, telefono: telefonoCliente, nombre: '' });
     }
 
-    // Buscar una conversación abierta existente, o crear una nueva con bot activo
-    let conversacion = await Conversacion.findOne({
-      empresaId: empresa._id,
-      contactoId: contacto._id,
-      estado: 'Abierto'
-    });
-
+    let conversacion = await Conversacion.findOne({ empresaId: empresa._id, contactoId: contacto._id, estado: 'Abierto' });
     if (!conversacion) {
+      console.log("💬 [8] Creando nueva conversación...");
       conversacion = await Conversacion.create({
         empresaId: empresa._id,
         contactoId: contacto._id,
@@ -75,23 +75,19 @@ const recibirMensaje = async (req, res) => {
       });
     }
 
-    // Guardar el mensaje del cliente
+    console.log("📝 [9] Guardando mensaje...");
     await Mensaje.create({
       conversacionId: conversacion._id,
       remitente: 'cliente',
       contenido: textoMensaje
     });
 
-    // Actualizar último mensaje en la conversación
-    await Conversacion.findByIdAndUpdate(conversacion._id, {
-      ultimoMensaje: textoMensaje
-    });
+    await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
 
-    // Devolvemos 200 siempre para confirmar a Meta que recibimos el evento
+    console.log("✅ [10] ¡ÉXITO! Mensaje guardado perfectamente en MongoDB.");
     return res.sendStatus(200);
   } catch (error) {
-    console.error('Error en recibirMensaje:', error);
-    // Aunque haya error, Meta debe recibir 200 para no reintentar infinitamente
+    console.error('🔥 [ERROR CATASTRÓFICO] Explotó el código en el Try/Catch:', error);
     return res.sendStatus(200);
   }
 };

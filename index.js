@@ -10,6 +10,7 @@ const { obtenerConversaciones } = require('./controllers/conversacionesControlle
 const app = express();
 
 app.use(express.json());
+app.use(express.static(__dirname));
 
 // Endpoint para listar conversaciones de la Parrilla (protegido)
 app.get('/api/conversaciones', auth, obtenerConversaciones);

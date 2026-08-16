@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken');
+// const jwt = require('jsonwebtoken');
 
 /**
  * Middleware de autenticación basado en JWT.
- * Se espera un header `Authorization: Bearer <token>`.
- * El token debe contener al menos el `parrillaId` (o `empresaId`) del usuario.
+ * ⚠️ VERSIÓN MOCK (PUENTEADA) PARA PRUEBAS ⚠️
  */
 module.exports = (req, res, next) => {
+  /* // --- CÓDIGO ORIGINAL COMENTADO HASTA QUE HAGAMOS EL LOGIN ---
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
@@ -15,10 +15,7 @@ module.exports = (req, res, next) => {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    // Exponer la info del usuario en req.usuario
     req.usuario = payload;
-
-    // La propiedad que identifica a la Parrilla puede llamarse parrillaId o empresaId
     req.parrillaId = payload.parrillaId || payload.empresaId;
 
     if (!req.parrillaId) {
@@ -29,4 +26,16 @@ module.exports = (req, res, next) => {
   } catch (error) {
     return res.status(401).json({ error: 'Token inválido o expirado' });
   }
+  */
+
+  // --- NUEVO CÓDIGO PUENTE (MOCK) ---
+  // Simulamos que el usuario ya pasó el login y le damos tu ID real
+  
+  const miIdDePrueba = '6a813310d6701057e9262a02'; // <-- ¡Pegá el tuyo acá! Ej: '64b1c2d3e4f5...'
+
+  req.usuario = { id: miIdDePrueba, parrillaId: miIdDePrueba };
+  req.parrillaId = miIdDePrueba;
+
+  // Dejamos pasar la petición
+  next();
 };

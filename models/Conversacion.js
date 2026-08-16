@@ -35,4 +35,4 @@ const ConversacionSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Conversacion', ConversacionSchema);
+module.exports = mongoose.model('Conversacion', ConversacionSchema, 'conversaciones');

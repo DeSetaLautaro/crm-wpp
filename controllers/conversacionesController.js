@@ -8,18 +8,23 @@ const Mensaje = require('../models/Mensaje');
  */
 const obtenerConversaciones = async (req, res) => {
   try {
-    const parrillaId = req.parrillaId;
+    // 1. Ahora buscamos el empresaId que nos inyecta el middleware
+    const empresaId = req.empresaId || req.parrillaId;
 
-    if (!parrillaId) {
-      return res.status(400).json({ error: 'No se pudo identificar la Parrilla asociada al usuario' });
+    if (!empresaId) {
+      return res.status(400).json({ error: 'No se pudo identificar la Empresa asociada al usuario' });
+    }
+    console.log("1. ID QUE ME LLEGA DEL PUENTE:", empresaId);
+    
+    const todasLasConversaciones = await Conversacion.find({});
+    console.log("2. TOTAL DE CHATS EN LA BASE DE DATOS:", todasLasConversaciones.length);
+    
+    if (todasLasConversaciones.length > 0) {
+        console.log("3. EL ID GUARDADO EN EL PRIMER CHAT ES:", todasLasConversaciones[0].empresaId);
     }
 
-    const query = {
-      $or: [
-        { empresaId: parrillaId },
-        { parrillaId }
-      ]
-    };
+    // 2. Le decimos a Mongo que busque las conversaciones de esta Empresa
+    const query = { empresaId: empresaId };
 
     const conversaciones = await Conversacion.find(query)
       .populate('contactoId', 'nombre telefono etiquetas')
@@ -35,7 +40,6 @@ const obtenerConversaciones = async (req, res) => {
         return {
           _id: conv._id,
           empresaId: conv.empresaId,
-          parrillaId: conv.parrillaId || conv.empresaId,
           contactoId: conv.contactoId,
           lineaReceptora: conv.lineaReceptora,
           botActivo: conv.botActivo,

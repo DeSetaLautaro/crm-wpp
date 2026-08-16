@@ -172,7 +172,119 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
   }
 };
 
+// ===== Enviar mensaje desde el dashboard =====
+const enviarMensaje = async (req, res) => {
+  try {
+    const { conversacionId, mensaje } = req.body || {};
+    if (!conversacionId || !mensaje || typeof mensaje !== 'string' || mensaje.length === 0) {
+      return res.status(400).json({ error: 'Faltan datos: conversacionId y mensaje son requeridos' });
+    }
+
+    const conversacion = await Conversacion.findById(conversacionId)
+      .populate('empresaId')
+      .populate('contactoId');
+    if (!conversacion) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+
+    const empresaId = conversacion.empresaId?._id || conversacion.empresaId;
+    const empresaIdStr = empresaId ? empresaId.toString() : '';
+    const reqEmpresaId = req.parrillaId ? String(req.parrillaId) : '';
+    if (reqEmpresaId && empresaIdStr !== reqEmpresaId) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+
+    const empresa = conversacion.empresaId;
+    const contacto = conversacion.contactoId;
+
+    const telefonoCliente = contacto?.telefono;
+    const whatsappPhoneId = empresa?.whatsappPhoneId;
+    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+
+    if (!whatsappPhoneId || !telefonoCliente) {
+      return res.status(500).json({ error: 'Faltan datos de empresa o contacto para enviar el mensaje' });
+    }
+
+    let enviado = false;
+    let respuestaWhatsApp = null;
+    if (accessToken) {
+      const url = `https://graph.facebook.com/v19.0/${whatsappPhoneId}/messages`;
+      const payload = {
+        messaging_product: 'whatsapp',
+        to: telefonoCliente,
+        type: 'text',
+        text: { body: mensaje }
+      };
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        respuestaWhatsApp = await resp.json();
+        if (resp.ok) {
+          enviado = true;
+        } else {
+          console.error('Error al enviar a WhatsApp:', respuestaWhatsApp);
+        }
+      } catch (error) {
+        console.error('Error de red enviando a la Graph API:', error);
+        return res.status(502).json({ error: 'No se pudo comunicar con WhatsApp' });
+      }
+    } else {
+      // Sin token configurado, simulamos envío exitoso para desarrollo
+      enviado = true;
+    }
+
+    if (!enviado) {
+      return res.status(502).json({ error: 'El envío a WhatsApp falló', detalle: respuestaWhatsApp });
+    }
+
+    const nuevoMensaje = await Mensaje.create({
+      conversacionId: conversacion._id,
+      remitente: 'empresa',
+      contenido: mensaje
+    });
+
+    await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: mensaje });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresaIdStr).emit('mensaje-nuevo', {
+        conversacionId: conversacion._id,
+        mensaje: {
+          remitente: 'empresa',
+          contenido: mensaje,
+          fecha: new Date()
+        },
+        conversacion: {
+          _id: conversacion._id,
+          ultimoMensaje: mensaje,
+          updatedAt: new Date()
+        }
+      });
+    }
+
+    return res.json({
+      ok: true,
+      mensaje: {
+        _id: nuevoMensaje._id,
+        remitente: nuevoMensaje.remitente,
+        contenido: nuevoMensaje.contenido,
+        fecha: nuevoMensaje.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error al enviar mensaje:', error);
+    return res.status(500).json({ error: 'Error interno al enviar mensaje' });
+  }
+};
+
 module.exports = {
   verificarWebhook,
-  recibirMensaje
+  recibirMensaje,
+  enviarMensaje
 };

@@ -11,7 +11,7 @@ const MensajeSchema = new Schema(
     },
     remitente: {
       type: String,
-      enum: ['cliente', 'bot', 'ia', 'humano', 'nota_interna'],
+      enum: ['cliente', 'bot', 'ia', 'humano', 'nota_interna', 'empresa'],
       required: true
     },
     contenido: {

@@ -185,11 +185,19 @@ function renderChatActivo() {
   areaMensajes.innerHTML = mensajes.map(msg => {
     let claseBurbuja = '';
     if (msg.remitente === 'cliente') claseBurbuja = 'bubble-cliente';
-    else if (msg.remitente === 'bot' || msg.remitente === 'humano' || msg.remitente === 'ia') claseBurbuja = 'bubble-humano';
+    else if (['bot', 'humano', 'ia', 'empresa'].includes(msg.remitente)) claseBurbuja = 'bubble-humano';
     else if (msg.remitente === 'nota_interna') claseBurbuja = 'bubble-nota';
 
     return `<div class="bubble ${claseBurbuja}">${msg.contenido}</div>`;
   }).join('');
+
+  // Habilitar campo de envío de mensajes para el chat activo
+  const inputMensaje = document.getElementById('input-mensaje');
+  const btnEnviar = document.getElementById('btn-enviar');
+  if (inputMensaje && btnEnviar) {
+    inputMensaje.disabled = false;
+    btnEnviar.disabled = false;
+  }
 
   // Etiquetas del perfil
   renderPerfil(contacto);
@@ -285,6 +293,13 @@ function updateVisibilidad() {
     app.classList.remove('sin-chat');
   } else {
     app.classList.add('sin-chat');
+  }
+
+  const inputMensaje = document.getElementById('input-mensaje');
+  const btnEnviar = document.getElementById('btn-enviar');
+  if (inputMensaje && btnEnviar) {
+    inputMensaje.disabled = !chatActivoId;
+    btnEnviar.disabled = !chatActivoId;
   }
 }
 
@@ -424,6 +439,34 @@ function setupSocketListeners() {
   });
 }
 
+// ===== Envío manual de mensaje desde el dashboard =====
+async function enviarMensajeDesdePanel() {
+  const input = document.getElementById('input-mensaje');
+  if (!input) return;
+  const mensaje = input.value.trim();
+  if (!mensaje || !chatActivoId) return;
+
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/enviar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ conversacionId: chatActivoId, mensaje })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('Error al enviar mensaje:', data.error || data);
+      return;
+    }
+    input.value = '';
+  } catch (error) {
+    console.error('Error de red al enviar mensaje:', error);
+  }
+}
+
 // ===== Eventos =====
 function init() {
   // Pestañas
@@ -459,6 +502,21 @@ function init() {
 
   // Cargar conversaciones (fetch o mock)
   cargarConversaciones();
+
+  // Envío manual de mensaje
+  const btnEnviar = document.getElementById('btn-enviar');
+  const inputMensaje = document.getElementById('input-mensaje');
+  if (btnEnviar) {
+    btnEnviar.addEventListener('click', enviarMensajeDesdePanel);
+  }
+  if (inputMensaje) {
+    inputMensaje.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        enviarMensajeDesdePanel();
+      }
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -15,6 +15,10 @@ const EmpresaSchema = new Schema(
     promptIA: {
       type: String,
       default: ''
+    },
+    botActivo: {
+      type: Boolean,
+      default: true
     }
   },
   { timestamps: true }

@@ -5,7 +5,8 @@ const auth = require('../middlewares/auth');
 const {
   verificarWebhook,
   recibirMensaje,
-  enviarMensaje
+  enviarMensaje,
+  actualizarBotActivo
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -16,5 +17,8 @@ router.post('/webhook', recibirMensaje);
 
 // Envío de mensaje desde el dashboard (POST)
 router.post('/enviar', auth, enviarMensaje);
+
+// Actualización del estado botActivo de la empresa (PUT)
+router.put('/bot-activo', auth, actualizarBotActivo);
 
 module.exports = router;

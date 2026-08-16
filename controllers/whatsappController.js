@@ -106,10 +106,12 @@ const recibirMensaje = async (req, res) => {
       });
     }
 
-    // ===== Generar respuesta con Gemini =====
+    // ===== Generar respuesta con Gemini (solo si el bot está activo) =====
     let respuestaIA = null;
 
-    if (process.env.GEMINI_API_KEY) {
+    const botHabilitado = (empresa.botActivo !== false);
+
+    if (botHabilitado && process.env.GEMINI_API_KEY) {
       try {
         const menuTexto = productos.length
           ? productos.map(p => {
@@ -283,8 +285,39 @@ const enviarMensaje = async (req, res) => {
   }
 };
 
+// ===== Actualizar botActivo de la empresa =====
+const actualizarBotActivo = async (req, res) => {
+  try {
+    const { botActivo } = req.body || {};
+    if (typeof botActivo !== 'boolean') {
+      return res.status(400).json({ error: 'botActivo debe ser un booleano' });
+    }
+
+    const empresaId = req.parrillaId || req.empresaId;
+    if (!empresaId) {
+      return res.status(400).json({ error: 'No se identificó la empresa' });
+    }
+
+    const empresa = await Empresa.findByIdAndUpdate(
+      empresaId,
+      { botActivo },
+      { new: true }
+    );
+
+    if (!empresa) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    return res.json({ ok: true, botActivo: empresa.botActivo });
+  } catch (error) {
+    console.error('Error al actualizar botActivo:', error);
+    return res.status(500).json({ error: 'Error interno al actualizar botActivo' });
+  }
+};
+
 module.exports = {
   verificarWebhook,
   recibirMensaje,
-  enviarMensaje
+  enviarMensaje,
+  actualizarBotActivo
 };

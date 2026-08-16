@@ -479,10 +479,33 @@ function init() {
     });
   });
 
-  // Toggle del bot (solo visual, sin lógica real por ahora)
-  document.getElementById('toggle-bot').addEventListener('change', (e) => {
-    const estado = e.target.checked ? 'Bot Activo' : 'Pausado';
-    document.getElementById('estado-bot').textContent = estado;
+  // Toggle del bot (actualiza botActivo en la empresa)
+  document.getElementById('toggle-bot').addEventListener('change', async (e) => {
+    const nuevoValor = e.target.checked;
+    document.getElementById('estado-bot').textContent = nuevoValor ? 'Bot Activo' : 'Pausado';
+
+    const token = localStorage.getItem('token') || '';
+    try {
+      const res = await fetch('/api/whatsapp/bot-activo', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ botActivo: nuevoValor })
+      });
+
+      if (!res.ok) {
+        // revertir estado si falla
+        e.target.checked = !nuevoValor;
+        document.getElementById('estado-bot').textContent = !nuevoValor ? 'Bot Activo' : 'Pausado';
+        console.error('Error al actualizar botActivo');
+      }
+    } catch (error) {
+      e.target.checked = !nuevoValor;
+      document.getElementById('estado-bot').textContent = !nuevoValor ? 'Bot Activo' : 'Pausado';
+      console.error('Error de red al actualizar botActivo:', error);
+    }
   });
 
   // Sidebar: alternar entre Inbox y Configuración

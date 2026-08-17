@@ -244,7 +244,7 @@ function renderPerfil(contacto) {
             </span>`;
   }).join('');
 
-  const contNotas = document.getElementById('lista-notas');
+  const contNotas = document.getElementById('modal-lista-notas');
   if (contNotas) {
     const notas = Array.isArray(contacto.notas) ? contacto.notas : [];
     if (notas.length === 0) {

@@ -6,6 +6,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const whatsappRoutes = require('./routes/whatsappRoutes');
+const pedidosRoutes = require('./routes/pedidosRoutes');
 const auth = require('./middlewares/auth');
 const { obtenerConversaciones } = require('./controllers/conversacionesController');
 const Usuario = require('./models/usuario');
@@ -43,6 +44,7 @@ app.get('/api/usuario', auth, async (req, res) => {
 });
 
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/pedidos', pedidosRoutes);
 
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crm';

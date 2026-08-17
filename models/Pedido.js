@@ -24,21 +24,22 @@ const itemPedidoSchema = new Schema(
 
 const PedidoSchema = new Schema(
   {
-    empresaId: {
+    // Referencia a la cuenta principal (dueño/local)
+    localId: {
       type: Types.ObjectId,
-      ref: 'Empresa',
-      required: true
+      ref: 'Usuario',
+      default: null
     },
-    conversacionId: {
-      type: Types.ObjectId,
-      ref: 'Conversacion',
-      required: true
+    // Datos del cliente
+    cliente: {
+      type: String,
+      default: ''
     },
-    contactoId: {
-      type: Types.ObjectId,
-      ref: 'Contacto',
-      required: true
+    telefonoCliente: {
+      type: String,
+      default: ''
     },
+    // Ítems del carrito
     items: {
       type: [itemPedidoSchema],
       default: []
@@ -47,16 +48,48 @@ const PedidoSchema = new Schema(
       type: Number,
       default: 0
     },
-    estado: {
-      type: String,
-      enum: ['Borrador', 'Pendiente', 'En preparación', 'Entregado', 'Cancelado'],
-      default: 'Borrador'
-    },
-    direccionEntrega: {
+    metodoPago: {
       type: String,
       default: ''
     },
-    metodoPago: {
+    estado: {
+      type: String,
+      enum: ['Borrador', 'Pendiente', 'confirmado', 'En preparación', 'Entregado', 'Cancelado'],
+      default: 'Borrador'
+    },
+    direccion: {
+      type: String,
+      default: ''
+    },
+    notas: {
+      type: String,
+      default: ''
+    },
+    fechaTurno: {
+      type: String,
+      default: ''
+    },
+    fecha: {
+      type: Date,
+      default: Date.now
+    },
+    // Campos adicionales para mantener compatibilidad con el sistema actual
+    empresaId: {
+      type: Types.ObjectId,
+      ref: 'Empresa',
+      default: null
+    },
+    conversacionId: {
+      type: Types.ObjectId,
+      ref: 'Conversacion',
+      default: null
+    },
+    contactoId: {
+      type: Types.ObjectId,
+      ref: 'Contacto',
+      default: null
+    },
+    direccionEntrega: {
       type: String,
       default: ''
     }

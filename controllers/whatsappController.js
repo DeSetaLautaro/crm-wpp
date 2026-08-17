@@ -95,7 +95,7 @@ const recibirMensaje = async (req, res) => {
     // ===== Extracción automática de datos del cliente con IA =====
     try {
       if (process.env.GEMINI_API_KEY) {
-        const promptExtract = `Analizá el siguiente mensaje de un cliente. Si contiene una dirección física, indicála en el campo "direccion". Si contiene un correo electrónico, indicálo en el campo "email". Respondé solo con un JSON válido con estos dos campos, usando string vacío cuando no se encuentre el dato.
+        const promptExtract = `Analizá el siguiente mensaje de un cliente. Si contiene una dirección física (calle y número), indicála en el campo "direccion". Si contiene un piso o departamento, indicálo en el campo "pisoDepto". Si contiene un código postal o localidad, indicálo en el campo "codigoPostal". Respondé solo con un JSON válido con estos tres campos, usando string vacío cuando no se encuentre el dato.
 
 Mensaje: "${textoMensaje}"
 
@@ -113,16 +113,15 @@ JSON:`;
           if (data && data.direccion && typeof data.direccion === 'string') {
             await Contacto.findByIdAndUpdate(contacto._id, { $set: { direccion: data.direccion } });
           }
-          if (data && data.email && typeof data.email === 'string') {
-            await Contacto.findByIdAndUpdate(contacto._id, { $set: { email: data.email } });
+          if (data && data.pisoDepto && typeof data.pisoDepto === 'string') {
+            await Contacto.findByIdAndUpdate(contacto._id, { $set: { pisoDepto: data.pisoDepto } });
+          }
+          if (data && data.codigoPostal && typeof data.codigoPostal === 'string') {
+            await Contacto.findByIdAndUpdate(contacto._id, { $set: { codigoPostal: data.codigoPostal } });
           }
         }
       } else {
-        const emailRegex = /[\w.-]+@[\w-]+\.[\w.-]+/;
-        const emailMatch = textoMensaje.match(emailRegex);
-        if (emailMatch && emailMatch[0]) {
-          await Contacto.findByIdAndUpdate(contacto._id, { $set: { email: emailMatch[0] } });
-        }
+        // Sin API key de Gemini, no se extrae información automáticamente
       }
     } catch (error) {
       console.error('⚠️ Error al extraer datos del cliente con IA:', error);
@@ -364,14 +363,15 @@ const actualizarBotActivo = async (req, res) => {
 const actualizarContacto = async (req, res) => {
   try {
     const { contactoId } = req.params;
-    const { direccion, email } = req.body || {};
+    const { direccion, pisoDepto, codigoPostal } = req.body || {};
 
     const updates = {};
     if (typeof direccion === 'string') updates.direccion = direccion;
-    if (typeof email === 'string') updates.email = email;
+    if (typeof pisoDepto === 'string') updates.pisoDepto = pisoDepto;
+    if (typeof codigoPostal === 'string') updates.codigoPostal = codigoPostal;
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'Debes enviar al menos direccion o email' });
+      return res.status(400).json({ error: 'Debes enviar al menos direccion, pisoDepto o codigoPostal' });
     }
 
     const contacto = await Contacto.findByIdAndUpdate(

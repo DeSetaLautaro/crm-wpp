@@ -210,9 +210,11 @@ function renderPerfil(contacto) {
   document.getElementById('perfil-nombre').value = nombre;
   document.getElementById('perfil-telefono').value = telefono;
   const inputDireccion = document.getElementById('perfil-direccion-input');
-  const inputEmail = document.getElementById('perfil-email-input');
+  const inputPisoDepto = document.getElementById('perfil-pisodpto-input');
+  const inputCodigoPostal = document.getElementById('perfil-codigopostal-input');
   if (inputDireccion) inputDireccion.value = contacto.direccion || '';
-  if (inputEmail) inputEmail.value = contacto.email || '';
+  if (inputPisoDepto) inputPisoDepto.value = contacto.pisoDepto || '';
+  if (inputCodigoPostal) inputCodigoPostal.value = contacto.codigoPostal || '';
   const nombreTexto = document.getElementById('perfil-nombre-texto');
   if (nombreTexto) nombreTexto.textContent = nombre;
   const telefonoTexto = document.getElementById('perfil-telefono-texto');
@@ -481,7 +483,8 @@ async function guardarDetallesCliente() {
   }
 
   const direccion = (document.getElementById('perfil-direccion-input') || {}).value?.trim() || '';
-  const email = (document.getElementById('perfil-email-input') || {}).value?.trim() || '';
+  const pisoDepto = (document.getElementById('perfil-pisodpto-input') || {}).value?.trim() || '';
+  const codigoPostal = (document.getElementById('perfil-codigopostal-input') || {}).value?.trim() || '';
 
   const token = localStorage.getItem('token') || '';
   try {
@@ -491,7 +494,7 @@ async function guardarDetallesCliente() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ direccion, email })
+      body: JSON.stringify({ direccion, pisoDepto, codigoPostal })
     });
 
     if (!res.ok) {
@@ -501,7 +504,8 @@ async function guardarDetallesCliente() {
     }
 
     contacto.direccion = direccion;
-    contacto.email = email;
+    contacto.pisoDepto = pisoDepto;
+    contacto.codigoPostal = codigoPostal;
   } catch (error) {
     console.error('Error de red al guardar detalles:', error);
   }

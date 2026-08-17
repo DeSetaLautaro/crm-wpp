@@ -27,7 +27,7 @@ const obtenerConversaciones = async (req, res) => {
     const query = { empresaId: empresaId };
 
     const conversaciones = await Conversacion.find(query)
-      .populate('contactoId', 'nombre telefono direccion email etiquetas')
+      .populate('contactoId', 'nombre telefono direccion pisoDepto codigoPostal etiquetas')
       .sort({ updatedAt: -1 })
       .lean();
 

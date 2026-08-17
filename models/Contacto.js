@@ -29,7 +29,11 @@ const ContactoSchema = new Schema(
       type: String,
       default: ''
     },
-    email: {
+    pisoDepto: {
+      type: String,
+      default: ''
+    },
+    codigoPostal: {
       type: String,
       default: ''
     },

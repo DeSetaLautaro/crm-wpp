@@ -6,7 +6,8 @@ const {
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
-  actualizarBotActivo
+  actualizarBotActivo,
+  actualizarContacto
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -25,3 +26,4 @@ router.put('/bot-activo', auth, actualizarBotActivo);
 router.put('/contacto/:contactoId', auth, actualizarContacto);
 
 module.exports = router;
+

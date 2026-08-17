@@ -9,7 +9,6 @@ const whatsappRoutes = require('./routes/whatsappRoutes');
 const pedidosRoutes = require('./routes/pedidosRoutes');
 const auth = require('./middlewares/auth');
 const { obtenerConversaciones } = require('./controllers/conversacionesController');
-const Usuario = require('./models/usuario');
 
 const app = express();
 

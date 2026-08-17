@@ -31,6 +31,10 @@ const recibirMensaje = async (req, res) => {
     }
 
     const metadata = value?.metadata || {};
+  // 1. Verificamos que 'contacts' exista y tenga al menos un elemento
+    const contact = value?.contacts?.[0];
+    // 2. Extraemos el nombre de forma segura (si no viene, le ponemos 'Cliente' por defecto)
+    const nombre = contact?.profile?.name || 'Cliente';    
     const whatsappPhoneId = metadata?.phone_number_id || metadata?.display_phone_number || '';
     const mensaje = value?.messages?.[0];
 
@@ -63,7 +67,7 @@ const recibirMensaje = async (req, res) => {
     let contacto = await Contacto.findOne({ empresaId: empresa._id, telefono: telefonoCliente });
     if (!contacto) {
       console.log("👤 [7] Creando nuevo contacto...");
-      contacto = await Contacto.create({ empresaId: empresa._id, telefono: telefonoCliente, nombre: '' });
+      contacto = await Contacto.create({ empresaId: empresa._id, telefono: telefonoCliente, nombre: nombre });
     }
 
     let conversacion = await Conversacion.findOne({ empresaId: empresa._id, contactoId: contacto._id, estado: 'Abierto' });

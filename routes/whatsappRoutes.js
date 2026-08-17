@@ -8,7 +8,9 @@ const {
   enviarMensaje,
   actualizarBotActivo,
   actualizarContacto,
-  obtenerPedidoActivo
+  obtenerPedidoActivo,
+  agregarEtiqueta,
+  eliminarEtiqueta
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -28,6 +30,12 @@ router.put('/contacto/:contactoId', auth, actualizarContacto);
 
 // Obtener pedido en curso / último pedido de una conversación (GET)
 router.get('/conversacion/:conversacionId/pedido-activo', auth, obtenerPedidoActivo);
+
+// Agregar etiqueta a un contacto (POST)
+router.post('/contacto/:contactoId/etiquetas', auth, agregarEtiqueta);
+
+// Eliminar etiqueta de un contacto (DELETE)
+router.delete('/contacto/:contactoId/etiquetas/:etiqueta', auth, eliminarEtiqueta);
 
 module.exports = router;
 

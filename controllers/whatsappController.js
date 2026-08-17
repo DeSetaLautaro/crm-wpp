@@ -419,11 +419,67 @@ const obtenerPedidoActivo = async (req, res) => {
   }
 };
 
+// ===== Agregar etiqueta a un contacto =====
+const agregarEtiqueta = async (req, res) => {
+  try {
+    const { contactoId } = req.params;
+    const { etiqueta } = req.body || {};
+
+    if (!etiqueta || typeof etiqueta !== 'string' || etiqueta.trim() === '') {
+      return res.status(400).json({ error: 'Etiqueta inválida' });
+    }
+
+    const contacto = await Contacto.findById(contactoId);
+    if (!contacto) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    const nueva = etiqueta.trim();
+    const actualizadas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
+    if (!actualizadas.includes(nueva)) {
+      actualizadas.push(nueva);
+      await Contacto.findByIdAndUpdate(contactoId, { $set: { etiquetas: actualizadas } }, { new: true });
+    }
+
+    return res.json({ ok: true, etiquetas: actualizadas });
+  } catch (error) {
+    console.error('Error al agregar etiqueta:', error);
+    return res.status(500).json({ error: 'Error interno al agregar etiqueta' });
+  }
+};
+
+// ===== Eliminar etiqueta de un contacto =====
+const eliminarEtiqueta = async (req, res) => {
+  try {
+    const { contactoId, etiqueta } = req.params;
+
+    if (!etiqueta) {
+      return res.status(400).json({ error: 'Etiqueta requerida' });
+    }
+
+    const contacto = await Contacto.findById(contactoId);
+    if (!contacto) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    const actuales = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
+    const filtradas = actuales.filter(e => e !== etiqueta);
+    await Contacto.findByIdAndUpdate(contactoId, { $set: { etiquetas: filtradas } }, { new: true });
+
+    return res.json({ ok: true, etiquetas: filtradas });
+  } catch (error) {
+    console.error('Error al eliminar etiqueta:', error);
+    return res.status(500).json({ error: 'Error interno al eliminar etiqueta' });
+  }
+};
+
 module.exports = {
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
   actualizarBotActivo,
   actualizarContacto,
-  obtenerPedidoActivo
+  obtenerPedidoActivo,
+  agregarEtiqueta,
+  eliminarEtiqueta
 };

@@ -2,14 +2,6 @@ const mongoose = require('mongoose');
 
 const { Schema, Types } = mongoose;
 
-const etiquetaSchema = new Schema({
-  nombre: String,
-  color: String,
-  creadoPor: String,
-  sucursal: String,
-  fecha: Date
-}, { _id: false });
-
 const ContactoSchema = new Schema(
   {
     empresaId: {
@@ -38,7 +30,7 @@ const ContactoSchema = new Schema(
       default: ''
     },
     etiquetas: {
-      type: [etiquetaSchema],
+      type: [String],
       default: []
     }
   },

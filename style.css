@@ -1036,3 +1036,78 @@ body {
 .detalle-input:focus {
   border-color: #2563EB;
 }
+
+/* ===== Gestión de etiquetas ===== */
+.etiquetas-input-wrapp {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.etiquetas-input-wrapp input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.etiquetas-input-wrapp input:focus {
+  border-color: #2563EB;
+}
+
+.etiqueta-btn-add {
+  background: #2563EB;
+  border: none;
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.2s;
+}
+
+.etiqueta-btn-add:hover {
+  background: #1D4ED8;
+}
+
+.etiquetas-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.etiqueta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #EFF6FF;
+  border: 1px solid #93C5FD;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #1E40AF;
+}
+
+.etiqueta-remove {
+  background: transparent;
+  border: none;
+  color: #6B7280;
+  font-size: 0.9rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.etiqueta-remove:hover {
+  color: #B91C1C;
+}
+
+.etiquetas-vacio {
+  color: #9CA3AF;
+  font-size: 0.85rem;
+}

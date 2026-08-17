@@ -20,19 +20,14 @@ const MOCK_CONTACTOS = [
     empresaId: 'emp1',
     telefono: '5491100000001',
     nombre: 'Martina',
-    etiquetas: [
-      { nombre: 'VIP', color: '#F59E0B', creadoPor: 'Laura', sucursal: 'Palermo', fecha: new Date('2024-01-10T10:00:00') },
-      { nombre: 'Quejoso', color: '#EF4444', creadoPor: 'Juan', sucursal: 'Palermo', fecha: new Date('2024-02-15T14:30:00') }
-    ]
+    etiquetas: ['VIP', 'Quejoso']
   },
   {
     _id: 'c2',
     empresaId: 'emp1',
     telefono: '5491100000002',
     nombre: 'Roberto',
-    etiquetas: [
-      { nombre: 'VIP', color: '#F59E0B', creadoPor: 'Laura', sucursal: 'Palermo', fecha: new Date('2024-03-01T09:00:00') }
-    ]
+    etiquetas: ['VIP']
   },
   {
     _id: 'c3',
@@ -119,6 +114,14 @@ function formatearFechaTooltip(fecha) {
 }
 
 // ===== Renderers =====
+function colorFromString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return `hsl(${hash % 360}, 65%, 45%)`;
+}
+
 function renderListaChats() {
   const container = document.getElementById('lista-chats');
   let filtrados;
@@ -226,14 +229,19 @@ function renderPerfil(contacto) {
   if (avatar) avatar.textContent = (nombre || '?').charAt(0).toUpperCase();
 
   const contEtiquetas = document.getElementById('lista-etiquetas');
-  if (contacto.etiquetas.length === 0) {
-    contEtiquetas.innerHTML = '<span style="color:#9CA3AF; font-size:0.85rem">Sin etiquetas</span>';
+  if (!contEtiquetas) return;
+  const etiquetas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
+  if (etiquetas.length === 0) {
+    contEtiquetas.innerHTML = '<span class="etiquetas-vacio">Sin etiquetas asignadas</span>';
     return;
   }
 
-  contEtiquetas.innerHTML = contacto.etiquetas.map(etiqueta => {
-    const tooltip = `Creada por: ${etiqueta.creadoPor} · Sucursal: ${etiqueta.sucursal} · ${formatearFechaTooltip(etiqueta.fecha)}`;
-    return `<span class="badge-etiqueta" style="background:${etiqueta.color}" title="${tooltip}">${etiqueta.nombre}</span>`;
+  contEtiquetas.innerHTML = etiquetas.map(etiqueta => {
+    const color = colorFromString(etiqueta);
+    return `<span class="etiqueta-pill" style="background:${color}22; border-color:${color}">
+              ${etiqueta}
+              <button class="etiqueta-remove" data-etiqueta="${etiqueta}" title="Eliminar etiqueta">×</button>
+            </span>`;
   }).join('');
 }
 
@@ -638,6 +646,73 @@ async function cargarPedidoActivo(conversacionId) {
   }
 }
 
+// ===== Funciones de etiquetas =====
+async function agregarEtiquetaDesdeUI() {
+  const input = document.getElementById('nueva-etiqueta-input');
+  if (!input) return;
+  const etiqueta = input.value.trim();
+  if (!etiqueta || !chatActivoId) return;
+
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) return;
+
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}/etiquetas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ etiqueta })
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al agregar etiqueta:', data.error || res.status);
+      return;
+    }
+
+    const data = await res.json();
+    contacto.etiquetas = data.etiquetas || [...(contacto.etiquetas || []), etiqueta];
+    input.value = '';
+    if (chatActivoId) renderChatActivo();
+  } catch (error) {
+    console.error('Error de red al agregar etiqueta:', error);
+  }
+}
+
+async function eliminarEtiquetaDesdeUI(etiqueta) {
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) return;
+
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}/etiquetas/${encodeURIComponent(etiqueta)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al eliminar etiqueta:', data.error || res.status);
+      return;
+    }
+
+    const data = await res.json();
+    contacto.etiquetas = data.etiquetas || [];
+    if (chatActivoId) renderChatActivo();
+  } catch (error) {
+    console.error('Error de red al eliminar etiqueta:', error);
+  }
+}
+
 // ===== Eventos =====
 function init() {
   // Pestañas
@@ -749,6 +824,33 @@ function init() {
   if (btnCerrar) btnCerrar.addEventListener('click', cerrarDetallesModal);
   const btnGuardarModal = document.getElementById('modal-guardar-detalles');
   if (btnGuardarModal) btnGuardarModal.addEventListener('click', guardarDetallesDesdeModal);
+
+  // Botón y input para agregar etiquetas
+  const btnAgregarEtiqueta = document.getElementById('btn-agregar-etiqueta');
+  const inputNuevaEtiqueta = document.getElementById('nueva-etiqueta-input');
+  if (btnAgregarEtiqueta) {
+    btnAgregarEtiqueta.addEventListener('click', agregarEtiquetaDesdeUI);
+  }
+  if (inputNuevaEtiqueta) {
+    inputNuevaEtiqueta.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        agregarEtiquetaDesdeUI();
+      }
+    });
+  }
+
+  // Delegación para eliminar etiquetas (clic en la ×)
+  const listaEtiquetas = document.getElementById('lista-etiquetas');
+  if (listaEtiquetas) {
+    listaEtiquetas.addEventListener('click', (e) => {
+      const btnEliminar = e.target.closest('.etiqueta-remove');
+      if (btnEliminar) {
+        const etiqueta = btnEliminar.dataset.etiqueta;
+        eliminarEtiquetaDesdeUI(etiqueta);
+      }
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

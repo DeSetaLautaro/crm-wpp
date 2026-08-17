@@ -446,6 +446,13 @@ function setupSocketListeners() {
       cargarConversaciones();
     }
   });
+
+  socket.on('pedido-actualizado', (payload) => {
+    if (!payload || !payload.conversacionId) return;
+    if (payload.conversacionId === chatActivoId) {
+      cargarPedidoActivo(payload.conversacionId);
+    }
+  });
 }
 
 // ===== Envío manual de mensaje desde el dashboard =====
@@ -598,7 +605,7 @@ async function cargarPedidoActivo(conversacionId) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
     const pedido = data.pedido;
-    if (!pedido) {
+    if (!pedido || pedido.estado === 'Entregado' || pedido.estado === 'Cancelado') {
       contenedor.innerHTML = '<span style="color:#9CA3AF;">Sin pedidos en curso</span>';
       return;
     }

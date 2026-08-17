@@ -49,10 +49,14 @@ const PedidoSchema = new Schema(
     },
     estado: {
       type: String,
-      enum: ['Pendiente', 'En preparación', 'Entregado', 'Cancelado'],
-      default: 'Pendiente'
+      enum: ['Borrador', 'Pendiente', 'En preparación', 'Entregado', 'Cancelado'],
+      default: 'Borrador'
     },
     direccionEntrega: {
+      type: String,
+      default: ''
+    },
+    metodoPago: {
       type: String,
       default: ''
     }

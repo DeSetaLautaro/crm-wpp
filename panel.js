@@ -500,6 +500,15 @@ function init() {
         e.target.checked = !nuevoValor;
         document.getElementById('estado-bot').textContent = !nuevoValor ? 'Bot Activo' : 'Pausado';
         console.error('Error al actualizar botActivo');
+      } else {
+        // Actualizar conversaciones locales para reflejar el nuevo estado
+        CONVERSACIONES.forEach(c => {
+          c.botActivo = nuevoValor;
+        });
+        renderListaChats();
+        if (chatActivoId) {
+          renderChatActivo();
+        }
       }
     } catch (error) {
       e.target.checked = !nuevoValor;

@@ -73,7 +73,7 @@ const recibirMensaje = async (req, res) => {
         empresaId: empresa._id,
         contactoId: contacto._id,
         lineaReceptora: whatsappPhoneId,
-        botActivo: true,
+        botActivo: empresa.botActivo !== false,
         estado: 'Abierto',
         ultimoMensaje: textoMensaje
       });
@@ -307,6 +307,11 @@ const actualizarBotActivo = async (req, res) => {
     if (!empresa) {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
+
+    await Conversacion.updateMany(
+      { empresaId },
+      { $set: { botActivo } }
+    );
 
     return res.json({ ok: true, botActivo: empresa.botActivo });
   } catch (error) {

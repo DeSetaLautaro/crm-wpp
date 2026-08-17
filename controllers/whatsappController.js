@@ -92,6 +92,42 @@ const recibirMensaje = async (req, res) => {
 
     await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
 
+    // ===== Extracción automática de datos del cliente con IA =====
+    try {
+      if (process.env.GEMINI_API_KEY) {
+        const promptExtract = `Analizá el siguiente mensaje de un cliente. Si contiene una dirección física, indicála en el campo "direccion". Si contiene un correo electrónico, indicálo en el campo "email". Respondé solo con un JSON válido con estos dos campos, usando string vacío cuando no se encuentre el dato.
+
+Mensaje: "${textoMensaje}"
+
+JSON:`;
+
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+        const result = await model.generateContent(promptExtract);
+        const rawText = result.response.text().trim().replace(/```json/g, '').replace(/```/g, '').trim();
+        const startIdx = rawText.indexOf('{');
+        const endIdx = rawText.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          const jsonStr = rawText.substring(startIdx, endIdx + 1);
+          const data = JSON.parse(jsonStr);
+          if (data && data.direccion && typeof data.direccion === 'string') {
+            await Contacto.findByIdAndUpdate(contacto._id, { $set: { direccion: data.direccion } });
+          }
+          if (data && data.email && typeof data.email === 'string') {
+            await Contacto.findByIdAndUpdate(contacto._id, { $set: { email: data.email } });
+          }
+        }
+      } else {
+        const emailRegex = /[\w.-]+@[\w-]+\.[\w.-]+/;
+        const emailMatch = textoMensaje.match(emailRegex);
+        if (emailMatch && emailMatch[0]) {
+          await Contacto.findByIdAndUpdate(contacto._id, { $set: { email: emailMatch[0] } });
+        }
+      }
+    } catch (error) {
+      console.error('⚠️ Error al extraer datos del cliente con IA:', error);
+    }
+
     // Emitir mensaje entrante a los clientes conectados
     const io = req.app.get('io');
     if (io) {
@@ -324,9 +360,41 @@ const actualizarBotActivo = async (req, res) => {
   }
 };
 
+// ===== Actualizar datos manuales del cliente =====
+const actualizarContacto = async (req, res) => {
+  try {
+    const { contactoId } = req.params;
+    const { direccion, email } = req.body || {};
+
+    const updates = {};
+    if (typeof direccion === 'string') updates.direccion = direccion;
+    if (typeof email === 'string') updates.email = email;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'Debes enviar al menos direccion o email' });
+    }
+
+    const contacto = await Contacto.findByIdAndUpdate(
+      contactoId,
+      { $set: updates },
+      { new: true }
+    );
+
+    if (!contacto) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    return res.json({ ok: true, contacto });
+  } catch (error) {
+    console.error('Error al actualizar contacto:', error);
+    return res.status(500).json({ error: 'Error interno al actualizar contacto' });
+  }
+};
+
 module.exports = {
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
-  actualizarBotActivo
+  actualizarBotActivo,
+  actualizarContacto
 };

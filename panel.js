@@ -209,6 +209,10 @@ function renderPerfil(contacto) {
 
   document.getElementById('perfil-nombre').value = nombre;
   document.getElementById('perfil-telefono').value = telefono;
+  const inputDireccion = document.getElementById('perfil-direccion-input');
+  const inputEmail = document.getElementById('perfil-email-input');
+  if (inputDireccion) inputDireccion.value = contacto.direccion || '';
+  if (inputEmail) inputEmail.value = contacto.email || '';
   const nombreTexto = document.getElementById('perfil-nombre-texto');
   if (nombreTexto) nombreTexto.textContent = nombre;
   const telefonoTexto = document.getElementById('perfil-telefono-texto');
@@ -467,6 +471,42 @@ async function enviarMensajeDesdePanel() {
   }
 }
 
+async function guardarDetallesCliente() {
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) {
+    console.error('Contacto no encontrado');
+    return;
+  }
+
+  const direccion = (document.getElementById('perfil-direccion-input') || {}).value?.trim() || '';
+  const email = (document.getElementById('perfil-email-input') || {}).value?.trim() || '';
+
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ direccion, email })
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al guardar detalles:', data.error || res.status);
+      return;
+    }
+
+    contacto.direccion = direccion;
+    contacto.email = email;
+  } catch (error) {
+    console.error('Error de red al guardar detalles:', error);
+  }
+}
+
 // ===== Eventos =====
 function init() {
   // Pestañas
@@ -548,6 +588,12 @@ function init() {
         enviarMensajeDesdePanel();
       }
     });
+  }
+
+  // Guardar detalles del cliente
+  const btnGuardarDetalles = document.getElementById('btn-guardar-detalles');
+  if (btnGuardarDetalles) {
+    btnGuardarDetalles.addEventListener('click', guardarDetallesCliente);
   }
 }
 

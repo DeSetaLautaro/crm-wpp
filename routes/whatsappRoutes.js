@@ -21,4 +21,7 @@ router.post('/enviar', auth, enviarMensaje);
 // Actualización del estado botActivo de la empresa (PUT)
 router.put('/bot-activo', auth, actualizarBotActivo);
 
+// Actualización de datos manuales de un cliente (PUT)
+router.put('/contacto/:contactoId', auth, actualizarContacto);
+
 module.exports = router;

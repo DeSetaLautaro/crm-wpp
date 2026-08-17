@@ -25,6 +25,14 @@ const ContactoSchema = new Schema(
       type: String,
       default: ''
     },
+    direccion: {
+      type: String,
+      default: ''
+    },
+    email: {
+      type: String,
+      default: ''
+    },
     etiquetas: {
       type: [etiquetaSchema],
       default: []

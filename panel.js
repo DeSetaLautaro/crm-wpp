@@ -215,8 +215,8 @@ function renderChatActivo() {
   // Etiquetas del perfil
   renderPerfil(contacto);
 
-  // Cargar pedido activo
-  cargarPedidoActivo(conv._id, contacto.telefono);
+  // Mostrar carrito en vivo o último pedido confirmado
+  renderPanelPedido(conv, contacto);
 }
 
 function renderPerfil(contacto) {
@@ -411,7 +411,9 @@ async function cargarConversaciones() {
         botActivo: conv.botActivo ?? true,
         estado: conv.estado || 'Abierto',
         ultimoMensaje: conv.ultimoMensaje || '',
-        ultimaFecha: conv.updatedAt ? new Date(conv.updatedAt) : new Date()
+        ultimaFecha: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
+        carrito: conv.carrito || [],
+        carritoTotal: conv.carritoTotal || 0
       };
     });
 
@@ -521,6 +523,18 @@ function setupSocketListeners() {
     } else {
       // Puede ser una conversación nueva, recargamos para obtenerla completa
       cargarConversaciones();
+    }
+  });
+
+  socket.on('carrito-actualizado', (payload) => {
+    if (!payload || !payload.conversacionId) return;
+    const conv = CONVERSACIONES.find(c => c._id === payload.conversacionId);
+    if (conv) {
+      conv.carrito = payload.carrito || [];
+      conv.carritoTotal = payload.total || 0;
+      if (chatActivoId === payload.conversacionId) {
+        renderPanelPedido(conv, getContactoPorId(conv.contactoId));
+      }
     }
   });
 
@@ -712,6 +726,39 @@ async function cargarPedidoActivo(conversacionId, telefono) {
     console.error('Error al obtener pedido:', error);
     contenedor.innerHTML = '<span style="color:#9CA3AF;">No se pudo cargar el pedido</span>';
   }
+}
+
+function renderCarrito(items, total) {
+  let html = '';
+  if (!items || items.length === 0) {
+    return '<span style="color:#9CA3AF;">Sin ítems aún</span>';
+  }
+  items.forEach(item => {
+    const cantidad = item.cantidad || 1;
+    const precio = item.precioUnitario || 0;
+    const subtotal = (cantidad * precio).toFixed(2);
+    html += `<div class="pedido-item">
+      <span class="pedido-item-nombre">${item.nombre}</span>
+      <span class="pedido-item-cantidad">× ${cantidad}</span>
+      <span class="pedido-item-precio">$${precio.toFixed(2)}</span>
+      <span class="pedido-item-subtotal">$${subtotal}</span>
+    </div>`;
+  });
+  html += `<div class="pedido-total">Total parcial: $${(Number(total) || 0).toFixed(2)}</div>`;
+  return html;
+}
+
+function renderPanelPedido(conv, contacto) {
+  const contenedor = document.getElementById('pedido-info');
+  if (!contenedor) return;
+
+  if (conv.carrito && conv.carrito.length > 0) {
+    contenedor.innerHTML = renderCarrito(conv.carrito, conv.carritoTotal);
+    return;
+  }
+
+  // No hay carrito en construcción → buscamos último pedido confirmado
+  cargarPedidoActivo(conv._id, contacto.telefono);
 }
 
 function renderPedido(contenedor, pedido) {

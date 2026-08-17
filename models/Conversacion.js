@@ -30,6 +30,20 @@ const ConversacionSchema = new Schema(
     ultimoMensaje: {
       type: String,
       default: ''
+    },
+    carrito: {
+      type: [
+        {
+          nombre: { type: String, default: '' },
+          cantidad: { type: Number, default: 1 },
+          precioUnitario: { type: Number, default: 0 }
+        }
+      ],
+      default: []
+    },
+    carritoTotal: {
+      type: Number,
+      default: 0
     }
   },
   { timestamps: true }

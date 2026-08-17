@@ -5,6 +5,44 @@ const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
 const Producto = require('../models/Producto');
 const Pedido = require('../models/Pedido');
+const { guardarPedidoConfirmado } = require('./pedidosController');
+
+async function procesarCarrito(empresa, conversacion, texto, productos) {
+  if (!process.env.GEMINI_API_KEY) return null;
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+    const menu = productos.map(p => `- ${p.nombre} ($${p.precio})`).join('\n');
+    const prompt = `Actúa como sistema de punto de venta. El cliente escribió: "${texto}".
+      Interpretá el pedido y devolvé un JSON con la estructura:
+      {
+        "items": [
+          {"nombre": "...", "cantidad": 2, "precioUnitario": 10}
+        ],
+        "total": 20
+      }
+      Si el mensaje no hace referencia a ningún ítem, devolvé null.
+      Catálogo:\n${menu}
+      Respuesta JSON:`;
+    const result = await model.generateContent(prompt);
+    const raw = result.response.text().trim().replace(/```json/g, '').replace(/```/g, '').trim();
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start === -1 || end === -1) return null;
+    const data = JSON.parse(raw.substring(start, end + 1));
+    if (!data || !Array.isArray(data.items)) return null;
+    return { items: data.items, total: Number(data.total) || 0 };
+  } catch (error) {
+    console.error('⚠️ Error al procesar carrito:', error);
+    return null;
+  }
+}
+
+function detectarConfirmacionPedido(texto) {
+  const lower = texto.toLowerCase();
+  const confirmaciones = ['confirmo', 'confirmar', 'confirmado', 'dale', 'si, quiero', 'sí, quiero', 'si quiero', 'sí quiero', 'hago el pedido', 'ok, pago', 'vamos'];
+  return confirmaciones.some(p => lower.includes(p));
+}
 
 const verificarWebhook = (req, res) => {
   const mode = req.query['hub.mode'];
@@ -82,6 +120,27 @@ const recibirMensaje = async (req, res) => {
         estado: 'Abierto',
         ultimoMensaje: textoMensaje
       });
+    }
+
+    // ===== Procesar carrito en vivo =====
+    const carritoProcesado = await procesarCarrito(empresa, conversacion, textoMensaje, productos);
+    if (carritoProcesado) {
+      conversacion.carrito = carritoProcesado.items;
+      conversacion.carritoTotal = carritoProcesado.total;
+      await Conversacion.findByIdAndUpdate(conversacion._id, {
+        $set: {
+          carrito: carritoProcesado.items,
+          carritoTotal: carritoProcesado.total
+        }
+      });
+      const ioCarrito = req.app.get('io');
+      if (ioCarrito) {
+        ioCarrito.to(empresa._id.toString()).emit('carrito-actualizado', {
+          conversacionId: conversacion._id,
+          carrito: carritoProcesado.items,
+          total: carritoProcesado.total
+        });
+      }
     }
 
     console.log("📝 [9] Guardando mensaje...");
@@ -187,6 +246,50 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
       });
 
       await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: respuestaIA });
+
+      // ===== Guardar pedido si el cliente confirmó la orden =====
+      try {
+        if (detectarConfirmacionPedido(textoMensaje)) {
+          const carritoActual = conversacion.carrito || [];
+          if (carritoActual.length > 0) {
+            const totalCarrito = (conversacion.carritoTotal || 0) ||
+              carritoActual.reduce((sum, it) => sum + (it.cantidad * it.precioUnitario), 0);
+            await guardarPedidoConfirmado({
+              localId: empresa._id,
+              cliente: contacto.nombre || nombre,
+              telefonoCliente: contacto.telefono,
+              items: carritoActual,
+              total: totalCarrito,
+              metodoPago: 'Pendiente',
+              estado: 'confirmado',
+              direccion: contacto.direccion || '',
+              notas: '',
+              fechaTurno: '',
+              fecha: new Date()
+            });
+
+            // Limpiar carrito después de confirmar
+            await Conversacion.findByIdAndUpdate(conversacion._id, {
+              $set: { carrito: [], carritoTotal: 0 }
+            });
+            conversacion.carrito = [];
+            conversacion.carritoTotal = 0;
+            const ioCarrito2 = req.app.get('io');
+            if (ioCarrito2) {
+              ioCarrito2.to(empresa._id.toString()).emit('carrito-actualizado', {
+                conversacionId: conversacion._id,
+                carrito: [],
+                total: 0
+              });
+            }
+            console.log(`✅ [PEDIDO] Pedido guardado para el cliente ${contacto.telefono}`);
+          } else {
+            console.log(`ℹ️ [PEDIDO] El cliente confirmó pero no hay items en el carrito`);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error al guardar pedido en BD:', error);
+      }
 
       const io = req.app.get('io');
       if (io) {

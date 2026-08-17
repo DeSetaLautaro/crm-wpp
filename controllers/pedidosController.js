@@ -13,7 +13,7 @@ async function guardarPedidoConfirmado(datos) {
 // Endpoint POST /api/pedidos (cumple el flujo de confirmación)
 async function confirmarPedido(req, res) {
   try {
-    const localId = req.parrillaId || req.empresaId;
+    const localId = req.usuario.id || req.userId;
     if (!localId) {
       return res.status(400).json({ error: 'No se pudo identificar el local' });
     }
@@ -54,7 +54,7 @@ async function confirmarPedido(req, res) {
 async function obtenerPedidosPorTelefono(req, res) {
   try {
     const { telefono } = req.params;
-    const localId = req.parrillaId || req.empresaId;
+    const localId = req.usuario.id || req.userId;
     if (!localId) {
       return res.status(400).json({ error: 'No se pudo identificar el local' });
     }

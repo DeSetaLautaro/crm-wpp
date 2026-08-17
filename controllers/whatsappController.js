@@ -4,6 +4,7 @@ const Contacto = require('../models/Contacto');
 const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
 const Producto = require('../models/Producto');
+const Pedido = require('../models/Pedido');
 
 const verificarWebhook = (req, res) => {
   const mode = req.query['hub.mode'];
@@ -391,10 +392,38 @@ const actualizarContacto = async (req, res) => {
   }
 };
 
+// ===== Obtener pedido activo / último pedido de una conversación =====
+const obtenerPedidoActivo = async (req, res) => {
+  try {
+    const { conversacionId } = req.params;
+    const conversacion = await Conversacion.findById(conversacionId);
+    if (!conversacion) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+
+    const empresaIdStr = conversacion.empresaId.toString();
+    const reqEmpresaId = req.parrillaId ? String(req.parrillaId) : '';
+    if (reqEmpresaId && empresaIdStr !== reqEmpresaId) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+
+    const pedido = await Pedido.findOne({
+      conversacionId,
+      estado: { $nin: ['Entregado', 'Cancelado'] }
+    }).sort({ createdAt: -1 });
+
+    return res.json({ ok: true, pedido });
+  } catch (error) {
+    console.error('Error al obtener pedido activo:', error);
+    return res.status(500).json({ error: 'Error interno al obtener pedido activo' });
+  }
+};
+
 module.exports = {
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
   actualizarBotActivo,
-  actualizarContacto
+  actualizarContacto,
+  obtenerPedidoActivo
 };

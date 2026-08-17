@@ -7,7 +7,8 @@ const {
   recibirMensaje,
   enviarMensaje,
   actualizarBotActivo,
-  actualizarContacto
+  actualizarContacto,
+  obtenerPedidoActivo
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -24,6 +25,9 @@ router.put('/bot-activo', auth, actualizarBotActivo);
 
 // Actualización de datos manuales de un cliente (PUT)
 router.put('/contacto/:contactoId', auth, actualizarContacto);
+
+// Obtener pedido en curso / último pedido de una conversación (GET)
+router.get('/conversacion/:conversacionId/pedido-activo', auth, obtenerPedidoActivo);
 
 module.exports = router;
 

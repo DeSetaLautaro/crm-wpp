@@ -201,6 +201,9 @@ function renderChatActivo() {
 
   // Etiquetas del perfil
   renderPerfil(contacto);
+
+  // Cargar pedido activo
+  cargarPedidoActivo(conv._id);
 }
 
 function renderPerfil(contacto) {
@@ -508,6 +511,54 @@ async function guardarDetallesCliente() {
     contacto.codigoPostal = codigoPostal;
   } catch (error) {
     console.error('Error de red al guardar detalles:', error);
+  }
+}
+
+// ===== Cargar pedido activo =====
+async function cargarPedidoActivo(conversacionId) {
+  const token = localStorage.getItem('token') || '';
+  const contenedor = document.getElementById('pedido-info');
+  if (!contenedor) return;
+  contenedor.innerHTML = '<span style="color:#9CA3AF;">Cargando...</span>';
+  try {
+    const res = await fetch(`/api/whatsapp/conversacion/${conversacionId}/pedido-activo`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
+    const pedido = data.pedido;
+    if (!pedido) {
+      contenedor.innerHTML = '<span style="color:#9CA3AF;">Sin pedidos en curso</span>';
+      return;
+    }
+    let html = '';
+    if (pedido.items && pedido.items.length) {
+      pedido.items.forEach(item => {
+        const cantidad = item.cantidad || 0;
+        const precio = item.precioUnitario || 0;
+        const subtotal = (cantidad * precio).toFixed(2);
+        html += `<div class="pedido-item">
+          <span class="pedido-item-nombre">${item.nombre}</span>
+          <span class="pedido-item-cantidad">× ${cantidad}</span>
+          <span class="pedido-item-precio">$${precio.toFixed(2)}</span>
+          <span class="pedido-item-subtotal">$${subtotal}</span>
+        </div>`;
+      });
+    } else {
+      html = '<div style="color:#9CA3AF;">Pedido sin ítems</div>';
+    }
+    const total = (pedido.total || 0).toFixed(2);
+    const direccion = pedido.direccionEntrega || 'No especificada';
+    const estado = pedido.estado || 'Pendiente';
+    html += `<div class="pedido-total">Total: $${total}</div>`;
+    html += `<div class="pedido-direccion">Entrega: ${direccion}</div>`;
+    html += `<div class="pedido-estado"><span class="badge-estado">${estado}</span></div>`;
+    contenedor.innerHTML = html;
+  } catch (error) {
+    console.error('Error al obtener pedido:', error);
+    contenedor.innerHTML = '<span style="color:#9CA3AF;">No se pudo cargar el pedido</span>';
   }
 }
 

@@ -419,6 +419,15 @@ async function cargarConversaciones() {
     CONVERSACIONES = conversacionesLocal;
     MENSAJES = mensajesAll;
 
+    // Obtener líneas de WhatsApp desde las conversaciones (ya no usamos /api/usuario)
+    const lineas = Array.from(new Set(conversacionesLocal.map(c => c.lineaReceptora).filter(Boolean)));
+    if (lineas.length > 0) {
+      poblarSelectorWhatsApp(lineas);
+      if (!whatsappSeleccionado || !lineas.includes(whatsappSeleccionado)) {
+        whatsappSeleccionado = lineas[0];
+      }
+    }
+
     if (!chatActivoId && CONVERSACIONES.length > 0) {
       chatActivoId = CONVERSACIONES[0]._id;
     }
@@ -442,6 +451,10 @@ async function cargarConversaciones() {
     CONVERSACIONES = [...MOCK_CONVERSACIONES];
     CONTACTOS = [...MOCK_CONTACTOS];
     MENSAJES = [...MOCK_MENSAJES];
+    poblarSelectorWhatsApp(MOCK_USUARIO.telefonosWhatsApp);
+    if (MOCK_USUARIO.telefonosWhatsApp.length > 0) {
+      whatsappSeleccionado = MOCK_USUARIO.telefonosWhatsApp[0];
+    }
     renderTodo();
   }
 }
@@ -459,34 +472,8 @@ async function cargarDatosUsuario() {
     return;
   }
 
-  try {
-    const token = localStorage.getItem('token') || '';
-    const res = await fetch('/api/usuario', {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    if (!res.ok) {
-      throw new Error(`Error HTTP: ${res.status}`);
-    }
-    const data = await res.json();
-    const usuario = data.usuario || {};
-    const telefonos = Array.isArray(usuario.telefonosWhatsApp) ? usuario.telefonosWhatsApp : [];
-    poblarSelectorWhatsApp(telefonos);
-    if (telefonos.length > 0) {
-      whatsappSeleccionado = telefonos[0];
-    } else {
-      whatsappSeleccionado = null;
-    }
-  } catch (error) {
-    console.error('Error al cargar datos del usuario:', error);
-    // Fallback a mock
-    const usuario = MOCK_USUARIO;
-    poblarSelectorWhatsApp(usuario.telefonosWhatsApp);
-    if (usuario.telefonosWhatsApp.length > 0) {
-      whatsappSeleccionado = usuario.telefonosWhatsApp[0];
-    }
-  }
+  // El manejo de usuarios queda en otro proyecto.
+  // Las líneas de WhatsApp se obtienen de las conversaciones (cargarConversaciones).
 }
 
 function poblarSelectorWhatsApp(telefonos) {

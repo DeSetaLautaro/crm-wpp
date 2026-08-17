@@ -18,30 +18,6 @@ app.use(express.static(__dirname));
 // Endpoint para listar conversaciones de la Parrilla (protegido)
 app.get('/api/conversaciones', auth, obtenerConversaciones);
 
-// Endpoint para obtener datos del usuario (nombreSucursal y telefonosWhatsApp)
-app.get('/api/usuario', auth, async (req, res) => {
-  try {
-    const usuarioId = req.parrillaId || req.usuario?.id;
-    if (!usuarioId) {
-      return res.status(400).json({ error: 'No se pudo identificar el usuario' });
-    }
-    const usuario = await Usuario.findById(usuarioId).lean();
-    if (!usuario) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
-    }
-    res.json({
-      ok: true,
-      usuario: {
-        nombreSucursal: usuario.nombreSucursal,
-        telefonosWhatsApp: usuario.telefonosWhatsApp || []
-      }
-    });
-  } catch (error) {
-    console.error('Error al obtener usuario:', error);
-    res.status(500).json({ error: 'Error interno al obtener usuario' });
-  }
-});
-
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 

@@ -364,7 +364,10 @@ async function cargarConversaciones() {
           empresaId: conv.empresaId,
           telefono,
           nombre,
-          etiquetas: []
+          direccion: contacto.direccion || '',
+          pisoDepto: contacto.pisoDepto || '',
+          codigoPostal: contacto.codigoPostal || '',
+          etiquetas: Array.isArray(contacto.etiquetas) ? contacto.etiquetas : []
         });
       }
 

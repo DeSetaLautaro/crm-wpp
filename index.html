@@ -81,7 +81,10 @@
             <div class="perfil-acciones">
               <button class="perfil-accion" title="Bloquear">🚫</button>
               <button class="perfil-accion" title="Llamar">📞</button>
-              <button class="perfil-accion" title="Más">⋯</button>
+              <button class="perfil-accion" id="btn-mas" title="Más">⋯</button>
+              <div id="perfil-menu" class="perfil-menu hidden">
+                <button id="btn-detalles-modal" class="perfil-menu-item">Detalles</button>
+              </div>
             </div>
           </div>
 
@@ -131,6 +134,37 @@
               <div class="archivo-miniatura"></div>
               <div class="archivo-miniatura"></div>
               <div class="archivo-miniatura"></div>
+            </div>
+          </div>
+
+          <!-- Modal de detalles (se abre desde el menú de tres puntos) -->
+          <div id="modal-detalles" class="modal-detalles hidden">
+            <div class="modal-header">
+              <span>Detalles del Contacto</span>
+              <button id="btn-cerrar-detalles" class="btn-cerrar">✕</button>
+            </div>
+            <div class="modal-body">
+              <div class="detalle-item">
+                <span class="detalle-la">Nombre</span>
+                <input type="text" id="modal-nombre" class="detalle-input" disabled>
+              </div>
+              <div class="detalle-item">
+                <span class="detalle-la">Teléfono</span>
+                <input type="text" id="modal-telefono" class="detalle-input" disabled>
+              </div>
+              <div class="detalle-item">
+                <span class="detalle-la">Dirección</span>
+                <input type="text" id="modal-direccion" class="detalle-input">
+              </div>
+              <div class="detalle-item">
+                <span class="detalle-la">Piso / Depto</span>
+                <input type="text" id="modal-pisodpto" class="detalle-input">
+              </div>
+              <div class="detalle-item">
+                <span class="detalle-la">Código Postal / Localidad</span>
+                <input type="text" id="modal-codigopostal" class="detalle-input">
+              </div>
+              <button id="modal-guardar-detalles" class="btn-guardar-detalles">Guardar Cambios</button>
             </div>
           </div>
 

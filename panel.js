@@ -514,6 +514,75 @@ async function guardarDetallesCliente() {
   }
 }
 
+// ===== Funciones para modal de detalles =====
+function abrirDetallesModal() {
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) return;
+
+  document.getElementById('modal-nombre').value = contacto.nombre || '';
+  document.getElementById('modal-telefono').value = contacto.telefono || '';
+  document.getElementById('modal-direccion').value = contacto.direccion || '';
+  document.getElementById('modal-pisodpto').value = contacto.pisoDepto || '';
+  document.getElementById('modal-codigopostal').value = contacto.codigoPostal || '';
+
+  const menu = document.getElementById('perfil-menu');
+  if (menu) menu.classList.add('hidden');
+  const modal = document.getElementById('modal-detalles');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function cerrarDetallesModal() {
+  const modal = document.getElementById('modal-detalles');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function guardarDetallesDesdeModal() {
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) return;
+
+  const direccion = (document.getElementById('modal-direccion') || {}).value?.trim() || '';
+  const pisoDepto = (document.getElementById('modal-pisodpto') || {}).value?.trim() || '';
+  const codigoPostal = (document.getElementById('modal-codigopostal') || {}).value?.trim() || '';
+
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ direccion, pisoDepto, codigoPostal })
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al guardar detalles:', data.error || res.status);
+      return;
+    }
+
+    contacto.direccion = direccion;
+    contacto.pisoDepto = pisoDepto;
+    contacto.codigoPostal = codigoPostal;
+
+    // Sincronizar con los campos del panel principal
+    const inputDir = document.getElementById('perfil-direccion-input');
+    const inputPiso = document.getElementById('perfil-pisodpto-input');
+    const inputCP = document.getElementById('perfil-codigopostal-input');
+    if (inputDir) inputDir.value = direccion;
+    if (inputPiso) inputPiso.value = pisoDepto;
+    if (inputCP) inputCP.value = codigoPostal;
+
+    cerrarDetallesModal();
+  } catch (error) {
+    console.error('Error de red al guardar detalles:', error);
+  }
+}
+
 // ===== Cargar pedido activo =====
 async function cargarPedidoActivo(conversacionId) {
   const token = localStorage.getItem('token') || '';
@@ -650,6 +719,29 @@ function init() {
   if (btnGuardarDetalles) {
     btnGuardarDetalles.addEventListener('click', guardarDetallesCliente);
   }
+
+  // Menú de tres puntos en perfil-header
+  const btnMas = document.getElementById('btn-mas');
+  const perfilMenu = document.getElementById('perfil-menu');
+  if (btnMas && perfilMenu) {
+    btnMas.addEventListener('click', (e) => {
+      e.stopPropagation();
+      perfilMenu.classList.toggle('hidden');
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (perfilMenu && !e.target.closest('.perfil-acciones')) {
+      perfilMenu.classList.add('hidden');
+    }
+  });
+
+  // Abrir y cerrar modal de detalles
+  const btnDetalles = document.getElementById('btn-detalles-modal');
+  if (btnDetalles) btnDetalles.addEventListener('click', abrirDetallesModal);
+  const btnCerrar = document.getElementById('btn-cerrar-detalles');
+  if (btnCerrar) btnCerrar.addEventListener('click', cerrarDetallesModal);
+  const btnGuardarModal = document.getElementById('modal-guardar-detalles');
+  if (btnGuardarModal) btnGuardarModal.addEventListener('click', guardarDetallesDesdeModal);
 }
 
 document.addEventListener('DOMContentLoaded', init);

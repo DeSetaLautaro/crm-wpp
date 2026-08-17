@@ -14,6 +14,12 @@ const MOCK_EMPRESA = {
   promptIA: ''
 };
 
+const MOCK_USUARIO = {
+  _id: 'emp1',
+  nombreSucursal: 'Heladería Palermo',
+  telefonosWhatsApp: ['Palermo', 'Recoleta']
+};
+
 const MOCK_CONTACTOS = [
   {
     _id: 'c1',
@@ -91,6 +97,7 @@ let pestanaActiva = 'pendientes';
 let chatActivoId = null;
 let socket = null;
 let miEmpresaId = null;
+let whatsappSeleccionado = null;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -124,16 +131,19 @@ function colorFromString(str) {
 
 function renderListaChats() {
   const container = document.getElementById('lista-chats');
-  let filtrados;
+  let base;
   if (pestanaActiva === 'todos') {
-    filtrados = CONVERSACIONES.filter(c => c.estado === 'Abierto');
+    base = CONVERSACIONES.filter(c => c.estado === 'Abierto');
   } else if (pestanaActiva === 'pendientes') {
-    filtrados = CONVERSACIONES.filter(c => c.estado === 'Abierto' && !c.botActivo);
+    base = CONVERSACIONES.filter(c => c.estado === 'Abierto' && !c.botActivo);
   } else if (pestanaActiva === 'resueltos') {
-    filtrados = CONVERSACIONES.filter(c => c.estado === 'Resuelto');
+    base = CONVERSACIONES.filter(c => c.estado === 'Resuelto');
   } else {
-    filtrados = CONVERSACIONES.filter(c => c.estado === 'Abierto');
+    base = CONVERSACIONES.filter(c => c.estado === 'Abierto');
   }
+  const filtrados = whatsappSeleccionado
+    ? base.filter(c => c.lineaReceptora === whatsappSeleccionado)
+    : base;
 
   container.innerHTML = filtrados.map(conv => {
     const contacto = getContactoPorId(conv.contactoId);
@@ -433,6 +443,64 @@ async function cargarConversaciones() {
     CONTACTOS = [...MOCK_CONTACTOS];
     MENSAJES = [...MOCK_MENSAJES];
     renderTodo();
+  }
+}
+
+// ===== Datos del usuario (nombreSucursal y líneas WhatsApp) =====
+async function cargarDatosUsuario() {
+  if (USAR_MOCK_DATA) {
+    const usuario = MOCK_USUARIO;
+    poblarSelectorWhatsApp(usuario.telefonosWhatsApp);
+    if (usuario.telefonosWhatsApp.length > 0) {
+      whatsappSeleccionado = usuario.telefonosWhatsApp[0];
+    } else {
+      whatsappSeleccionado = null;
+    }
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token') || '';
+    const res = await fetch('/api/usuario', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+    const data = await res.json();
+    const usuario = data.usuario || {};
+    const telefonos = Array.isArray(usuario.telefonosWhatsApp) ? usuario.telefonosWhatsApp : [];
+    poblarSelectorWhatsApp(telefonos);
+    if (telefonos.length > 0) {
+      whatsappSeleccionado = telefonos[0];
+    } else {
+      whatsappSeleccionado = null;
+    }
+  } catch (error) {
+    console.error('Error al cargar datos del usuario:', error);
+    // Fallback a mock
+    const usuario = MOCK_USUARIO;
+    poblarSelectorWhatsApp(usuario.telefonosWhatsApp);
+    if (usuario.telefonosWhatsApp.length > 0) {
+      whatsappSeleccionado = usuario.telefonosWhatsApp[0];
+    }
+  }
+}
+
+function poblarSelectorWhatsApp(telefonos) {
+  const select = document.getElementById('select-whatsapp');
+  if (!select) return;
+  select.innerHTML = '';
+  telefonos.forEach(num => {
+    const opt = document.createElement('option');
+    opt.value = num;
+    opt.textContent = num;
+    select.appendChild(opt);
+  });
+  if (telefonos.length > 0) {
+    select.value = telefonos[0];
   }
 }
 
@@ -817,6 +885,19 @@ function init() {
   // Configuración del Bot
   initConfigSidebar();
 
+  // Selector de cuenta WhatsApp
+  const selectWhatsapp = document.getElementById('select-whatsapp');
+  if (selectWhatsapp) {
+    selectWhatsapp.addEventListener('change', (e) => {
+      whatsappSeleccionado = e.target.value;
+      const convActual = chatActivoId ? getConversacionPorId(chatActivoId) : null;
+      if (convActual && convActual.lineaReceptora !== whatsappSeleccionado) {
+        chatActivoId = null;
+      }
+      renderTodo();
+    });
+  }
+
   // Botón para crear nuevo agente (placeholder)
   const btnNuevoAgente = document.getElementById('btn-nuevo-agente');
   if (btnNuevoAgente) {
@@ -824,6 +905,9 @@ function init() {
       console.log('Función para crear nuevo agente próximamente');
     });
   }
+
+  // Cargar datos del usuario (nombreSucursal y telefonosWhatsApp)
+  cargarDatosUsuario();
 
   // Cargar conversaciones (fetch o mock)
   cargarConversaciones();

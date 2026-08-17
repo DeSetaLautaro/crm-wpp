@@ -65,6 +65,30 @@ body {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+.whatsapp-selector {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.whatsapp-selector label {
+  font-size: 0.85rem;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.whatsapp-selector select {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  outline: none;
+  cursor: pointer;
+}
+
 .pestanas {
   display: flex;
   gap: 8px;

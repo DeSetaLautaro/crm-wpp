@@ -32,6 +32,10 @@ const ContactoSchema = new Schema(
     etiquetas: {
       type: [String],
       default: []
+    },
+    notas: {
+      type: [String],
+      default: []
     }
   },
   { timestamps: true }

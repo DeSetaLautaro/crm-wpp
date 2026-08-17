@@ -473,6 +473,36 @@ const eliminarEtiqueta = async (req, res) => {
   }
 };
 
+// ===== Agregar nota interna a un contacto =====
+const agregarNota = async (req, res) => {
+  try {
+    const { contactoId } = req.params;
+    const { nota } = req.body || {};
+
+    if (!nota || typeof nota !== 'string' || nota.trim() === '') {
+      return res.status(400).json({ error: 'Nota inválida' });
+    }
+
+    const contacto = await Contacto.findById(contactoId);
+    if (!contacto) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    const actuales = Array.isArray(contacto.notas) ? contacto.notas : [];
+    actuales.push(nota.trim());
+    const actualizado = await Contacto.findByIdAndUpdate(
+      contactoId,
+      { $set: { notas: actuales } },
+      { new: true }
+    );
+
+    return res.json({ ok: true, notas: actualizado.notas });
+  } catch (error) {
+    console.error('Error al agregar nota:', error);
+    return res.status(500).json({ error: 'Error interno al agregar nota' });
+  }
+};
+
 module.exports = {
   verificarWebhook,
   recibirMensaje,
@@ -481,5 +511,6 @@ module.exports = {
   actualizarContacto,
   obtenerPedidoActivo,
   agregarEtiqueta,
-  eliminarEtiqueta
+  eliminarEtiqueta,
+  agregarNota
 };

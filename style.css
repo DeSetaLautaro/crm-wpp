@@ -1111,3 +1111,25 @@ body {
   color: #9CA3AF;
   font-size: 0.85rem;
 }
+
+/* ===== Notas internas ===== */
+.lista-notas {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nota-item {
+  background: #FEF9C3;
+  border: 1px solid #FDE68A;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  color: #713F12;
+}
+
+.notas-vacio {
+  color: #9CA3AF;
+  font-size: 0.85rem;
+}

@@ -243,6 +243,16 @@ function renderPerfil(contacto) {
               <button class="etiqueta-remove" data-etiqueta="${etiqueta}" title="Eliminar etiqueta">×</button>
             </span>`;
   }).join('');
+
+  const contNotas = document.getElementById('lista-notas');
+  if (contNotas) {
+    const notas = Array.isArray(contacto.notas) ? contacto.notas : [];
+    if (notas.length === 0) {
+      contNotas.innerHTML = '<span class="notas-vacio">Sin notas internas</span>';
+    } else {
+      contNotas.innerHTML = notas.map(n => `<div class="nota-item">${n}</div>`).join('');
+    }
+  }
 }
 
 function renderTodo() {
@@ -367,7 +377,8 @@ async function cargarConversaciones() {
           direccion: contacto.direccion || '',
           pisoDepto: contacto.pisoDepto || '',
           codigoPostal: contacto.codigoPostal || '',
-          etiquetas: Array.isArray(contacto.etiquetas) ? contacto.etiquetas : []
+          etiquetas: Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [],
+          notas: Array.isArray(contacto.notas) ? contacto.notas : []
         });
       }
 
@@ -716,6 +727,39 @@ async function eliminarEtiquetaDesdeUI(etiqueta) {
   }
 }
 
+// ===== Guardar nota interna =====
+async function guardarNota() {
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) return;
+  const textarea = document.getElementById('nota-interna-textarea');
+  const nota = textarea?.value?.trim();
+  if (!nota) return;
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}/notas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ nota })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al guardar nota:', data.error || res.status);
+      return;
+    }
+    const data = await res.json();
+    contacto.notas = data.notas || [...(contacto.notas || []), nota];
+    if (textarea) textarea.value = '';
+    if (chatActivoId) renderChatActivo();
+  } catch (error) {
+    console.error('Error de red al guardar nota:', error);
+  }
+}
+
 // ===== Eventos =====
 function init() {
   // Pestañas
@@ -854,6 +898,10 @@ function init() {
       }
     });
   }
+
+  // Guardar nota interna
+  const btnGuardarNota = document.getElementById('guardar-nota');
+  if (btnGuardarNota) btnGuardarNota.addEventListener('click', guardarNota);
 }
 
 document.addEventListener('DOMContentLoaded', init);

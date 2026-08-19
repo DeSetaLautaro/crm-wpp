@@ -14,12 +14,18 @@ module.exports = (req, res, next) => {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.usuario = payload;
-    req.usuario.id = payload.id || payload._id || payload.sub;
-    // También asignamos parrillaId para compatibilidad con código existente
-    req.parrillaId = payload.parrillaId || payload.empresaId || req.usuario.id;
+    req.usuario.id = payload.userId || payload.id || payload._id || payload.sub;
+    // La empresa a la que pertenece el CRM (puede venir como empresaId o parrillaId)
+    req.empresaId = payload.empresaId || payload.parrillaId || null;
+    // Compatibilidad con código que todavía usa parrillaId
+    req.parrillaId = req.empresaId;
 
     if (!req.usuario.id) {
       return res.status(403).json({ error: 'El token no contiene un identificador de usuario válido' });
+    }
+
+    if (!req.empresaId) {
+      return res.status(403).json({ error: 'El token no contiene una empresa válida' });
     }
 
     next();

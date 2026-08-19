@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const auth = require('../middlewares/auth');
+const { loginConPin } = require('../controllers/authController');
 const {
   verificarWebhook,
   recibirMensaje,
@@ -19,6 +20,9 @@ router.get('/webhook', verificarWebhook);
 
 // Recepción de mensajes entrantes (POST)
 router.post('/webhook', recibirMensaje);
+
+// Login con PIN para acceder al CRM
+router.post('/login-pin', loginConPin);
 
 // Envío de mensaje desde el dashboard (POST)
 router.post('/enviar', auth, enviarMensaje);

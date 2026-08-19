@@ -33,9 +33,9 @@ const loginConPin = async (req, res) => {
       return res.status(404).json({ error: 'No se encontró el usuario asociado a esta empresa' });
     }
 
-    // 4. Obtener todas las empresas del usuario (soporta múltiples líneas)
-    const empresas = await Empresa.find({ usuarioAppId: usuario._id }).lean();
-    const empresasIds = empresas.map(e => e._id.toString());
+    // 4. Debido a que el login se hace con un PIN por empresa,
+    // el token solo contendrá la empresa con la que se entró
+    const empresasIds = [empresa._id.toString()];
 
     // 5. Generar token con los datos necesarios
     const token = jwt.sign(

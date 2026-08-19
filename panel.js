@@ -362,6 +362,12 @@ async function cargarConversaciones() {
       }
     });
 
+    if (res.status === 401) {
+      localStorage.removeItem('token');
+      mostrarModalLogin();
+      return;
+    }
+
     if (!res.ok) {
       throw new Error(`Error HTTP: ${res.status}`);
     }

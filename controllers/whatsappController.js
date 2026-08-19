@@ -86,12 +86,26 @@ const recibirMensaje = async (req, res) => {
     const telefonoCliente = mensaje?.from || '';
     const textoMensaje = mensaje?.text?.body || '';
 
+    const whatsappMsgId = mensaje?.id || '';
+
     console.log(`🔍 [3] Datos extraídos -> Cliente: ${telefonoCliente} | Mi Local ID: ${whatsappPhoneId} | Texto: ${textoMensaje}`);
 
     if (!whatsappPhoneId || !telefonoCliente || !textoMensaje) {
       console.log("🛑 [4] Falla: Faltan datos clave (Teléfono, ID o Texto).");
       return res.sendStatus(200);
     }
+
+    // Deduplicación: si ya procesamos este mensaje, no volver a hacerlo
+    if (whatsappMsgId) {
+      const yaProcesado = await Mensaje.findOne({ whatsappMsgId });
+      if (yaProcesado) {
+        console.log(`🔁 Mensaje duplicado ${whatsappMsgId} ignorado.`);
+        return res.sendStatus(200);
+      }
+    }
+
+    // Responder inmediatamente a Meta para evitar reintentos
+    res.sendStatus(200);
 
     console.log(`⚙️ [5] Buscando empresa en MongoDB con whatsappPhoneId: '${whatsappPhoneId}'`);
     const empresa = await Empresa.findOne({ whatsappPhoneId: whatsappPhoneId });
@@ -150,7 +164,8 @@ const recibirMensaje = async (req, res) => {
     await Mensaje.create({
       conversacionId: conversacion._id,
       remitente: 'cliente',
-      contenido: textoMensaje
+      contenido: textoMensaje,
+      whatsappMsgId
     });
 
     await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
@@ -372,10 +387,10 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
     }
 
     console.log("✅ [10] ¡ÉXITO! Mensaje guardado perfectamente en MongoDB.");
-    return res.sendStatus(200);
+    return;
   } catch (error) {
     console.error('🔥 [ERROR CATASTRÓFICO] Explotó el código en el Try/Catch:', error);
-    return res.sendStatus(200);
+    return;
   }
 };
 

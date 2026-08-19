@@ -14,6 +14,10 @@ const MensajeSchema = new Schema(
       enum: ['cliente', 'bot', 'ia', 'humano', 'nota_interna', 'empresa'],
       required: true
     },
+    whatsappMsgId: {
+      type: String,
+      default: ''
+    },
     contenido: {
       type: String,
       required: true

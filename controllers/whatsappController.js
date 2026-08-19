@@ -249,6 +249,38 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
     }
 
     if (respuestaIA) {
+      // Enviar la respuesta al cliente por WhatsApp
+      const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+      if (accessToken) {
+        try {
+          const url = `https://graph.facebook.com/v19.0/${whatsappPhoneId}/messages`;
+          const payload = {
+            messaging_product: 'whatsapp',
+            to: telefonoCliente,
+            type: 'text',
+            text: { body: respuestaIA }
+          };
+
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!resp.ok) {
+            console.error('Error al enviar respuesta IA a WhatsApp:', await resp.json().catch(() => ({})));
+          }
+        } catch (error) {
+          console.error('Error de red al enviar respuesta IA a WhatsApp:', error);
+        }
+      } else {
+        console.log('⚠️ Sin WHATSAPP_ACCESS_TOKEN, la respuesta IA no se envió al cliente');
+      }
+
+      // Guardar mensaje en la base de datos
       await Mensaje.create({
         conversacionId: conversacion._id,
         remitente: 'ia',

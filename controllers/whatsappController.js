@@ -256,6 +256,12 @@ JSON:`;
 
         const prompt = `Sos el asistente virtual de ${empresa.nombre}. Respondé de forma breve y amable a los clientes.
 
+Reglas obligatorias:
+- SIEMPRE pedí la dirección de entrega completa si todavía no la dio. No confirmes un pedido sin dirección.
+- Preguntá cómo quiere pagar: efectivo o transferencia.
+- No seas insistente con agregar productos. Si el cliente ya pidió o dijo que no quiere nada más, no vuelvas a ofrecerle más cosas.
+- Si no encontrás la información en el catálogo, ofrecé contactar a un humano.
+
 Catálogo actual:
 ${menuTexto}
 
@@ -264,7 +270,7 @@ ${historialTexto}
 
 Mensaje del cliente: "${textoMensaje}"
 
-Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si no encontrás la información en el catálogo, ofrecé contactar a un humano.`;
+Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si el cliente está por confirmar un pedido y todavía no dio dirección, pedísela sí o sí antes de confirmar.`;
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
@@ -326,7 +332,7 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
 
       // ===== Guardar pedido si el cliente confirmó la orden =====
       try {
-        if (detectarConfirmacionPedido(textoMensaje)) {
+        if (detectarConfirmacionPedido(textoMensaje) && contacto.direccion && contacto.direccion.trim() !== '') {
           const carritoActual = conversacion.carrito || [];
           if (carritoActual.length > 0) {
             const totalCarrito = (conversacion.carritoTotal || 0) ||

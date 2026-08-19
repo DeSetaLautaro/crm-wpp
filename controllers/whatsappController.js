@@ -344,8 +344,9 @@ const enviarMensaje = async (req, res) => {
 
     const empresaId = conversacion.empresaId?._id || conversacion.empresaId;
     const empresaIdStr = empresaId ? empresaId.toString() : '';
-    const reqEmpresaId = req.parrillaId ? String(req.parrillaId) : '';
-    if (reqEmpresaId && empresaIdStr !== reqEmpresaId) {
+    const empresasPermitidas = req.empresas && req.empresas.length > 0 ? req.empresas : [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
       return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
     }
 
@@ -446,27 +447,28 @@ const actualizarBotActivo = async (req, res) => {
       return res.status(400).json({ error: 'botActivo debe ser un booleano' });
     }
 
-    const empresaId = req.parrillaId || req.empresaId;
-    if (!empresaId) {
+    const idsEmpresas = (req.empresas && req.empresas.length > 0)
+      ? req.empresas
+      : (req.parrillaId || req.empresaId ? [req.parrillaId || req.empresaId] : []);
+    if (idsEmpresas.length === 0) {
       return res.status(400).json({ error: 'No se identificó la empresa' });
     }
 
-    const empresa = await Empresa.findByIdAndUpdate(
-      empresaId,
-      { botActivo },
-      { new: true }
+    const resultado = await Empresa.updateMany(
+      { _id: { $in: idsEmpresas } },
+      { $set: { botActivo } }
     );
 
-    if (!empresa) {
+    if (resultado.matchedCount === 0) {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
 
     await Conversacion.updateMany(
-      { empresaId },
+      { empresaId: { $in: idsEmpresas } },
       { $set: { botActivo } }
     );
 
-    return res.json({ ok: true, botActivo: empresa.botActivo });
+    return res.json({ ok: true, botActivo });
   } catch (error) {
     console.error('Error al actualizar botActivo:', error);
     return res.status(500).json({ error: 'Error interno al actualizar botActivo' });
@@ -515,8 +517,9 @@ const obtenerPedidoActivo = async (req, res) => {
     }
 
     const empresaIdStr = conversacion.empresaId.toString();
-    const reqEmpresaId = req.parrillaId ? String(req.parrillaId) : '';
-    if (reqEmpresaId && empresaIdStr !== reqEmpresaId) {
+    const empresasPermitidas = req.empresas && req.empresas.length > 0 ? req.empresas : [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
       return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
     }
 

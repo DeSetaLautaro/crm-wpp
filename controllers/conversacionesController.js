@@ -15,15 +15,6 @@ const obtenerConversaciones = async (req, res) => {
     if (!empresaId) {
       return res.status(400).json({ error: 'No se pudo identificar la Empresa asociada al usuario' });
     }
-    console.log("1. ID QUE ME LLEGA DEL PUENTE:", empresaId);
-    
-    const todasLasConversaciones = await Conversacion.find({});
-    console.log("2. TOTAL DE CHATS EN LA BASE DE DATOS:", todasLasConversaciones.length);
-    
-    if (todasLasConversaciones.length > 0) {
-        console.log("3. EL ID GUARDADO EN EL PRIMER CHAT ES:", todasLasConversaciones[0].empresaId);
-    }
-
     // 2. Le decimos a Mongo que busque las conversaciones de las Empresas del usuario
     const empresas = req.empresas && req.empresas.length > 0 ? req.empresas : [empresaId];
     const query = { empresaId: { $in: empresas } };

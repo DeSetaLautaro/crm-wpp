@@ -1059,6 +1059,15 @@ function init() {
   document.getElementById('btn-inbox').addEventListener('click', () => showView('inbox'));
   document.getElementById('btn-config').addEventListener('click', () => showView('config'));
 
+  // Cerrar sesión
+  const btnLogout = document.getElementById('btn-logout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', () => {
+      localStorage.removeItem('token');
+      location.reload();
+    });
+  }
+
   // Configuración del Bot
   initConfigSidebar();
 

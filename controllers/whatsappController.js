@@ -250,16 +250,20 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
 
     if (respuestaIA) {
       // Enviar la respuesta al cliente por WhatsApp
-      const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+      const phoneNumberId = metadata?.phone_number_id || whatsappPhoneId;
+      const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+
       if (accessToken) {
         try {
-          const url = `https://graph.facebook.com/v19.0/${whatsappPhoneId}/messages`;
+          const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
           const payload = {
             messaging_product: 'whatsapp',
             to: telefonoCliente,
             type: 'text',
             text: { body: respuestaIA }
           };
+
+          console.log(`📤 Enviando respuesta IA al teléfono ${telefonoCliente} usando phoneNumberId ${phoneNumberId}`);
 
           const resp = await fetch(url, {
             method: 'POST',
@@ -270,14 +274,17 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
             body: JSON.stringify(payload)
           });
 
+          const respBody = await resp.json().catch(() => ({}));
           if (!resp.ok) {
-            console.error('Error al enviar respuesta IA a WhatsApp:', await resp.json().catch(() => ({})));
+            console.error('❌ Error al enviar respuesta IA a WhatsApp:', resp.status, respBody);
+          } else {
+            console.log('✅ Respuesta IA enviada a WhatsApp correctamente');
           }
         } catch (error) {
-          console.error('Error de red al enviar respuesta IA a WhatsApp:', error);
+          console.error('❌ Error de red al enviar respuesta IA a WhatsApp:', error);
         }
       } else {
-        console.log('⚠️ Sin WHATSAPP_ACCESS_TOKEN, la respuesta IA no se envió al cliente');
+        console.log('⚠️ Sin tokenMeta ni WHATSAPP_ACCESS_TOKEN, la respuesta IA no se envió al cliente');
       }
 
       // Guardar mensaje en la base de datos

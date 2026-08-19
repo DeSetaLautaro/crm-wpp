@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const Empresa = require('../models/Empresa');
 const Usuario = require('../models/usuario');
 
@@ -13,27 +14,35 @@ const loginConPin = async (req, res) => {
       return res.status(400).json({ error: 'El PIN es obligatorio' });
     }
 
-    // 1. Buscar la empresa que tenga ese WhatsApp y PIN
-    const empresa = await Empresa.findOne({
-      whatsappPhoneId: telefono.trim(),
-      $or: [{ pinCrm: pin.trim() }, { pin: pin.trim() }]
-    });
+    // 1. Buscar la empresa que tenga ese WhatsApp
+    const empresa = await Empresa.findOne({ whatsappPhoneId: telefono.trim() });
 
     if (!empresa) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // 2. Con el id de la empresa, buscar al usuario dueño
+    // 2. Verificar el PIN hasheado
+    const pinValido = await bcrypt.compare(pin.trim(), empresa.pinCrm);
+    if (!pinValido) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    // 3. Con el id de la empresa, buscar al usuario dueño
     const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
     if (!usuario) {
       return res.status(404).json({ error: 'No se encontró el usuario asociado a esta empresa' });
     }
 
-    // 3. Generar token con los datos necesarios
+    // 4. Obtener todas las empresas del usuario (soporta múltiples líneas)
+    const empresas = await Empresa.find({ usuarioAppId: usuario._id }).lean();
+    const empresasIds = empresas.map(e => e._id.toString());
+
+    // 5. Generar token con los datos necesarios
     const token = jwt.sign(
       {
         userId: usuario._id.toString(),
         empresaId: empresa._id.toString(),
+        empresas: empresasIds,
         email: usuario.email
       },
       process.env.JWT_SECRET,

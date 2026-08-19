@@ -23,8 +23,9 @@ const obtenerConversaciones = async (req, res) => {
         console.log("3. EL ID GUARDADO EN EL PRIMER CHAT ES:", todasLasConversaciones[0].empresaId);
     }
 
-    // 2. Le decimos a Mongo que busque las conversaciones de esta Empresa
-    const query = { empresaId: empresaId };
+    // 2. Le decimos a Mongo que busque las conversaciones de las Empresas del usuario
+    const empresas = req.empresas && req.empresas.length > 0 ? req.empresas : [empresaId];
+    const query = { empresaId: { $in: empresas } };
 
     const conversaciones = await Conversacion.find(query)
       .populate('contactoId', 'nombre telefono direccion pisoDepto codigoPostal etiquetas notas')

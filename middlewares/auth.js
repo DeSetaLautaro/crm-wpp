@@ -15,8 +15,9 @@ module.exports = (req, res, next) => {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.usuario = payload;
     req.usuario.id = payload.userId || payload.id || payload._id || payload.sub;
-    // La empresa a la que pertenece el CRM (puede venir como empresaId o parrillaId)
-    req.empresaId = payload.empresaId || payload.parrillaId || null;
+    // Soporte para múltiples empresas (varias líneas de WhatsApp)
+    req.empresas = payload.empresas || (payload.empresaId ? [payload.empresaId] : []);
+    req.empresaId = payload.empresaId || req.empresas[0] || null;
     // Compatibilidad con código que todavía usa parrillaId
     req.parrillaId = req.empresaId;
 

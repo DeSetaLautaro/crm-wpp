@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+const bcrypt = require('bcryptjs');
 
 const EmpresaSchema = new Schema(
   {
@@ -53,4 +54,17 @@ const EmpresaSchema = new Schema(
 );
 
 // Podes seguir llamándolo 'Empresa' o 'BotCRM', para Mongoose es lo mismo
+
+// Hashear el PIN antes de guardar
+EmpresaSchema.pre('save', async function (next) {
+  if (!this.isModified('pinCrm')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.pinCrm = await bcrypt.hash(this.pinCrm, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = mongoose.model('Empresa', EmpresaSchema);

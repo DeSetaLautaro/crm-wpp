@@ -887,6 +887,69 @@ async function guardarNota() {
   }
 }
 
+// ===== Login con PIN =====
+function mostrarModalLogin() {
+  document.body.classList.add('modo-login');
+  const modal = document.getElementById('modal-login');
+  if (modal) modal.classList.remove('hidden');
+  const inputPin = document.getElementById('input-pin');
+  if (inputPin) {
+    inputPin.value = '';
+    inputPin.focus();
+  }
+  const errorEl = document.getElementById('login-error');
+  if (errorEl) errorEl.classList.add('hidden');
+}
+
+function ocultarModalLogin() {
+  document.body.classList.remove('modo-login');
+  const modal = document.getElementById('modal-login');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function manejarLogin() {
+  const inputPin = document.getElementById('input-pin');
+  const pin = inputPin?.value?.trim() || '';
+  const errorEl = document.getElementById('login-error');
+
+  if (!pin) {
+    if (errorEl) {
+      errorEl.textContent = 'Ingresá tu PIN';
+      errorEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (errorEl) errorEl.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/whatsapp/login-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'PIN inválido');
+    }
+
+    localStorage.setItem('token', data.token);
+    ocultarModalLogin();
+
+    // Arrancamos el CRM recién después de autenticar
+    await cargarDatosUsuario();
+    await cargarConversaciones();
+  } catch (error) {
+    console.error('Error al iniciar sesión:', error);
+    if (errorEl) {
+      errorEl.textContent = 'PIN inválido. Intentá de nuevo.';
+      errorEl.classList.remove('hidden');
+    }
+  }
+}
+
 // ===== Eventos =====
 function init() {
   // Pestañas
@@ -965,11 +1028,31 @@ function init() {
     });
   }
 
-  // Cargar datos del usuario (nombreSucursal y telefonosWhatsApp)
-  cargarDatosUsuario();
+  // Eventos del modal de login
+  const btnIngresar = document.getElementById('btn-ingresar');
+  if (btnIngresar) btnIngresar.addEventListener('click', manejarLogin);
 
-  // Cargar conversaciones (fetch o mock)
-  cargarConversaciones();
+  const inputPin = document.getElementById('input-pin');
+  if (inputPin) {
+    inputPin.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        manejarLogin();
+      }
+    });
+  }
+
+  // Verificamos si ya hay un token guardado
+  const tokenGuardado = localStorage.getItem('token');
+  if (!tokenGuardado) {
+    mostrarModalLogin();
+  } else {
+    // Cargar datos del usuario (nombreSucursal y telefonosWhatsApp)
+    cargarDatosUsuario();
+
+    // Cargar conversaciones (fetch o mock)
+    cargarConversaciones();
+  }
 
   // Envío manual de mensaje
   const btnEnviar = document.getElementById('btn-enviar');

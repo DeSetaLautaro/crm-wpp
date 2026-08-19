@@ -248,6 +248,18 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Login con PIN -->
+  <div id="modal-login" class="modal-login hidden">
+    <div class="modal-login-card">
+      <h2>Bienvenido 👋</h2>
+      <p class="modal-login-subtitle">Ingresá tu PIN para acceder al CRM</p>
+      <input type="password" id="input-pin" placeholder="• • • •" maxlength="6" autocomplete="off" />
+      <p id="login-error" class="login-error hidden">PIN inválido. Intentá de nuevo.</p>
+      <button id="btn-ingresar" type="button">Ingresar</button>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js" defer></script>
   <script src="panel.js" defer></script>
 </body>

@@ -1157,3 +1157,85 @@ body {
   color: #9CA3AF;
   font-size: 0.85rem;
 }
+
+/* ===== Modal de Login PIN ===== */
+.modal-login {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-login-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 32px 40px;
+  width: 360px;
+  max-width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.modal-login-card h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 8px;
+}
+
+.modal-login-subtitle {
+  font-size: 0.9rem;
+  color: #6B7280;
+  margin-bottom: 24px;
+}
+
+.modal-login-card input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  text-align: center;
+  letter-spacing: 0.3em;
+  outline: none;
+  margin-bottom: 12px;
+}
+
+.modal-login-card input:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.modal-login-card button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: #2563EB;
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.modal-login-card button:hover {
+  background: #1D4ED8;
+}
+
+.login-error {
+  color: #DC2626;
+  font-size: 0.85rem;
+  margin: 0 0 12px;
+}
+
+body.modo-login #app {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}

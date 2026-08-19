@@ -421,11 +421,15 @@ async function cargarConversaciones() {
     CONVERSACIONES = conversacionesLocal;
     MENSAJES = mensajesAll;
 
-    // Obtener líneas de WhatsApp desde las conversaciones (ya no usamos /api/usuario)
-    const lineas = Array.from(new Set(conversacionesLocal.map(c => c.lineaReceptora).filter(Boolean)));
-    if (lineas.length > 0) {
+    // Obtener empresas del usuario para armar el selector
+    const empresasInfo = data.empresas || [];
+    if (empresasInfo.length > 0) {
+      poblarSelectorWhatsApp(empresasInfo);
+    } else {
+      // Fallback: si el backend aún no devuelve empresas, usamos las líneas de las conversaciones
+      const lineas = Array.from(new Set(conversacionesLocal.map(c => c.lineaReceptora).filter(Boolean)));
       poblarSelectorWhatsApp(lineas);
-      if (!whatsappSeleccionado || !lineas.includes(whatsappSeleccionado)) {
+      if (lineas.length > 0 && (!whatsappSeleccionado || !lineas.includes(whatsappSeleccionado))) {
         whatsappSeleccionado = lineas[0];
       }
     }
@@ -478,18 +482,54 @@ async function cargarDatosUsuario() {
   // Las líneas de WhatsApp se obtienen de las conversaciones (cargarConversaciones).
 }
 
-function poblarSelectorWhatsApp(telefonos) {
+function poblarSelectorWhatsApp(items) {
   const select = document.getElementById('select-whatsapp');
   if (!select) return;
   select.innerHTML = '';
-  telefonos.forEach(num => {
+
+  // Opción "Todas las líneas"
+  const optAll = document.createElement('option');
+  optAll.value = '';
+  optAll.textContent = 'Todas las líneas';
+  select.appendChild(optAll);
+
+  if (!items || items.length === 0) {
+    select.value = '';
+    whatsappSeleccionado = '';
+    return;
+  }
+
+  const esObjeto = typeof items[0] === 'object' && items[0] !== null;
+
+  items.forEach(item => {
     const opt = document.createElement('option');
-    opt.value = num;
-    opt.textContent = num;
+    if (esObjeto) {
+      opt.value = item.whatsappPhoneId;
+      opt.textContent = `${item.nombre} (${item.whatsappPhoneId})`;
+    } else {
+      opt.value = item;
+      opt.textContent = item;
+    }
     select.appendChild(opt);
   });
-  if (telefonos.length > 0) {
-    select.value = telefonos[0];
+
+  // Selección inicial: primera empresa / línea, o la que ya estaba
+  if (esObjeto) {
+    const lineas = items.map(e => e.whatsappPhoneId);
+    if (!whatsappSeleccionado || !lineas.includes(whatsappSeleccionado)) {
+      whatsappSeleccionado = lineas[0];
+      select.value = whatsappSeleccionado;
+    } else {
+      select.value = whatsappSeleccionado;
+    }
+  } else {
+    const lineas = items;
+    if (!whatsappSeleccionado || !lineas.includes(whatsappSeleccionado)) {
+      whatsappSeleccionado = lineas[0];
+      select.value = whatsappSeleccionado;
+    } else {
+      select.value = whatsappSeleccionado;
+    }
   }
 }
 

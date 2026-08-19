@@ -1,5 +1,6 @@
 const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
+const Empresa = require('../models/Empresa');
 
 /**
  * GET /api/conversaciones
@@ -32,6 +33,14 @@ const obtenerConversaciones = async (req, res) => {
       .sort({ updatedAt: -1 })
       .lean();
 
+    // 3. Obtener datos básicos de las empresas del usuario para el selector
+    const empresasDocs = await Empresa.find({ _id: { $in: empresas } }).lean();
+    const empresasInfo = empresasDocs.map(e => ({
+      _id: e._id.toString(),
+      nombre: e.nombre,
+      whatsappPhoneId: e.whatsappPhoneId
+    }));
+
     const conversacionesConMensajes = await Promise.all(
       conversaciones.map(async (conv) => {
         const mensajes = await Mensaje.find({ conversacionId: conv._id })
@@ -59,7 +68,8 @@ const obtenerConversaciones = async (req, res) => {
 
     return res.json({
       ok: true,
-      conversaciones: conversacionesConMensajes
+      conversaciones: conversacionesConMensajes,
+      empresas: empresasInfo
     });
   } catch (error) {
     console.error('Error al obtener conversaciones:', error);

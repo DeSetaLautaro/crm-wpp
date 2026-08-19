@@ -4,6 +4,7 @@ const Contacto = require('../models/Contacto');
 const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
 const Producto = require('../models/Producto');
+const Usuario = require('../models/usuario');
 const Pedido = require('../models/Pedido');
 const { guardarPedidoConfirmado } = require('./pedidosController');
 
@@ -101,7 +102,9 @@ const recibirMensaje = async (req, res) => {
     }
     console.log(`🏢 [6] ¡Empresa encontrada!: ${empresa.nombre}`);
     
-    const productos = await Producto.find({ empresaId: empresa._id }).lean();
+    // Buscar el Usuario que posee la empresa para obtener sus platos
+    const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
+    const productos = usuario?.platos || [];
 
     let contacto = await Contacto.findOne({ empresaId: empresa._id, telefono: telefonoCliente });
     if (!contacto) {
@@ -214,7 +217,14 @@ JSON:`;
       try {
         const menuTexto = productos.length
           ? productos.map(p => {
-              const detalleExtras = p.toppings?.length ? ` (extras: ${p.toppings.join(', ')})` : '';
+              let detalleExtras = '';
+              if (p.toppings && p.toppings.length > 0) {
+                detalleExtras = p.toppings.map(g => {
+                  const opciones = Array.isArray(g.opciones) ? g.opciones.join(', ') : '';
+                  return `${g.grupo || ''}: ${opciones}`.trim();
+                }).filter(Boolean).join('; ');
+                detalleExtras = ` (extras: ${detalleExtras})`;
+              }
               return `- ${p.nombre} ($${p.precio})${detalleExtras}`;
             }).join('\n')
           : 'No hay productos cargados en el catálogo.';

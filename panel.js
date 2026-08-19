@@ -892,11 +892,16 @@ function mostrarModalLogin() {
   document.body.classList.add('modo-login');
   const modal = document.getElementById('modal-login');
   if (modal) modal.classList.remove('hidden');
+  const inputTelefono = document.getElementById('input-telefono');
+  if (inputTelefono) {
+    inputTelefono.value = '';
+  }
   const inputPin = document.getElementById('input-pin');
   if (inputPin) {
     inputPin.value = '';
-    inputPin.focus();
   }
+  const primerCampo = document.getElementById('input-telefono') || document.getElementById('input-pin');
+  if (primerCampo) primerCampo.focus();
   const errorEl = document.getElementById('login-error');
   if (errorEl) errorEl.classList.add('hidden');
 }
@@ -908,9 +913,19 @@ function ocultarModalLogin() {
 }
 
 async function manejarLogin() {
+  const inputTelefono = document.getElementById('input-telefono');
+  const telefono = inputTelefono?.value?.trim() || '';
   const inputPin = document.getElementById('input-pin');
   const pin = inputPin?.value?.trim() || '';
   const errorEl = document.getElementById('login-error');
+
+  if (!telefono) {
+    if (errorEl) {
+      errorEl.textContent = 'Ingresá tu número de WhatsApp';
+      errorEl.classList.remove('hidden');
+    }
+    return;
+  }
 
   if (!pin) {
     if (errorEl) {
@@ -926,13 +941,13 @@ async function manejarLogin() {
     const res = await fetch('/api/whatsapp/login-pin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin })
+      body: JSON.stringify({ telefono, pin })
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data.error || 'PIN inválido');
+      throw new Error(data.error || 'Credenciales inválidas');
     }
 
     localStorage.setItem('token', data.token);
@@ -944,7 +959,7 @@ async function manejarLogin() {
   } catch (error) {
     console.error('Error al iniciar sesión:', error);
     if (errorEl) {
-      errorEl.textContent = 'PIN inválido. Intentá de nuevo.';
+      errorEl.textContent = 'Número de WhatsApp o PIN inválidos. Intentá de nuevo.';
       errorEl.classList.remove('hidden');
     }
   }
@@ -1031,6 +1046,16 @@ function init() {
   // Eventos del modal de login
   const btnIngresar = document.getElementById('btn-ingresar');
   if (btnIngresar) btnIngresar.addEventListener('click', manejarLogin);
+
+  const inputTelefono = document.getElementById('input-telefono');
+  if (inputTelefono) {
+    inputTelefono.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        manejarLogin();
+      }
+    });
+  }
 
   const inputPin = document.getElementById('input-pin');
   if (inputPin) {

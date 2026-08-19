@@ -4,19 +4,23 @@ const Usuario = require('../models/usuario');
 
 const loginConPin = async (req, res) => {
   try {
-    const { pin } = req.body || {};
+    const { telefono, pin } = req.body || {};
 
+    if (!telefono || typeof telefono !== 'string' || telefono.trim() === '') {
+      return res.status(400).json({ error: 'El teléfono de WhatsApp es obligatorio' });
+    }
     if (!pin || typeof pin !== 'string' || pin.trim() === '') {
       return res.status(400).json({ error: 'El PIN es obligatorio' });
     }
 
-    // 1. Buscar la empresa que tenga ese PIN
+    // 1. Buscar la empresa que tenga ese WhatsApp y PIN
     const empresa = await Empresa.findOne({
+      whatsappPhoneId: telefono.trim(),
       $or: [{ pinCrm: pin.trim() }, { pin: pin.trim() }]
     });
 
     if (!empresa) {
-      return res.status(401).json({ error: 'PIN inválido' });
+      return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     // 2. Con el id de la empresa, buscar al usuario dueño
@@ -48,7 +52,7 @@ const loginConPin = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error en login con PIN:', error);
+    console.error('Error en login:', error);
     return res.status(500).json({ error: 'Error interno al iniciar sesión' });
   }
 };

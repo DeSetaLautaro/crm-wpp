@@ -229,10 +229,23 @@ JSON:`;
             }).join('\n')
           : 'No hay productos cargados en el catálogo.';
 
+        // Obtener últimos mensajes para dar contexto a la IA
+        const historialMensajes = await Mensaje.find({ conversacionId: conversacion._id })
+          .sort({ createdAt: -1 })
+          .limit(12)
+          .lean();
+        const historialTexto = historialMensajes.reverse().map(m => {
+          const autor = m.remitente === 'cliente' ? 'Cliente' : (m.remitente === 'ia' || m.remitente === 'bot' ? 'Bot' : 'Sistema');
+          return `${autor}: ${m.contenido}`;
+        }).join('\n');
+
         const prompt = `Sos el asistente virtual de ${empresa.nombre}. Respondé de forma breve y amable a los clientes.
 
 Catálogo actual:
 ${menuTexto}
+
+Historial reciente:
+${historialTexto}
 
 Mensaje del cliente: "${textoMensaje}"
 

@@ -313,6 +313,11 @@ function renderChatActivo() {
   toggle.checked = conv.botActivo;
   estadoBot.textContent = conv.botActivo ? 'Bot Activo' : 'Pausado';
 
+  const btnAtendido = document.getElementById('btn-marcar-atendido');
+  if (btnAtendido) {
+    btnAtendido.style.display = conv.estado === 'Abierto' ? 'inline-block' : 'none';
+  }
+
   // Mensajes
   const areaMensajes = document.getElementById('area-mensajes');
   const mensajes = getMensajesDeConversacion(conv._id);
@@ -1050,6 +1055,28 @@ async function eliminarNotaDesdeUI(notaEncode) {
 }
 
 // ===== Guardar nota interna =====
+async function marcarAtendido() {
+  if (!chatActivoId) return;
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/whatsapp/conversacion/${chatActivoId}/atender`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al marcar atendido:', data.error || res.status);
+      return;
+    }
+    const data = await res.json();
+    const conv = getConversacionPorId(chatActivoId);
+    if (conv) conv.estado = 'Resuelto';
+    renderTodo();
+  } catch (error) {
+    console.error('Error de red al marcar atendido:', error);
+  }
+}
+
 async function guardarNota() {
   const conv = getConversacionPorId(chatActivoId);
   if (!conv) return;
@@ -1246,6 +1273,10 @@ function init() {
       renderListaChats();
     });
   }
+
+  // Botón de marcar atendido
+  const btnAtendido = document.getElementById('btn-marcar-atendido');
+  if (btnAtendido) btnAtendido.addEventListener('click', marcarAtendido);
 
   // Botón para crear nuevo agente (placeholder)
   const btnNuevoAgente = document.getElementById('btn-nuevo-agente');

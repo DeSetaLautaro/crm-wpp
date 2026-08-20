@@ -10,6 +10,7 @@ const {
   actualizarBotActivo,
   actualizarContacto,
   obtenerPedidoActivo,
+  marcarAtendido,
   agregarEtiqueta,
   eliminarEtiqueta,
   agregarNota,
@@ -36,6 +37,9 @@ router.put('/contacto/:contactoId', auth, actualizarContacto);
 
 // Obtener pedido en curso / último pedido de una conversación (GET)
 router.get('/conversacion/:conversacionId/pedido-activo', auth, obtenerPedidoActivo);
+
+// Marcar conversación como atendida (PUT)
+router.put('/conversacion/:id/atender', auth, marcarAtendido);
 
 // Agregar etiqueta a un contacto (POST)
 router.post('/contacto/:contactoId/etiquetas', auth, agregarEtiqueta);

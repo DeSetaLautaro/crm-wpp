@@ -127,7 +127,8 @@ const recibirMensaje = async (req, res) => {
       contacto = await Contacto.create({ empresaId: empresa._id, telefono: telefonoCliente, nombre: nombre });
     }
 
-    let conversacion = await Conversacion.findOne({ empresaId: empresa._id, contactoId: contacto._id, estado: 'Abierto' });
+    let conversacion = await Conversacion.findOne({ empresaId: empresa._id, contactoId: contacto._id })
+      .sort({ createdAt: -1 });
     if (!conversacion) {
       console.log("💬 [8] Creando nueva conversación...");
       conversacion = await Conversacion.create({
@@ -138,6 +139,9 @@ const recibirMensaje = async (req, res) => {
         estado: 'Abierto',
         ultimoMensaje: textoMensaje
       });
+    } else if (conversacion.estado !== 'Abierto') {
+      conversacion.estado = 'Abierto';
+      await conversacion.save();
     }
 
     // ===== Procesar carrito en vivo =====
@@ -612,6 +616,31 @@ const obtenerPedidoActivo = async (req, res) => {
   }
 };
 
+const marcarAtendido = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID de conversación inválido' });
+    }
+    const conversacion = await Conversacion.findById(id);
+    if (!conversacion) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+    const empresaIdStr = conversacion.empresaId.toString();
+    const empresasPermitidas = req.empresas && req.empresas.length > 0 ? req.empresas : [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+    conversacion.estado = 'Resuelto';
+    await conversacion.save();
+    return res.json({ ok: true, conversacion });
+  } catch (error) {
+    console.error('Error al marcar atendido:', error);
+    return res.status(500).json({ error: 'Error interno al marcar atendido' });
+  }
+};
+
 // ===== Agregar etiqueta a un contacto =====
 const agregarEtiqueta = async (req, res) => {
   try {
@@ -732,6 +761,7 @@ module.exports = {
   actualizarBotActivo,
   actualizarContacto,
   obtenerPedidoActivo,
+  marcarAtendido,
   agregarEtiqueta,
   eliminarEtiqueta,
   agregarNota,

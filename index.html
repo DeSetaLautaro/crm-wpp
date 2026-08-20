@@ -175,10 +175,15 @@
           <div class="perfil-archivos">
             <div class="perfil-seccion-titulo">Compartidos</div>
             <div class="archivos-switch">
-              <button class="archivos-switch-btn activo" data-pestana-archivo="archivos" type="button">Archivos</button>
-              <button class="archivos-switch-btn" data-pestana-archivo="notas" type="button">Notas</button>
+              <button class="archivos-switch-btn activo" data-pestana-archivo="notas" type="button">Notas</button>
+              <button class="archivos-switch-btn" data-pestana-archivo="archivos" type="button">Archivos</button>
             </div>
-            <div id="archivos-panel" class="archivos-panel">
+            <div id="notas-panel" class="archivos-panel">
+              <textarea id="nota-interna-textarea" rows="3" placeholder="Escribí una nota invisible para el cliente..."></textarea>
+              <button id="guardar-nota" type="button">Guardar Nota</button>
+              <div id="lista-notas" class="lista-notas"></div>
+            </div>
+            <div id="archivos-panel" class="archivos-panel hidden">
               <div class="archivos-grid">
                 <div class="archivo-miniatura"></div>
                 <div class="archivo-miniatura"></div>
@@ -187,11 +192,6 @@
                 <div class="archivo-miniatura"></div>
                 <div class="archivo-miniatura"></div>
               </div>
-            </div>
-            <div id="notas-panel" class="archivos-panel hidden">
-              <textarea id="nota-interna-textarea" rows="3" placeholder="Escribí una nota invisible para el cliente..."></textarea>
-              <button id="guardar-nota" type="button">Guardar Nota</button>
-              <div id="lista-notas" class="lista-notas"></div>
             </div>
           </div>
 

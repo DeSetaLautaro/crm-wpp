@@ -1,4 +1,4 @@
-const { generarTextoGemini } = require('../services/geminiService');
+const { generarTexto } = require('../services/iaService');
 const mongoose = require('mongoose');
 const Empresa = require('../models/Empresa');
 const Contacto = require('../models/Contacto');
@@ -24,7 +24,7 @@ async function procesarCarrito(empresa, conversacion, texto, productos) {
       Si el mensaje no hace referencia a ningún ítem, devolvé null.
       Catálogo:\n${menu}
       Respuesta JSON:`;
-    const raw = (await generarTextoGemini(prompt) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
+    const raw = (await generarTexto(prompt) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
     if (start === -1 || end === -1) return null;
@@ -202,7 +202,7 @@ Mensaje: "${textoMensaje}"
 
 JSON:`;
 
-        const rawText = (await generarTextoGemini(promptExtract) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
+        const rawText = (await generarTexto(promptExtract) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
         const startIdx = rawText.indexOf('{');
         const endIdx = rawText.lastIndexOf('}');
         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
@@ -276,7 +276,7 @@ Mensaje del cliente: "${textoMensaje}"
 
 Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si el cliente está por confirmar un pedido y todavía no dio dirección, pedísela sí o sí antes de confirmar.`;
 
-        respuestaIA = await generarTextoGemini(prompt);
+        respuestaIA = await generarTexto(prompt);
       } catch (err) {
         console.error("❌ Error al generar respuesta con Gemini:", err);
       }

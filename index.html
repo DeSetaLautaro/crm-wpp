@@ -5,6 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CRM Omnicanal WhatsApp</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .archivos-switch {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .archivos-switch-btn {
+      flex: 1;
+      padding: 6px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #f9fafb;
+      cursor: pointer;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .archivos-switch-btn.activo {
+      background: #e5e7eb;
+      color: #111827;
+      border-color: #9ca3af;
+    }
+    .archivos-panel.hidden {
+      display: none;
+    }
+    #notas-panel textarea {
+      width: 100%;
+      margin-bottom: 6px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 6px;
+      font-size: 12px;
+      resize: vertical;
+    }
+    #notas-panel .lista-notas {
+      margin-top: 8px;
+    }
+    .nota-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f3f4f6;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .nota-item-texto {
+      flex: 1;
+      margin-right: 6px;
+    }
+    .nota-remove-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #ef4444;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0 2px;
+    }
+  </style>
 </head>
 <body>
   <div id="app">
@@ -112,21 +172,26 @@
             </div>
           </div>
 
-          <div class="perfil-notas">
-            <div class="perfil-seccion-titulo">Notas Internas</div>
-            <textarea id="nota-interna-textarea" rows="3" placeholder="Escribí una nota invisible para el cliente..."></textarea>
-            <button id="guardar-nota" type="button">Guardar Nota</button>
-          </div>
-
           <div class="perfil-archivos">
-            <div class="perfil-seccion-titulo">Archivos Compartidos</div>
-            <div class="archivos-grid">
-              <div class="archivo-miniatura"></div>
-              <div class="archivo-miniatura"></div>
-              <div class="archivo-miniatura"></div>
-              <div class="archivo-miniatura"></div>
-              <div class="archivo-miniatura"></div>
-              <div class="archivo-miniatura"></div>
+            <div class="perfil-seccion-titulo">Compartidos</div>
+            <div class="archivos-switch">
+              <button class="archivos-switch-btn activo" data-pestana-archivo="archivos" type="button">Archivos</button>
+              <button class="archivos-switch-btn" data-pestana-archivo="notas" type="button">Notas</button>
+            </div>
+            <div id="archivos-panel" class="archivos-panel">
+              <div class="archivos-grid">
+                <div class="archivo-miniatura"></div>
+                <div class="archivo-miniatura"></div>
+                <div class="archivo-miniatura"></div>
+                <div class="archivo-miniatura"></div>
+                <div class="archivo-miniatura"></div>
+                <div class="archivo-miniatura"></div>
+              </div>
+            </div>
+            <div id="notas-panel" class="archivos-panel hidden">
+              <textarea id="nota-interna-textarea" rows="3" placeholder="Escribí una nota invisible para el cliente..."></textarea>
+              <button id="guardar-nota" type="button">Guardar Nota</button>
+              <div id="lista-notas" class="lista-notas"></div>
             </div>
           </div>
 
@@ -157,8 +222,6 @@
                 <span class="detalle-la">Código Postal / Localidad</span>
                 <input type="text" id="modal-codigopostal" class="detalle-input">
               </div>
-              <div class="perfil-seccion-titulo">Notas Internas</div>
-              <div id="modal-lista-notas" class="lista-notas"></div>
               <button id="modal-guardar-detalles" class="btn-guardar-detalles">Guardar Cambios</button>
             </div>
           </div>

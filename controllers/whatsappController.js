@@ -666,6 +666,35 @@ const eliminarEtiqueta = async (req, res) => {
   }
 };
 
+// ===== Eliminar nota interna de un contacto =====
+const eliminarNota = async (req, res) => {
+  try {
+    const { contactoId, nota } = req.params;
+
+    if (!nota) {
+      return res.status(400).json({ error: 'Nota requerida' });
+    }
+
+    const contacto = await Contacto.findById(contactoId);
+    if (!contacto) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    const actuales = Array.isArray(contacto.notas) ? contacto.notas : [];
+    const filtradas = actuales.filter(n => n !== nota);
+    await Contacto.findByIdAndUpdate(
+      contactoId,
+      { $set: { notas: filtradas } },
+      { new: true }
+    );
+
+    return res.json({ ok: true, notas: filtradas });
+  } catch (error) {
+    console.error('Error al eliminar nota:', error);
+    return res.status(500).json({ error: 'Error interno al eliminar nota' });
+  }
+};
+
 // ===== Agregar nota interna a un contacto =====
 const agregarNota = async (req, res) => {
   try {
@@ -705,5 +734,6 @@ module.exports = {
   obtenerPedidoActivo,
   agregarEtiqueta,
   eliminarEtiqueta,
-  agregarNota
+  agregarNota,
+  eliminarNota
 };

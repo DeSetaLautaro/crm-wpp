@@ -12,7 +12,8 @@ const {
   obtenerPedidoActivo,
   agregarEtiqueta,
   eliminarEtiqueta,
-  agregarNota
+  agregarNota,
+  eliminarNota
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -44,6 +45,9 @@ router.delete('/contacto/:contactoId/etiquetas/:etiqueta', auth, eliminarEtiquet
 
 // Agregar nota interna a un contacto (POST)
 router.post('/contacto/:contactoId/notas', auth, agregarNota);
+
+// Eliminar nota interna de un contacto (DELETE)
+router.delete('/contacto/:contactoId/notas/:nota', auth, eliminarNota);
 
 module.exports = router;
 

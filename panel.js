@@ -264,13 +264,18 @@ function renderPerfil(contacto) {
     contEtiquetas.innerHTML = '';
   }
 
-  const contNotas = document.getElementById('modal-lista-notas');
+  const contNotas = document.getElementById('lista-notas');
   if (contNotas) {
     const notas = Array.isArray(contacto.notas) ? contacto.notas : [];
     if (notas.length === 0) {
       contNotas.innerHTML = '<span class="notas-vacio">Sin notas internas</span>';
     } else {
-      contNotas.innerHTML = notas.map(n => `<div class="nota-item">${n}</div>`).join('');
+      contNotas.innerHTML = notas.map(n => `
+        <div class="nota-item">
+          <span class="nota-item-texto">${n}</span>
+          <button class="nota-remove-btn" data-nota="${encodeURIComponent(n)}" title="Eliminar nota">×</button>
+        </div>
+      `).join('');
     }
   }
 }
@@ -913,6 +918,35 @@ async function eliminarEtiquetaDesdeUI(etiqueta) {
   }
 }
 
+// ===== Eliminar nota interna =====
+async function eliminarNotaDesdeUI(notaEncode) {
+  const nota = decodeURIComponent(notaEncode);
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) return;
+
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}/notas/${encodeURIComponent(nota)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al eliminar nota:', data.error || res.status);
+      return;
+    }
+    const data = await res.json();
+    contacto.notas = data.notas || [];
+    if (chatActivoId) renderChatActivo();
+  } catch (error) {
+    console.error('Error de red al eliminar nota:', error);
+  }
+}
+
 // ===== Guardar nota interna =====
 async function guardarNota() {
   const conv = getConversacionPorId(chatActivoId);
@@ -1212,6 +1246,25 @@ function init() {
     if (btnEliminar) {
       const etiqueta = btnEliminar.dataset.etiqueta;
       eliminarEtiquetaDesdeUI(etiqueta);
+    }
+  });
+
+  // Switch Archivos | Notas
+  document.querySelectorAll('.archivos-switch-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.archivos-switch-btn').forEach(b => b.classList.remove('activo'));
+      btn.classList.add('activo');
+      const pestana = btn.dataset.pestanaArchivo;
+      document.getElementById('archivos-panel').classList.toggle('hidden', pestana !== 'archivos');
+      document.getElementById('notas-panel').classList.toggle('hidden', pestana !== 'notas');
+    });
+  });
+
+  // Eliminar nota interna (delegación)
+  document.addEventListener('click', (e) => {
+    const btnEliminar = e.target.closest('.nota-remove-btn');
+    if (btnEliminar) {
+      eliminarNotaDesdeUI(btnEliminar.dataset.nota);
     }
   });
 

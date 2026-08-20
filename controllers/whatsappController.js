@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { generarTextoGemini } = require('../services/geminiService');
 const mongoose = require('mongoose');
 const Empresa = require('../models/Empresa');
 const Contacto = require('../models/Contacto');
@@ -12,8 +12,6 @@ const { guardarPedidoConfirmado } = require('./pedidosController');
 async function procesarCarrito(empresa, conversacion, texto, productos) {
   if (!process.env.GEMINI_API_KEY) return null;
   try {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
     const menu = productos.map(p => `- ${p.nombre} ($${p.precio})`).join('\n');
     const prompt = `Actúa como sistema de punto de venta. El cliente escribió: "${texto}".
       Interpretá el pedido y devolvé un JSON con la estructura:
@@ -26,8 +24,7 @@ async function procesarCarrito(empresa, conversacion, texto, productos) {
       Si el mensaje no hace referencia a ningún ítem, devolvé null.
       Catálogo:\n${menu}
       Respuesta JSON:`;
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text().trim().replace(/```json/g, '').replace(/```/g, '').trim();
+    const raw = (await generarTextoGemini(prompt) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
     if (start === -1 || end === -1) return null;
@@ -205,10 +202,7 @@ Mensaje: "${textoMensaje}"
 
 JSON:`;
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
-        const result = await model.generateContent(promptExtract);
-        const rawText = result.response.text().trim().replace(/```json/g, '').replace(/```/g, '').trim();
+        const rawText = (await generarTextoGemini(promptExtract) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
         const startIdx = rawText.indexOf('{');
         const endIdx = rawText.lastIndexOf('}');
         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
@@ -282,11 +276,7 @@ Mensaje del cliente: "${textoMensaje}"
 
 Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si el cliente está por confirmar un pedido y todavía no dio dirección, pedísela sí o sí antes de confirmar.`;
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
-
-        const result = await model.generateContent(prompt);
-        respuestaIA = result.response.text().trim();
+        respuestaIA = await generarTextoGemini(prompt);
       } catch (err) {
         console.error("❌ Error al generar respuesta con Gemini:", err);
       }

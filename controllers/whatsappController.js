@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const mongoose = require('mongoose');
 const Empresa = require('../models/Empresa');
 const Contacto = require('../models/Contacto');
 const Conversacion = require('../models/Conversacion');
@@ -584,6 +585,9 @@ const actualizarContacto = async (req, res) => {
 const obtenerPedidoActivo = async (req, res) => {
   try {
     const { conversacionId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(conversacionId)) {
+      return res.status(400).json({ error: 'ID de conversación inválido' });
+    }
     const conversacion = await Conversacion.findById(conversacionId);
     if (!conversacion) {
       return res.status(404).json({ error: 'Conversación no encontrada' });

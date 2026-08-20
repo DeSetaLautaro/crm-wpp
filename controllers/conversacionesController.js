@@ -50,10 +50,6 @@ const obtenerConversaciones = async (req, res) => {
           .sort({ createdAt: 1 })
           .lean();
 
-        if (conv.contactoId && conv.contactoId._id && contactosMap.has(conv.contactoId._id)) {
-          conv.contactoId.direccionFrecuente = contactosMap.get(conv.contactoId._id).direccionFrecuente || '';
-        }
-
         return {
           _id: conv._id,
           empresaId: conv.empresaId,

@@ -88,6 +88,7 @@ const recibirMensaje = async (req, res) => {
     const textoMensaje = mensaje?.text?.body || '';
 
     const whatsappMsgId = mensaje?.id || '';
+    const t0 = performance.now();
 
     console.log(`🔍 [3] Datos extraídos -> Cliente: ${telefonoCliente} | Mi Local ID: ${whatsappPhoneId} | Texto: ${textoMensaje}`);
 
@@ -175,6 +176,26 @@ const recibirMensaje = async (req, res) => {
 
     await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
 
+    // Emitir el mensaje entrante ANTES de procesarlo con IA para que el panel lo muestre al instante
+    const ioEntrante = req.app.get('io');
+    if (ioEntrante) {
+      ioEntrante.to(empresa._id.toString()).emit('mensaje-nuevo', {
+        conversacionId: conversacion._id,
+        mensaje: {
+          remitente: 'cliente',
+          contenido: textoMensaje,
+          fecha: new Date()
+        },
+        conversacion: {
+          _id: conversacion._id,
+          ultimoMensaje: textoMensaje,
+          updatedAt: new Date()
+        }
+      });
+    }
+
+    console.log(`⏱️ Tiempo hasta mensaje guardado: ${(performance.now() - t0).toFixed(0)} ms`);
+
     // ===== Extracción automática de datos del cliente con IA =====
     try {
       if (process.env.GEMINI_API_KEY) {
@@ -210,23 +231,7 @@ JSON:`;
       console.error('⚠️ Error al extraer datos del cliente con IA:', error);
     }
 
-    // Emitir mensaje entrante a los clientes conectados
-    const io = req.app.get('io');
-    if (io) {
-      io.to(empresa._id.toString()).emit('mensaje-nuevo', {
-        conversacionId: conversacion._id,
-        mensaje: {
-          remitente: 'cliente',
-          contenido: textoMensaje,
-          fecha: new Date()
-        },
-        conversacion: {
-          _id: conversacion._id,
-          ultimoMensaje: textoMensaje,
-          updatedAt: new Date()
-        }
-      });
-    }
+    console.log(`⏱️ Tiempo extracción IA: ${(performance.now() - t0).toFixed(0)} ms`);
 
     // ===== Generar respuesta con Gemini (solo si el bot está activo) =====
     let respuestaIA = null;

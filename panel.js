@@ -120,7 +120,7 @@ function formatearFechaTooltip(fecha) {
   return fecha.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-function filtrarConversaciones(conversaciones, texto) {
+function filtrarPorContacto(conversaciones, texto) {
   const term = (texto || '').toLowerCase().trim();
   if (!term) return conversaciones;
 
@@ -128,8 +128,15 @@ function filtrarConversaciones(conversaciones, texto) {
     const contacto = getContactoPorId(conv.contactoId);
     const nombre = (contacto?.nombre || '').toLowerCase();
     const telefono = (contacto?.telefono || '').toLowerCase();
-    if (nombre.includes(term) || telefono.includes(term)) return true;
+    return nombre.includes(term) || telefono.includes(term);
+  });
+}
 
+function filtrarPorMensaje(conversaciones, texto) {
+  const term = (texto || '').toLowerCase().trim();
+  if (!term) return [];
+
+  return conversaciones.filter(conv => {
     const mensajes = MENSAJES.filter(m => m.conversacionId === conv._id);
     return mensajes.some(m => (m.contenido || '').toLowerCase().includes(term));
   });
@@ -157,9 +164,88 @@ function renderListaChats() {
     base = CONVERSACIONES.filter(c => c.estado === 'Abierto');
   }
   const buscador = (document.getElementById('buscador') || {}).value || '';
-  const filtrados = filtrarConversaciones(base, buscador).filter(c =>
+  const filtrados = base.filter(c =>
     !whatsappSeleccionado ? true : c.lineaReceptora === whatsappSeleccionado
   );
+
+  const filtrar = (lista) => lista.filter(c =>
+    !whatsappSeleccionado ? true : c.lineaReceptora === whatsappSeleccionado
+  );
+
+  let htmlFinal = '';
+
+  if (buscador.trim() !== '') {
+    const porContacto = filtrar(filtrarPorContacto(filtrados, buscador));
+    const porMensaje = filtrar(filtrarPorMensaje(filtrados, buscador));
+
+    if (porContacto.length > 0) {
+      htmlFinal += `<div class="resultado-seccion-titulo">Chats</div>`;
+      htmlFinal += porContacto.map(conv => {
+        const contacto = getContactoPorId(conv.contactoId);
+        const inicial = (contacto.nombre || '?').charAt(0).toUpperCase();
+        const requiereAtencionClase = !conv.botActivo ? 'requiere-atencion' : '';
+        const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
+        const activaClase = conv._id === chatActivoId ? 'activo' : '';
+
+        return `
+          <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
+            <div class="chat-item-avatar">${inicial}</div>
+            <div class="chat-item-contenido">
+              <div class="chat-item-titulo">
+                <span class="chat-item-nombre">${contacto.nombre}</span>
+                <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
+              </div>
+              <div class="chat-item-linea">${conv.lineaReceptora}</div>
+              <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
+            </div>
+            <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    if (porMensaje.length > 0) {
+      htmlFinal += `<div class="resultado-seccion-titulo">Mensajes</div>`;
+      htmlFinal += porMensaje.map(conv => {
+        const contacto = getContactoPorId(conv.contactoId);
+        const inicial = (contacto.nombre || '?').charAt(0).toUpperCase();
+        const requiereAtencionClase = !conv.botActivo ? 'requiere-atencion' : '';
+        const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
+        const activaClase = conv._id === chatActivoId ? 'activo' : '';
+
+        return `
+          <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
+            <div class="chat-item-avatar">${inicial}</div>
+            <div class="chat-item-contenido">
+              <div class="chat-item-titulo">
+                <span class="chat-item-nombre">${contacto.nombre}</span>
+                <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
+              </div>
+              <div class="chat-item-linea">${conv.lineaReceptora}</div>
+              <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
+            </div>
+            <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    if (!porContacto.length && !porMensaje.length) {
+      htmlFinal = '<div class="sin-resultados">Sin resultados</div>';
+    }
+
+    container.innerHTML = htmlFinal;
+
+    // Asociar clics en cada ítem
+    document.querySelectorAll('.chat-item').forEach(item => {
+      item.addEventListener('click', () => {
+        chatActivoId = item.dataset.convId;
+        renderTodo();
+      });
+    });
+
+    return;
+  }
 
   container.innerHTML = filtrados.map(conv => {
     const contacto = getContactoPorId(conv.contactoId);

@@ -48,6 +48,16 @@ async function generarTextoGemini(prompt) {
       console.log(`🤖 Probando modelo Gemini: ${modelo}`);
       const model = genAI.getGenerativeModel({ model: modelo });
       const result = await model.generateContent(prompt);
+      const usage = result.response.usageMetadata;
+      if (usage) {
+        const precioEntrada = 0.30; // USD por millón de tokens (gemini 2.5/2.0 flash)
+        const precioSalida = 2.50;  // USD por millón de tokens
+        const costoEntrada = ((usage.promptTokenCount || 0) / 1000000) * precioEntrada;
+        const costoSalida = ((usage.candidatesTokenCount || 0) / 1000000) * precioSalida;
+        const costoTotal = (costoEntrada + costoSalida).toFixed(6);
+        console.log(`📊 Tokens -> Entrada: ${usage.promptTokenCount} | Salida: ${usage.candidatesTokenCount} | Total: ${usage.totalTokenCount}`);
+        console.log(`💰 Costo estimado: $${costoTotal} USD (${modelo})`);
+      }
       return result.response.text().trim();
     } catch (error) {
       ultimoError = error;

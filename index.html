@@ -64,6 +64,24 @@
       line-height: 1;
       padding: 0 2px;
     }
+    .whatsapp-selector {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    .whatsapp-selector label {
+      white-space: nowrap;
+    }
+    .whatsapp-selector select {
+      flex: 1;
+      min-width: 0;
+      padding: 3px 5px;
+      font-size: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -85,7 +103,7 @@
           <div class="panel-header">
             <h2>Bandeja de entrada</h2>
             <div class="whatsapp-selector">
-              <label for="select-whatsapp">Línea WhatsApp:</label>
+              <label for="select-whatsapp">Línea:</label>
               <select id="select-whatsapp"></select>
             </div>
             <div class="buscador">

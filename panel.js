@@ -120,6 +120,21 @@ function formatearFechaTooltip(fecha) {
   return fecha.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+function filtrarConversaciones(conversaciones, texto) {
+  const term = (texto || '').toLowerCase().trim();
+  if (!term) return conversaciones;
+
+  return conversaciones.filter(conv => {
+    const contacto = getContactoPorId(conv.contactoId);
+    const nombre = (contacto?.nombre || '').toLowerCase();
+    const telefono = (contacto?.telefono || '').toLowerCase();
+    if (nombre.includes(term) || telefono.includes(term)) return true;
+
+    const mensajes = MENSAJES.filter(m => m.conversacionId === conv._id);
+    return mensajes.some(m => (m.contenido || '').toLowerCase().includes(term));
+  });
+}
+
 // ===== Renderers =====
 function colorFromString(str) {
   let hash = 0;
@@ -141,9 +156,10 @@ function renderListaChats() {
   } else {
     base = CONVERSACIONES.filter(c => c.estado === 'Abierto');
   }
-  const filtrados = whatsappSeleccionado
-    ? base.filter(c => c.lineaReceptora === whatsappSeleccionado)
-    : base;
+  const buscador = (document.getElementById('buscador') || {}).value || '';
+  const filtrados = filtrarConversaciones(base, buscador).filter(c =>
+    !whatsappSeleccionado ? true : c.lineaReceptora === whatsappSeleccionado
+  );
 
   container.innerHTML = filtrados.map(conv => {
     const contacto = getContactoPorId(conv.contactoId);
@@ -1134,6 +1150,14 @@ function init() {
         chatActivoId = null;
       }
       renderTodo();
+    });
+  }
+
+  // Buscador de chats
+  const inputBuscador = document.getElementById('buscador');
+  if (inputBuscador) {
+    inputBuscador.addEventListener('input', () => {
+      renderListaChats();
     });
   }
 

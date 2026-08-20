@@ -44,9 +44,8 @@ const EmpresaSchema = new Schema(
     botActivo: {
       type: Boolean,
       default: true
-    },
+    }
  
-    pin: { type: String}
   },
   
   { timestamps: true }

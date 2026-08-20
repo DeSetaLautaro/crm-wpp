@@ -12,9 +12,9 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // ============================================================
 
 const MODELOS_POR_DEFECTO = [
-  'gemini-2.5-flash-preview-09-2025',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash'
+  'gemini-3.1-pro-preview',
+  'gemini-3.5-flash',
+  'gemini-3.1-flash-lite'
 ];
 
 function obtenerModelos() {

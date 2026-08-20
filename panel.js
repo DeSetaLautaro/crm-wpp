@@ -799,7 +799,10 @@ function renderPanelPedido(conv, contacto) {
   if (!contenedor) return;
 
   if (conv.carrito && conv.carrito.length > 0) {
-    contenedor.innerHTML = renderCarrito(conv.carrito, conv.carritoTotal);
+    let html = renderCarrito(conv.carrito, conv.carritoTotal);
+    const direccion = (contacto && contacto.direccion) ? contacto.direccion : 'No especificada';
+    html += `<div class="pedido-direccion">Entrega: ${direccion}</div>`;
+    contenedor.innerHTML = html;
     return;
   }
 

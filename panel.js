@@ -590,10 +590,9 @@ async function cargarConversaciones() {
       setupSocketListeners();
     }
 
-    const primeraEmpresa = convsApi[0] && (convsApi[0].empresaId || convsApi[0].parrillaId);
-    if (socket && primeraEmpresa && primeraEmpresa !== miEmpresaId) {
-      miEmpresaId = primeraEmpresa;
-      socket.emit('join', miEmpresaId);
+    if (socket) {
+      const salas = [...new Set(conversacionesLocal.map(c => c.empresaId).filter(Boolean))];
+      salas.forEach(sala => socket.emit('join', sala));
     }
 
     renderTodo();
@@ -681,6 +680,12 @@ function poblarSelectorWhatsApp(items) {
 
 function setupSocketListeners() {
   if (!socket) return;
+
+  socket.on('connect', () => {
+    const salas = [...new Set(CONVERSACIONES.map(c => c.empresaId).filter(Boolean))];
+    salas.forEach(sala => socket.emit('join', sala));
+  });
+
   socket.on('mensaje-nuevo', (payload) => {
     const { conversacionId, mensaje, conversacion } = payload;
 

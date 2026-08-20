@@ -145,7 +145,37 @@ const recibirMensaje = async (req, res) => {
       await conversacion.save();
     }
 
-    // ===== Procesar carrito en vivo =====
+    console.log("📝 [9] Guardando mensaje...");
+    await Mensaje.create({
+      conversacionId: conversacion._id,
+      remitente: 'cliente',
+      contenido: textoMensaje,
+      whatsappMsgId
+    });
+
+    await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
+
+    // Emitir el mensaje entrante ANTES de procesar el carrito para que el panel lo muestre al instante
+    const ioEntrante = req.app.get('io');
+    if (ioEntrante) {
+      ioEntrante.to(empresa._id.toString()).emit('mensaje-nuevo', {
+        conversacionId: conversacion._id,
+        mensaje: {
+          remitente: 'cliente',
+          contenido: textoMensaje,
+          fecha: new Date()
+        },
+        conversacion: {
+          _id: conversacion._id,
+          ultimoMensaje: textoMensaje,
+          updatedAt: new Date()
+        }
+      });
+    }
+
+    console.log(`⏱️ Tiempo hasta mensaje guardado: ${(performance.now() - t0).toFixed(0)} ms`);
+
+    // ===== Procesar carrito en vivo (después de mostrar el mensaje) =====
     const carritoProcesado = await procesarCarrito(empresa, conversacion, textoMensaje, productos);
     if (carritoProcesado) {
       conversacion.carrito = carritoProcesado.items;
@@ -165,36 +195,6 @@ const recibirMensaje = async (req, res) => {
         });
       }
     }
-
-    console.log("📝 [9] Guardando mensaje...");
-    await Mensaje.create({
-      conversacionId: conversacion._id,
-      remitente: 'cliente',
-      contenido: textoMensaje,
-      whatsappMsgId
-    });
-
-    await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
-
-    // Emitir el mensaje entrante ANTES de procesarlo con IA para que el panel lo muestre al instante
-    const ioEntrante = req.app.get('io');
-    if (ioEntrante) {
-      ioEntrante.to(empresa._id.toString()).emit('mensaje-nuevo', {
-        conversacionId: conversacion._id,
-        mensaje: {
-          remitente: 'cliente',
-          contenido: textoMensaje,
-          fecha: new Date()
-        },
-        conversacion: {
-          _id: conversacion._id,
-          ultimoMensaje: textoMensaje,
-          updatedAt: new Date()
-        }
-      });
-    }
-
-    console.log(`⏱️ Tiempo hasta mensaje guardado: ${(performance.now() - t0).toFixed(0)} ms`);
 
     // ===== Extracción automática de datos del cliente con IA =====
     try {

@@ -30,7 +30,11 @@ app.set('io', io);
 
 io.on('connection', (socket) => {
   socket.on('join', (empresaId) => {
-    if (empresaId) socket.join(empresaId);
+    if (empresaId) {
+      const sala = String(empresaId);
+      socket.join(sala);
+      console.log(`📡 Socket unido a sala: ${sala}`);
+    }
   });
 });
 

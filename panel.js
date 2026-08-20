@@ -188,6 +188,26 @@ function renderChatActivo() {
   document.getElementById('chat-nombre').textContent = contacto.nombre;
   document.getElementById('chat-linea').textContent = conv.lineaReceptora;
 
+  // Mostrar etiquetas del contacto en el header del chat
+  const lineaHeader = document.getElementById('chat-linea');
+  let etiquetasHeader = document.getElementById('chat-etiquetas');
+  if (!etiquetasHeader && lineaHeader && lineaHeader.parentNode) {
+    etiquetasHeader = document.createElement('div');
+    etiquetasHeader.id = 'chat-etiquetas';
+    etiquetasHeader.className = 'chat-etiquetas';
+    lineaHeader.parentNode.insertBefore(etiquetasHeader, lineaHeader.nextSibling);
+  }
+  if (etiquetasHeader) {
+    const etiquetas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
+    etiquetasHeader.innerHTML = etiquetas.map(etiqueta => {
+      const color = colorFromString(etiqueta);
+      return `<span style="background:${color}22; border:1px solid ${color}; border-radius:12px; padding:2px 8px; font-size:12px; margin-right:4px; color:${color};">
+                ${etiqueta}
+                <button class="etiqueta-remove" data-etiqueta="${etiqueta}" style="background:none; border:none; color:inherit; margin-left:4px; cursor:pointer; font-size:12px;">×</button>
+              </span>`;
+    }).join('');
+  }
+
   toggle.checked = conv.botActivo;
   estadoBot.textContent = conv.botActivo ? 'Bot Activo' : 'Pausado';
 
@@ -239,20 +259,10 @@ function renderPerfil(contacto) {
   if (avatar) avatar.textContent = (nombre || '?').charAt(0).toUpperCase();
 
   const contEtiquetas = document.getElementById('lista-etiquetas');
-  if (!contEtiquetas) return;
-  const etiquetas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
-  if (etiquetas.length === 0) {
-    contEtiquetas.innerHTML = '<span class="etiquetas-vacio">Sin etiquetas asignadas</span>';
-    return;
+  if (contEtiquetas) {
+    // Las etiquetas se muestran en el header del chat, por eso acá no se muestra nada.
+    contEtiquetas.innerHTML = '';
   }
-
-  contEtiquetas.innerHTML = etiquetas.map(etiqueta => {
-    const color = colorFromString(etiqueta);
-    return `<span class="etiqueta-pill" style="background:${color}22; border-color:${color}">
-              ${etiqueta}
-              <button class="etiqueta-remove" data-etiqueta="${etiqueta}" title="Eliminar etiqueta">×</button>
-            </span>`;
-  }).join('');
 
   const contNotas = document.getElementById('modal-lista-notas');
   if (contNotas) {
@@ -1224,16 +1234,13 @@ function init() {
   }
 
   // Delegación para eliminar etiquetas (clic en la ×)
-  const listaEtiquetas = document.getElementById('lista-etiquetas');
-  if (listaEtiquetas) {
-    listaEtiquetas.addEventListener('click', (e) => {
-      const btnEliminar = e.target.closest('.etiqueta-remove');
-      if (btnEliminar) {
-        const etiqueta = btnEliminar.dataset.etiqueta;
-        eliminarEtiquetaDesdeUI(etiqueta);
-      }
-    });
-  }
+  document.addEventListener('click', (e) => {
+    const btnEliminar = e.target.closest('.etiqueta-remove');
+    if (btnEliminar) {
+      const etiqueta = btnEliminar.dataset.etiqueta;
+      eliminarEtiquetaDesdeUI(etiqueta);
+    }
+  });
 
   // Guardar nota interna
   const btnGuardarNota = document.getElementById('guardar-nota');

@@ -641,6 +641,31 @@ const marcarAtendido = async (req, res) => {
   }
 };
 
+const reabrirConversacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID de conversación inválido' });
+    }
+    const conversacion = await Conversacion.findById(id);
+    if (!conversacion) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+    const empresaIdStr = conversacion.empresaId.toString();
+    const empresasPermitidas = req.empresas && req.empresas.length > 0 ? req.empresas : [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+    conversacion.estado = 'Abierto';
+    await conversacion.save();
+    return res.json({ ok: true, conversacion });
+  } catch (error) {
+    console.error('Error al reabrir conversación:', error);
+    return res.status(500).json({ error: 'Error interno al reabrir conversación' });
+  }
+};
+
 // ===== Agregar etiqueta a un contacto =====
 const agregarEtiqueta = async (req, res) => {
   try {

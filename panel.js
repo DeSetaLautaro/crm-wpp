@@ -142,6 +142,14 @@ function filtrarPorMensaje(conversaciones, texto) {
   });
 }
 
+function requiereAtencionHumana(conv) {
+  if (conv.botActivo) return false;
+  const msgs = getMensajesDeConversacion(conv._id);
+  if (msgs.length === 0) return true;
+  const ultimo = msgs[msgs.length - 1];
+  return ultimo.remitente === 'cliente';
+}
+
 function botonAccionChat(conv) {
   if (conv.estado === 'Resuelto') {
     return `<button class="chat-item-accion" data-accion="reabrir" data-conv-id="${conv._id}" title="Volver a bot inactivo">↩️</button>`;
@@ -193,7 +201,7 @@ function renderListaChats() {
       htmlFinal += porContacto.map(conv => {
         const contacto = getContactoPorId(conv.contactoId);
         const inicial = (contacto.nombre || '?').charAt(0).toUpperCase();
-        const requiereAtencionClase = !conv.botActivo ? 'requiere-atencion' : '';
+        const requiereAtencionClase = requiereAtencionHumana(conv) ? 'requiere-atencion' : '';
         const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
         const activaClase = conv._id === chatActivoId ? 'activo' : '';
 
@@ -220,7 +228,7 @@ function renderListaChats() {
       htmlFinal += porMensaje.map(conv => {
         const contacto = getContactoPorId(conv.contactoId);
         const inicial = (contacto.nombre || '?').charAt(0).toUpperCase();
-        const requiereAtencionClase = !conv.botActivo ? 'requiere-atencion' : '';
+        const requiereAtencionClase = requiereAtencionHumana(conv) ? 'requiere-atencion' : '';
         const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
         const activaClase = conv._id === chatActivoId ? 'activo' : '';
 
@@ -263,7 +271,7 @@ function renderListaChats() {
   container.innerHTML = filtrados.map(conv => {
     const contacto = getContactoPorId(conv.contactoId);
     const inicial = (contacto.nombre || '?').charAt(0).toUpperCase();
-    const requiereAtencionClase = !conv.botActivo ? 'requiere-atencion' : '';
+    const requiereAtencionClase = requiereAtencionHumana(conv) ? 'requiere-atencion' : '';
     const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
     const activaClase = conv._id === chatActivoId ? 'activo' : '';
 

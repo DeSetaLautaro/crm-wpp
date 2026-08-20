@@ -483,7 +483,7 @@ const enviarMensaje = async (req, res) => {
       contenido: mensaje
     });
 
-    await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: mensaje });
+    await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: mensaje, estado: 'Abierto' });
 
     const io = req.app.get('io');
     if (io) {
@@ -762,6 +762,7 @@ module.exports = {
   actualizarContacto,
   obtenerPedidoActivo,
   marcarAtendido,
+  reabrirConversacion,
   agregarEtiqueta,
   eliminarEtiqueta,
   agregarNota,

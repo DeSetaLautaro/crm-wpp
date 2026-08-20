@@ -142,6 +142,16 @@ function filtrarPorMensaje(conversaciones, texto) {
   });
 }
 
+function botonAccionChat(conv) {
+  if (conv.estado === 'Resuelto') {
+    return `<button class="chat-item-accion" data-accion="reabrir" data-conv-id="${conv._id}" title="Volver a bot inactivo">↩️</button>`;
+  }
+  if (!conv.botActivo) {
+    return `<button class="chat-item-accion" data-accion="atender" data-conv-id="${conv._id}" title="Marcar como atendido">✅</button>`;
+  }
+  return '';
+}
+
 // ===== Renderers =====
 function colorFromString(str) {
   let hash = 0;
@@ -198,6 +208,7 @@ function renderListaChats() {
               <div class="chat-item-linea">${conv.lineaReceptora}</div>
               <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
             </div>
+            ${botonAccionChat(conv)}
             <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
           </div>
         `;
@@ -224,6 +235,7 @@ function renderListaChats() {
               <div class="chat-item-linea">${conv.lineaReceptora}</div>
               <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
             </div>
+            ${botonAccionChat(conv)}
             <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
           </div>
         `;
@@ -238,7 +250,8 @@ function renderListaChats() {
 
     // Asociar clics en cada ítem
     document.querySelectorAll('.chat-item').forEach(item => {
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.chat-item-accion')) return;
         chatActivoId = item.dataset.convId;
         renderTodo();
       });
@@ -265,6 +278,7 @@ function renderListaChats() {
           <div class="chat-item-linea">${conv.lineaReceptora}</div>
           <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
         </div>
+        ${botonAccionChat(conv)}
         <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
       </div>
     `;
@@ -272,7 +286,8 @@ function renderListaChats() {
 
   // Asociar clics en cada ítem
   document.querySelectorAll('.chat-item').forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.chat-item-accion')) return;
       chatActivoId = item.dataset.convId;
       renderTodo();
     });
@@ -312,11 +327,6 @@ function renderChatActivo() {
 
   toggle.checked = conv.botActivo;
   estadoBot.textContent = conv.botActivo ? 'Bot Activo' : 'Pausado';
-
-  const btnAtendido = document.getElementById('btn-marcar-atendido');
-  if (btnAtendido) {
-    btnAtendido.style.display = conv.estado === 'Abierto' ? 'inline-block' : 'none';
-  }
 
   // Mensajes
   const areaMensajes = document.getElementById('area-mensajes');
@@ -677,6 +687,7 @@ function setupSocketListeners() {
     // Actualizar la conversación local
     const convLocal = CONVERSACIONES.find(c => c._id === conversacionId);
     if (convLocal) {
+      convLocal.estado = 'Abierto';
       convLocal.ultimoMensaje = (conversacion && conversacion.ultimoMensaje) || mensaje.contenido;
       convLocal.ultimaFecha = (conversacion && conversacion.updatedAt)
         ? new Date(conversacion.updatedAt)
@@ -737,6 +748,11 @@ async function enviarMensajeDesdePanel() {
       return;
     }
     input.value = '';
+    const conv = getConversacionPorId(chatActivoId);
+    if (conv && conv.estado !== 'Abierto') {
+      conv.estado = 'Abierto';
+      renderListaChats();
+    }
   } catch (error) {
     console.error('Error de red al enviar mensaje:', error);
   }
@@ -1055,11 +1071,11 @@ async function eliminarNotaDesdeUI(notaEncode) {
 }
 
 // ===== Guardar nota interna =====
-async function marcarAtendido() {
-  if (!chatActivoId) return;
+async function marcarAtendido(convId = chatActivoId) {
+  if (!convId) return;
   const token = localStorage.getItem('token') || '';
   try {
-    const res = await fetch(`/api/whatsapp/conversacion/${chatActivoId}/atender`, {
+    const res = await fetch(`/api/whatsapp/conversacion/${convId}/atender`, {
       method: 'PUT',
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -1068,12 +1084,32 @@ async function marcarAtendido() {
       console.error('Error al marcar atendido:', data.error || res.status);
       return;
     }
-    const data = await res.json();
-    const conv = getConversacionPorId(chatActivoId);
+    const conv = getConversacionPorId(convId);
     if (conv) conv.estado = 'Resuelto';
     renderTodo();
   } catch (error) {
     console.error('Error de red al marcar atendido:', error);
+  }
+}
+
+async function reabrirConversacion(convId) {
+  if (!convId) return;
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/whatsapp/conversacion/${convId}/reabrir`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al reabrir conversación:', data.error || res.status);
+      return;
+    }
+    const conv = getConversacionPorId(convId);
+    if (conv) conv.estado = 'Abierto';
+    renderTodo();
+  } catch (error) {
+    console.error('Error de red al reabrir conversación:', error);
   }
 }
 
@@ -1274,9 +1310,6 @@ function init() {
     });
   }
 
-  // Botón de marcar atendido
-  const btnAtendido = document.getElementById('btn-marcar-atendido');
-  if (btnAtendido) btnAtendido.addEventListener('click', marcarAtendido);
 
   // Botón para crear nuevo agente (placeholder)
   const btnNuevoAgente = document.getElementById('btn-nuevo-agente');
@@ -1407,6 +1440,16 @@ function init() {
     if (btnEliminar) {
       eliminarNotaDesdeUI(btnEliminar.dataset.nota);
     }
+
+    // Acciones rápidas en chat-item (atender/reabrir)
+    const btnAccion = e.target.closest('.chat-item-accion');
+    if (!btnAccion) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const convId = btnAccion.dataset.convId;
+    const accion = btnAccion.dataset.accion;
+    if (accion === 'atender') marcarAtendido(convId);
+    else if (accion === 'reabrir') reabrirConversacion(convId);
   });
 
   // Guardar nota interna

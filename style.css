@@ -211,6 +211,23 @@ body {
   margin-top: 4px;
 }
 
+.chat-item-accion {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: 6px;
+}
+
+.chat-item-accion:hover {
+  background: #E5E7EB;
+}
+
 .chat-item-indicador {
   width: 10px;
   height: 10px;

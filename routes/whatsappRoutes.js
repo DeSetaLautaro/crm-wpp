@@ -11,6 +11,7 @@ const {
   actualizarContacto,
   obtenerPedidoActivo,
   marcarAtendido,
+  reabrirConversacion,
   agregarEtiqueta,
   eliminarEtiqueta,
   agregarNota,
@@ -40,6 +41,9 @@ router.get('/conversacion/:conversacionId/pedido-activo', auth, obtenerPedidoAct
 
 // Marcar conversación como atendida (PUT)
 router.put('/conversacion/:id/atender', auth, marcarAtendido);
+
+// Reabrir conversación atendida (PUT)
+router.put('/conversacion/:id/reabrir', auth, reabrirConversacion);
 
 // Agregar etiqueta a un contacto (POST)
 router.post('/contacto/:contactoId/etiquetas', auth, agregarEtiqueta);

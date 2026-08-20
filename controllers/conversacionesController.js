@@ -1,6 +1,18 @@
 const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
 const Empresa = require('../models/Empresa');
+const Pedido = require('../models/Pedido');
+
+function normalizarTelefono(tel) {
+  const digits = String(tel || '').replace(/\D/g, '');
+  if (digits.startsWith('54') && digits.length > 11) {
+    if (digits.startsWith('549')) {
+      return digits.slice(3);
+    }
+    return digits.slice(2);
+  }
+  return digits;
+}
 
 /**
  * GET /api/conversaciones
@@ -37,6 +49,10 @@ const obtenerConversaciones = async (req, res) => {
         const mensajes = await Mensaje.find({ conversacionId: conv._id })
           .sort({ createdAt: 1 })
           .lean();
+
+        if (conv.contactoId && conv.contactoId._id && contactosMap.has(conv.contactoId._id)) {
+          conv.contactoId.direccionFrecuente = contactosMap.get(conv.contactoId._id).direccionFrecuente || '';
+        }
 
         return {
           _id: conv._id,

@@ -6,7 +6,11 @@ const itemPedidoSchema = new Schema(
   {
     nombre: {
       type: String,
-      required: true
+      default: ''
+    },
+    nombrePlato: {
+      type: String,
+      default: ''
     },
     cantidad: {
       type: Number,
@@ -15,8 +19,23 @@ const itemPedidoSchema = new Schema(
     },
     precioUnitario: {
       type: Number,
-      required: true,
       default: 0
+    },
+    precio: {
+      type: Number,
+      default: 0
+    },
+    enPromocion: {
+      type: Boolean,
+      default: false
+    },
+    porcentajeDescuento: {
+      type: Number,
+      default: 0
+    },
+    toppings: {
+      type: [Schema.Types.Mixed],
+      default: []
     }
   },
   { _id: false }
@@ -72,6 +91,14 @@ const PedidoSchema = new Schema(
     fecha: {
       type: Date,
       default: Date.now
+    },
+    estadoDelivery: {
+      type: String,
+      default: 'pendiente'
+    },
+    numeroDiario: {
+      type: Number,
+      default: 0
     },
     // Campos adicionales para mantener compatibilidad con el sistema actual
     empresaId: {

@@ -228,7 +228,7 @@ function renderPerfil(contacto) {
   const inputDireccion = document.getElementById('perfil-direccion-input');
   const inputPisoDepto = document.getElementById('perfil-pisodpto-input');
   const inputCodigoPostal = document.getElementById('perfil-codigopostal-input');
-  if (inputDireccion) inputDireccion.value = contacto.direccion || '';
+  if (inputDireccion) inputDireccion.value = contacto.direccionFrecuente || contacto.direccion || '';
   if (inputPisoDepto) inputPisoDepto.value = contacto.pisoDepto || '';
   if (inputCodigoPostal) inputCodigoPostal.value = contacto.codigoPostal || '';
   const nombreTexto = document.getElementById('perfil-nombre-texto');
@@ -422,6 +422,33 @@ async function cargarConversaciones() {
         carritoTotal: conv.carritoTotal || 0
       };
     });
+
+    // Obtener pedidos del usuario para calcular dirección más frecuente
+    let pedidosLocal = [];
+    try {
+      pedidosLocal = await Pedido.find({ localId: { $in: empresas } })
+        .sort({ fecha: -1 })
+        .lean();
+    } catch (error) {
+      console.error('Error al obtener pedidos para calcular dirección frecuente:', error);
+    }
+
+    for (const [, contactoData] of contactosMap) {
+      if (!contactoData.telefono) continue;
+      const telNorm = normalizarTelefono(contactoData.telefono);
+      const pedidosContacto = pedidosLocal
+        .filter(p => normalizarTelefono(p.telefonoCliente) === telNorm)
+        .slice(0, 7);
+
+      const conteo = {};
+      pedidosContacto.forEach(p => {
+        const dir = p.direccion && typeof p.direccion === 'string' ? p.direccion.trim() : '';
+        if (dir) conteo[dir] = (conteo[dir] || 0) + 1;
+      });
+
+      contactoData.direccionFrecuente = Object.keys(conteo)
+        .sort((a, b) => conteo[b] - conteo[a])[0] || '';
+    }
 
     CONTACTOS = Array.from(contactosMap.values());
     CONVERSACIONES = conversacionesLocal;
@@ -800,7 +827,7 @@ function renderPanelPedido(conv, contacto) {
 
   if (conv.carrito && conv.carrito.length > 0) {
     let html = renderCarrito(conv.carrito, conv.carritoTotal);
-    const direccion = (contacto && contacto.direccion) ? contacto.direccion : 'No especificada';
+    const direccion = (contacto && (contacto.direccionFrecuente || contacto.direccion)) ? (contacto.direccionFrecuente || contacto.direccion) : 'No especificada';
     html += `<div class="pedido-direccion">Entrega: ${direccion}</div>`;
     contenedor.innerHTML = html;
     return;

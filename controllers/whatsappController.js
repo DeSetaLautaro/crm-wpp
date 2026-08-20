@@ -43,6 +43,14 @@ function detectarConfirmacionPedido(texto) {
   return confirmaciones.some(p => lower.includes(p));
 }
 
+function detectarMetodoPago(texto) {
+  const lower = (texto || '').toLowerCase();
+  if (/(efectivo|contado|billete|cash)/.test(lower)) return 'efectivo';
+  if (/(transferencia|transferir|alias|cbu|depósito|deposito)/.test(lower)) return 'transferencia';
+  if (/(tarjeta|débito|debito|crédito|credito|mercado pago|mercadopago)/.test(lower)) return 'tarjeta';
+  return null;
+}
+
 const verificarWebhook = (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -337,13 +345,34 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
           if (carritoActual.length > 0) {
             const totalCarrito = (conversacion.carritoTotal || 0) ||
               carritoActual.reduce((sum, it) => sum + (it.cantidad * it.precioUnitario), 0);
+
+            // Detectar método de pago mencionado en los últimos mensajes
+            let metodoPago = 'Pendiente';
+            try {
+              const ultimosMsgs = await Mensaje.find({ conversacionId: conversacion._id })
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .lean();
+              for (const msg of ultimosMsgs) {
+                const det = detectarMetodoPago(msg.contenido);
+                if (det) {
+                  metodoPago = det;
+                  break;
+                }
+              }
+            } catch (e) {
+              console.warn('⚠️ No se pudo detectar método de pago:', e);
+            }
+
             await guardarPedidoConfirmado({
-              localId: empresa._id,
+              localId: usuario._id,
+              empresaId: empresa._id,
+              contactoId: contacto._id,
               cliente: contacto.nombre || nombre,
               telefonoCliente: contacto.telefono,
               items: carritoActual,
               total: totalCarrito,
-              metodoPago: 'Pendiente',
+              metodoPago,
               estado: 'confirmado',
               direccion: contacto.direccion || '',
               notas: '',
@@ -601,6 +630,8 @@ const obtenerPedidoActivo = async (req, res) => {
 
     const pedido = await Pedido.findOne({
       conversacionId,
+      empresaId: conversacion.empresaId,
+      contactoId: conversacion.contactoId,
       estado: { $nin: ['Entregado', 'Cancelado'] }
     }).sort({ createdAt: -1 });
 

@@ -26,11 +26,18 @@ async function confirmarPedido(req, res) {
       direccion = '',
       notas = '',
       fechaTurno = '',
-      fecha = new Date()
+      fecha = new Date(),
+      empresaId = null,
+      contactoId = null
     } = req.body || {};
+
+    const empresaIdFinal = req.empresaId || empresaId;
+    const contactoIdFinal = req.body?.contactoId || contactoId;
 
     const pedido = await guardarPedidoConfirmado({
       localId,
+      empresaId: empresaIdFinal,
+      contactoId: contactoIdFinal,
       cliente,
       telefonoCliente,
       items,
@@ -55,14 +62,21 @@ async function obtenerPedidosPorTelefono(req, res) {
   try {
     const { telefono } = req.params;
     const localId = req.usuario.id || req.userId;
+    const empresaId = req.empresaId || null;
+    const contactoId = req.query.contactoId || null;
     if (!localId) {
       return res.status(400).json({ error: 'No se pudo identificar el local' });
     }
 
-    const pedidos = await Pedido.find({
-      localId,
-      telefonoCliente: telefono
-    }).sort({ fecha: -1 }).lean();
+    const query = { localId };
+    if (empresaId) query.empresaId = empresaId;
+    if (contactoId) {
+      query.contactoId = contactoId;
+    } else if (telefono) {
+      query.telefonoCliente = telefono;
+    }
+
+    const pedidos = await Pedido.find(query).sort({ fecha: -1 }).lean();
 
     return res.json({ ok: true, pedidos });
   } catch (error) {

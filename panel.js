@@ -879,7 +879,7 @@ async function guardarDetallesDesdeModal() {
 }
 
 // ===== Cargar pedido activo =====
-async function cargarPedidoActivo(conversacionId, telefono) {
+async function cargarPedidoActivo(conversacionId, telefono, contactoId) {
   const token = localStorage.getItem('token') || '';
   const contenedor = document.getElementById('pedido-info');
   if (!contenedor) return;
@@ -888,7 +888,11 @@ async function cargarPedidoActivo(conversacionId, telefono) {
   // 1. Intentar obtener pedidos desde el endpoint específico por número de teléfono
   if (telefono) {
     try {
-      const res = await fetch(`/api/pedidos/cliente/${encodeURIComponent(telefono)}`, {
+      let url = `/api/pedidos/cliente/${encodeURIComponent(telefono)}`;
+      if (contactoId) {
+        url += `?contactoId=${encodeURIComponent(contactoId)}`;
+      }
+      const res = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -958,7 +962,7 @@ function renderPanelPedido(conv, contacto) {
   }
 
   // No hay carrito en construcción → buscamos último pedido confirmado
-  cargarPedidoActivo(conv._id, contacto.telefono);
+  cargarPedidoActivo(conv._id, contacto.telefono, contacto._id);
 }
 
 function renderPedido(contenedor, pedido) {

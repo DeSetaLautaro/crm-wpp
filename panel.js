@@ -367,6 +367,7 @@ function armarHeaderMovil(contacto, conv) {
 
   const bloqueado = contacto.bloqueado;
   menu.innerHTML = `
+    <div class="menu-movil-item" id="menu-movil-llamar">📞 Llamar</div>
     <div class="menu-movil-item" id="menu-movil-bloquear">${bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear'}</div>
     <div class="menu-movil-item" id="menu-movil-detalles">👁 Ver detalles</div>
     <div class="menu-movil-item" id="menu-movil-notas">📝 Notas / Archivos</div>
@@ -385,6 +386,11 @@ function armarHeaderMovil(contacto, conv) {
   document.getElementById('menu-movil-notas').onclick = () => {
     menu.classList.add('hidden');
     abrirArchivosNotasDesdeMenu();
+  };
+
+  document.getElementById('menu-movil-llamar').onclick = () => {
+    menu.classList.add('hidden');
+    window.location.href = `tel:${contacto.telefono || ''}`;
   };
 }
 
@@ -596,6 +602,19 @@ function renderPerfil(contacto) {
     itemArchivos.onclick = () => {
       perfilMenu.classList.add('hidden');
       abrirArchivosNotasDesdeMenu();
+    };
+
+    let itemLlamar = document.getElementById('menu-item-llamar');
+    if (!itemLlamar) {
+      itemLlamar = document.createElement('div');
+      itemLlamar.id = 'menu-item-llamar';
+      itemLlamar.className = 'perfil-menu-item';
+      perfilMenu.appendChild(itemLlamar);
+    }
+    itemLlamar.textContent = '📞 Llamar';
+    itemLlamar.onclick = () => {
+      perfilMenu.classList.add('hidden');
+      window.location.href = `tel:${contacto.telefono || ''}`;
     };
   }
 }

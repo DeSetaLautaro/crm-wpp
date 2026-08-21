@@ -1569,4 +1569,13 @@ function init() {
   if (btnGuardarNota) btnGuardarNota.addEventListener('click', guardarNota);
 }
 
+function ocultarBotonLlamarEnEscritorio() {
+  // Si el dispositivo tiene un puntero fino (mouse/desktop),
+  // ocultamos el botón de llamada porque no tiene sentido en escritorio.
+  const style = document.createElement('style');
+  style.textContent = '@media (pointer: fine) { [title="Llamar"], a[title="Llamar"], button[title="Llamar"] { display: none; } }';
+  document.head.appendChild(style);
+}
+
 document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', ocultarBotonLlamarEnEscritorio);

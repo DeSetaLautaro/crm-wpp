@@ -15,7 +15,9 @@ const {
   agregarEtiqueta,
   eliminarEtiqueta,
   agregarNota,
-  eliminarNota
+  eliminarNota,
+  bloquearCliente,
+  desbloquearCliente
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -56,6 +58,12 @@ router.post('/contacto/:contactoId/notas', auth, agregarNota);
 
 // Eliminar nota interna de un contacto (DELETE)
 router.delete('/contacto/:contactoId/notas/:nota', auth, eliminarNota);
+
+// Bloquear cliente (PUT)
+router.put('/contacto/:contactoId/bloquear', auth, bloquearCliente);
+
+// Desbloquear cliente (PUT)
+router.put('/contacto/:contactoId/desbloquear', auth, desbloquearCliente);
 
 module.exports = router;
 

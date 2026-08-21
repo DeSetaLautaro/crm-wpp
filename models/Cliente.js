@@ -52,6 +52,10 @@ const ClienteSchema = new Schema(
     ultimaFechaPedido: {
       type: Date,
       default: null
+    },
+    bloqueado: {
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: true }

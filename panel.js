@@ -403,6 +403,20 @@ function renderPerfil(contacto) {
       `).join('');
     }
   }
+
+  // Botón de bloqueo / desbloqueo
+  const perfilHeader = document.querySelector('.perfil-header');
+  if (perfilHeader) {
+    let btnBloqueo = document.getElementById('btn-bloquear-cliente');
+    if (!btnBloqueo) {
+      btnBloqueo = document.createElement('button');
+      btnBloqueo.id = 'btn-bloquear-cliente';
+      btnBloqueo.className = 'btn-bloquear-cliente';
+      perfilHeader.appendChild(btnBloqueo);
+    }
+    btnBloqueo.textContent = contacto.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear';
+    btnBloqueo.onclick = () => confirmarBloqueoCliente();
+  }
 }
 
 function renderTodo() {
@@ -1159,6 +1173,84 @@ async function guardarNota() {
     if (chatActivoId) renderChatActivo();
   } catch (error) {
     console.error('Error de red al guardar nota:', error);
+  }
+}
+
+// ===== Bloqueo de cliente =====
+function confirmarBloqueoCliente() {
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) return;
+
+  // Crear overlay y modal
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-bloqueo-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:400px;text-align:center;';
+
+  const titulo = document.createElement('h3');
+  titulo.textContent = contacto.bloqueado ? '¿Desbloquear cliente?' : '¿Bloquear cliente?';
+  titulo.style.marginTop = '0';
+
+  const texto = document.createElement('p');
+  texto.textContent = contacto.bloqueado
+    ? 'El cliente volverá a recibir mensajes automáticos del bot.'
+    : 'El cliente dejará de recibir respuestas automáticas y sus mensajes serán descartados.';
+
+  const contBtns = document.createElement('div');
+  contBtns.style.marginTop = '20px';
+
+  const btnCancelar = document.createElement('button');
+  btnCancelar.textContent = 'Cancelar';
+  btnCancelar.style.cssText = 'margin-right:10px;padding:10px 20px;border:none;border-radius:8px;background:#e5e7eb;cursor:pointer;';
+
+  const btnConfirmar = document.createElement('button');
+  btnConfirmar.textContent = 'Confirmar';
+  btnConfirmar.style.cssText = 'padding:10px 20px;border:none;border-radius:8px;background:#ef4444;color:#fff;cursor:pointer;';
+
+  btnCancelar.addEventListener('click', () => overlay.remove());
+  btnConfirmar.addEventListener('click', () => {
+    overlay.remove();
+    toggleBloqueoCliente();
+  });
+
+  contBtns.appendChild(btnCancelar);
+  contBtns.appendChild(btnConfirmar);
+  modal.appendChild(titulo);
+  modal.appendChild(texto);
+  modal.appendChild(contBtns);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+async function toggleBloqueoCliente() {
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const contacto = getContactoPorId(conv.contactoId);
+  if (!contacto) return;
+
+  const token = localStorage.getItem('token') || '';
+  const ruta = contacto.bloqueado ? 'desbloquear' : 'bloquear';
+  try {
+    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}/${ruta}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error('Error al cambiar estado:', data.error || res.status);
+      return;
+    }
+
+    const data = await res.json();
+    contacto.bloqueado = data.bloqueado;
+    renderChatActivo();
+  } catch (error) {
+    console.error('Error de red al cambiar estado:', error);
   }
 }
 

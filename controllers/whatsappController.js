@@ -133,6 +133,12 @@ const recibirMensaje = async (req, res) => {
       contacto = await Cliente.create({ localId: usuario._id, empresaId: empresa._id, telefono: telefonoCliente, nombre: nombre });
     }
 
+    // 🚫 Si el cliente está bloqueado, descartamos el mensaje por completo
+    if (contacto.bloqueado) {
+      console.log(`🚫 Cliente bloqueado (${telefonoCliente}), se descarta mensaje.`);
+      return;
+    }
+
     let conversacion = await Conversacion.findOne({ empresaId: empresa._id, contactoId: contacto._id })
       .sort({ createdAt: -1 });
     if (!conversacion) {
@@ -805,6 +811,42 @@ const agregarNota = async (req, res) => {
   }
 };
 
+const bloquearCliente = async (req, res) => {
+  try {
+    const { contactoId } = req.params;
+    const contacto = await Cliente.findByIdAndUpdate(
+      contactoId,
+      { $set: { bloqueado: true } },
+      { new: true }
+    );
+    if (!contacto) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+    return res.json({ ok: true, bloqueado: true, contacto });
+  } catch (error) {
+    console.error('Error al bloquear cliente:', error);
+    return res.status(500).json({ error: 'Error interno al bloquear cliente' });
+  }
+};
+
+const desbloquearCliente = async (req, res) => {
+  try {
+    const { contactoId } = req.params;
+    const contacto = await Cliente.findByIdAndUpdate(
+      contactoId,
+      { $set: { bloqueado: false } },
+      { new: true }
+    );
+    if (!contacto) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+    return res.json({ ok: true, bloqueado: false, contacto });
+  } catch (error) {
+    console.error('Error al desbloquear cliente:', error);
+    return res.status(500).json({ error: 'Error interno al desbloquear cliente' });
+  }
+};
+
 module.exports = {
   verificarWebhook,
   recibirMensaje,
@@ -817,5 +859,7 @@ module.exports = {
   agregarEtiqueta,
   eliminarEtiqueta,
   agregarNota,
-  eliminarNota
+  eliminarNota,
+  bloquearCliente,
+  desbloquearCliente
 };

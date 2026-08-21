@@ -379,19 +379,12 @@ function armarHeaderMovil(contacto, conv) {
 
   document.getElementById('menu-movil-detalles').onclick = () => {
     menu.classList.add('hidden');
-    const app = document.getElementById('app');
-    if (app) app.classList.add('perfil-abierto');
-    abrirDetallesModal();
+    abrirDetallesDesdeMenu();
   };
 
   document.getElementById('menu-movil-notas').onclick = () => {
     menu.classList.add('hidden');
-    const app = document.getElementById('app');
-    if (app) app.classList.add('perfil-abierto');
-    const panelNotas = document.getElementById('notas-panel');
-    const panelArchivos = document.getElementById('archivos-panel');
-    if (panelNotas) panelNotas.classList.remove('hidden');
-    if (panelArchivos) panelArchivos.classList.add('hidden');
+    abrirArchivosNotasDesdeMenu();
   };
 }
 
@@ -409,6 +402,28 @@ function armarBotonCerrarPerfilMovil() {
     document.getElementById('modal-detalles')?.classList.add('hidden');
   });
   perfilHeader.insertBefore(btn, perfilHeader.firstChild);
+}
+
+function abrirDetallesDesdeMenu() {
+  const app = document.getElementById('app');
+  if (app && window.innerWidth <= 768) {
+    app.classList.add('perfil-abierto');
+  }
+  abrirDetallesModal();
+}
+
+function abrirArchivosNotasDesdeMenu() {
+  const app = document.getElementById('app');
+  if (app && window.innerWidth <= 768) {
+    app.classList.add('perfil-abierto');
+  }
+  const modal = document.getElementById('modal-detalles');
+  if (modal) modal.classList.add('hidden');
+
+  const panelNotas = document.getElementById('notas-panel');
+  const panelArchivos = document.getElementById('archivos-panel');
+  if (panelNotas) panelNotas.classList.remove('hidden');
+  if (panelArchivos) panelArchivos.classList.add('hidden');
 }
 
 function renderChatActivo() {
@@ -553,6 +568,32 @@ function renderPerfil(contacto) {
     itemBloqueo.onclick = () => {
       perfilMenu.classList.add('hidden');
       confirmarBloqueoCliente();
+    };
+
+    let itemDetalles = document.getElementById('menu-item-detalles');
+    if (!itemDetalles) {
+      itemDetalles = document.createElement('div');
+      itemDetalles.id = 'menu-item-detalles';
+      itemDetalles.className = 'perfil-menu-item';
+      perfilMenu.appendChild(itemDetalles);
+    }
+    itemDetalles.textContent = '👁 Ver detalles';
+    itemDetalles.onclick = () => {
+      perfilMenu.classList.add('hidden');
+      abrirDetallesDesdeMenu();
+    };
+
+    let itemArchivos = document.getElementById('menu-item-archivos');
+    if (!itemArchivos) {
+      itemArchivos = document.createElement('div');
+      itemArchivos.id = 'menu-item-archivos';
+      itemArchivos.className = 'perfil-menu-item';
+      perfilMenu.appendChild(itemArchivos);
+    }
+    itemArchivos.textContent = '📝 Notas / Archivos';
+    itemArchivos.onclick = () => {
+      perfilMenu.classList.add('hidden');
+      abrirArchivosNotasDesdeMenu();
     };
   }
 }

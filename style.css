@@ -1281,7 +1281,109 @@ body.modo-login #app {
   display: none;
 }
 
+.chat-avatar-movil,
+.btn-llamar-movil,
+.btn-mas-movil,
+.btn-cerrar-perfil-movil {
+  display: none;
+}
+
+.menu-movil {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .chat-avatar-movil {
+    display: flex;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #2563EB;
+    color: white;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+
+  .btn-llamar-movil {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    text-decoration: none;
+    color: #2563EB;
+    padding: 4px;
+    margin-left: 8px;
+  }
+
+  .btn-mas-movil {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    color: #2563EB;
+    padding: 4px 8px;
+    margin-left: 4px;
+  }
+
+  .btn-cerrar-perfil-movil {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #2563EB;
+    margin-right: 4px;
+    padding: 4px;
+  }
+
+  .menu-movil {
+    display: block;
+    position: fixed;
+    top: 60px;
+    right: 10px;
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    min-width: 180px;
+    z-index: 60;
+    padding: 6px 0;
+  }
+
+  .menu-movil-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #374151;
+    border-bottom: 1px solid #F1F5F9;
+  }
+
+  .menu-movil-item:last-child {
+    border-bottom: none;
+  }
+
+  .menu-movil-item:hover {
+    background: #F9FAFB;
+  }
+
+  #app.perfil-abierto #col-derecha {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: white;
+    overflow-y: auto;
+  }
+
   #slim-sidebar {
     display: none;
   }

@@ -302,6 +302,115 @@ function renderListaChats() {
   });
 }
 
+function armarHeaderMovil(contacto, conv) {
+  const chatHeader = document.querySelector('.chat-header');
+  if (!chatHeader) return;
+
+  // Avatar con inicial al lado de la flecha "volver"
+  let avatar = document.getElementById('chat-avatar-movil');
+  if (!avatar) {
+    avatar = document.createElement('div');
+    avatar.id = 'chat-avatar-movil';
+    avatar.className = 'chat-avatar-movil';
+    const backBtn = document.getElementById('btn-volver');
+    if (backBtn && backBtn.nextSibling) {
+      chatHeader.insertBefore(avatar, backBtn.nextSibling);
+    } else {
+      chatHeader.insertBefore(avatar, chatHeader.firstChild?.nextSibling || chatHeader.firstChild);
+    }
+  }
+  avatar.textContent = (contacto.nombre || '?').charAt(0).toUpperCase();
+
+  // Botón teléfono (solo visible en celular)
+  let btnTel = document.getElementById('btn-llamar-movil');
+  if (!btnTel) {
+    btnTel = document.createElement('a');
+    btnTel.id = 'btn-llamar-movil';
+    btnTel.className = 'btn-llamar-movil';
+    btnTel.textContent = '📞';
+    btnTel.title = 'Llamar';
+    const toggleWrap = document.querySelector('.toggle-wrapper');
+    if (toggleWrap) toggleWrap.parentNode.insertBefore(btnTel, toggleWrap);
+  }
+  btnTel.href = `tel:${contacto.telefono || ''}`;
+
+  // Botón "⋯" que abre el menú en celular
+  let btnMenu = document.getElementById('btn-mas-movil');
+  if (!btnMenu) {
+    btnMenu = document.createElement('button');
+    btnMenu.id = 'btn-mas-movil';
+    btnMenu.className = 'btn-mas-movil';
+    btnMenu.textContent = '⋯';
+    btnMenu.title = 'Más opciones';
+    const toggleWrap2 = document.querySelector('.toggle-wrapper');
+    if (toggleWrap2) toggleWrap2.parentNode.insertBefore(btnMenu, toggleWrap2.nextSibling);
+    btnMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById('menu-movil');
+      if (menu) menu.classList.toggle('hidden');
+    });
+  }
+
+  // Menú flotante (Bloquear / Detalles / Notas)
+  let menu = document.getElementById('menu-movil');
+  if (!menu) {
+    menu = document.createElement('div');
+    menu.id = 'menu-movil';
+    menu.className = 'menu-movil hidden';
+    document.body.appendChild(menu);
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#menu-movil') && !e.target.closest('#btn-mas-movil')) {
+        menu.classList.add('hidden');
+      }
+    });
+  }
+
+  const bloqueado = contacto.bloqueado;
+  menu.innerHTML = `
+    <div class="menu-movil-item" id="menu-movil-bloquear">${bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear'}</div>
+    <div class="menu-movil-item" id="menu-movil-detalles">👁 Ver detalles</div>
+    <div class="menu-movil-item" id="menu-movil-notas">📝 Notas / Archivos</div>
+  `;
+
+  document.getElementById('menu-movil-bloquear').onclick = () => {
+    menu.classList.add('hidden');
+    confirmarBloqueoCliente();
+  };
+
+  document.getElementById('menu-movil-detalles').onclick = () => {
+    menu.classList.add('hidden');
+    const app = document.getElementById('app');
+    if (app) app.classList.add('perfil-abierto');
+    abrirDetallesModal();
+  };
+
+  document.getElementById('menu-movil-notas').onclick = () => {
+    menu.classList.add('hidden');
+    const app = document.getElementById('app');
+    if (app) app.classList.add('perfil-abierto');
+    const panelNotas = document.getElementById('notas-panel');
+    const panelArchivos = document.getElementById('archivos-panel');
+    if (panelNotas) panelNotas.classList.remove('hidden');
+    if (panelArchivos) panelArchivos.classList.add('hidden');
+  };
+}
+
+function armarBotonCerrarPerfilMovil() {
+  const perfilHeader = document.querySelector('.perfil-header');
+  if (!perfilHeader) return;
+  if (document.getElementById('btn-cerrar-perfil-movil')) return;
+  const btn = document.createElement('button');
+  btn.id = 'btn-cerrar-perfil-movil';
+  btn.className = 'btn-cerrar-perfil-movil';
+  btn.textContent = '←';
+  btn.title = 'Volver al chat';
+  btn.addEventListener('click', () => {
+    document.getElementById('app').classList.remove('perfil-abierto');
+    document.getElementById('modal-detalles')?.classList.add('hidden');
+  });
+  perfilHeader.insertBefore(btn, perfilHeader.firstChild);
+}
+
 function renderChatActivo() {
   const conv = getConversacionPorId(chatActivoId);
   if (!conv) return;
@@ -309,6 +418,8 @@ function renderChatActivo() {
   const contacto = getContactoPorId(conv.contactoId);
   const toggle = document.getElementById('toggle-bot');
   const estadoBot = document.getElementById('estado-bot');
+
+  armarHeaderMovil(contacto, conv);
 
   document.getElementById('chat-nombre').textContent = contacto.nombre;
   document.getElementById('chat-linea').textContent = conv.lineaReceptora;
@@ -1614,6 +1725,9 @@ function init() {
     });
     chatHeader.insertBefore(backBtn, chatHeader.firstChild);
   }
+
+  // Botón para cerrar la columna derecha en móvil
+  armarBotonCerrarPerfilMovil();
 }
 
 function ocultarBotonLlamarEnEscritorio() {

@@ -1167,6 +1167,28 @@ body {
   color: #B91C1C;
 }
 
+.chat-item-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.chat-chip-etiqueta {
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #93C5FD;
+  border-radius: 12px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.chat-chip-etiqueta:hover {
+  background: #DBEAFE;
+}
+
 .etiquetas-vacio {
   color: #9CA3AF;
   font-size: 0.85rem;

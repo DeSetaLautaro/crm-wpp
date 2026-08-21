@@ -98,6 +98,7 @@ let chatActivoId = null;
 let socket = null;
 let miEmpresaId = null;
 let whatsappSeleccionado = null;
+let etiquetaFiltrada = null;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -128,7 +129,8 @@ function filtrarPorContacto(conversaciones, texto) {
     const contacto = getContactoPorId(conv.contactoId);
     const nombre = (contacto?.nombre || '').toLowerCase();
     const telefono = (contacto?.telefono || '').toLowerCase();
-    return nombre.includes(term) || telefono.includes(term);
+    const etiquetasTexto = (contacto?.etiquetas || []).map(e => e.toLowerCase()).join(' ');
+    return nombre.includes(term) || telefono.includes(term) || etiquetasTexto.includes(term);
   });
 }
 
@@ -169,6 +171,25 @@ function colorFromString(str) {
   return `hsl(${hash % 360}, 65%, 45%)`;
 }
 
+function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indicadorClase, activaClase) {
+  return `
+          <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
+            <div class="chat-item-avatar">${inicial}</div>
+            <div class="chat-item-contenido">
+              <div class="chat-item-titulo">
+                <span class="chat-item-nombre">${contacto.nombre}</span>
+                <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
+              </div>
+              <div class="chat-item-linea">${conv.lineaReceptora}</div>
+              <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
+              <div class="chat-item-etiquetas">${(contacto.etiquetas || []).map(et => `<span class="chat-chip-etiqueta" data-etiqueta="${et}">${et}</span>`).join('')}</div>
+            </div>
+            ${botonAccionChat(conv)}
+            <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
+          </div>
+        `;
+}
+
 function renderListaChats() {
   const container = document.getElementById('lista-chats');
   let base;
@@ -186,6 +207,14 @@ function renderListaChats() {
     !whatsappSeleccionado ? true : c.lineaReceptora === whatsappSeleccionado
   );
 
+  const conFiltroEtiqueta = etiquetaFiltrada
+    ? filtrados.filter(c => {
+        const contacto = getContactoPorId(c.contactoId);
+        const etiquetas = (contacto?.etiquetas || []).map(e => e.toLowerCase());
+        return etiquetas.includes(etiquetaFiltrada.toLowerCase());
+      })
+    : filtrados;
+
   const filtrar = (lista) => lista.filter(c =>
     !whatsappSeleccionado ? true : c.lineaReceptora === whatsappSeleccionado
   );
@@ -193,8 +222,8 @@ function renderListaChats() {
   let htmlFinal = '';
 
   if (buscador.trim() !== '') {
-    const porContacto = filtrar(filtrarPorContacto(filtrados, buscador));
-    const porMensaje = filtrar(filtrarPorMensaje(filtrados, buscador));
+    const porContacto = filtrar(filtrarPorContacto(conFiltroEtiqueta, buscador));
+    const porMensaje = filtrar(filtrarPorMensaje(conFiltroEtiqueta, buscador));
 
     if (porContacto.length > 0) {
       htmlFinal += `<div class="resultado-seccion-titulo">Chats</div>`;
@@ -204,22 +233,7 @@ function renderListaChats() {
         const requiereAtencionClase = requiereAtencionHumana(conv) ? 'requiere-atencion' : '';
         const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
         const activaClase = conv._id === chatActivoId ? 'activo' : '';
-
-        return `
-          <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
-            <div class="chat-item-avatar">${inicial}</div>
-            <div class="chat-item-contenido">
-              <div class="chat-item-titulo">
-                <span class="chat-item-nombre">${contacto.nombre}</span>
-                <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
-              </div>
-              <div class="chat-item-linea">${conv.lineaReceptora}</div>
-              <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
-            </div>
-            ${botonAccionChat(conv)}
-            <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
-          </div>
-        `;
+        return buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indicadorClase, activaClase);
       }).join('');
     }
 
@@ -231,22 +245,7 @@ function renderListaChats() {
         const requiereAtencionClase = requiereAtencionHumana(conv) ? 'requiere-atencion' : '';
         const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
         const activaClase = conv._id === chatActivoId ? 'activo' : '';
-
-        return `
-          <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
-            <div class="chat-item-avatar">${inicial}</div>
-            <div class="chat-item-contenido">
-              <div class="chat-item-titulo">
-                <span class="chat-item-nombre">${contacto.nombre}</span>
-                <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
-              </div>
-              <div class="chat-item-linea">${conv.lineaReceptora}</div>
-              <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
-            </div>
-            ${botonAccionChat(conv)}
-            <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
-          </div>
-        `;
+        return buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indicadorClase, activaClase);
       }).join('');
     }
 
@@ -256,10 +255,9 @@ function renderListaChats() {
 
     container.innerHTML = htmlFinal;
 
-    // Asociar clics en cada ítem
     document.querySelectorAll('.chat-item').forEach(item => {
       item.addEventListener('click', (e) => {
-        if (e.target.closest('.chat-item-accion')) return;
+        if (e.target.closest('.chat-item-accion') || e.target.closest('.chat-chip-etiqueta')) return;
         chatActivoId = item.dataset.convId;
         renderTodo();
       });
@@ -268,34 +266,18 @@ function renderListaChats() {
     return;
   }
 
-  container.innerHTML = filtrados.map(conv => {
+  container.innerHTML = conFiltroEtiqueta.map(conv => {
     const contacto = getContactoPorId(conv.contactoId);
     const inicial = (contacto.nombre || '?').charAt(0).toUpperCase();
     const requiereAtencionClase = requiereAtencionHumana(conv) ? 'requiere-atencion' : '';
     const indicadorClase = conv.botActivo ? 'activo' : 'requiere-atencion-ind';
     const activaClase = conv._id === chatActivoId ? 'activo' : '';
-
-    return `
-      <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
-        <div class="chat-item-avatar">${inicial}</div>
-        <div class="chat-item-contenido">
-          <div class="chat-item-titulo">
-            <span class="chat-item-nombre">${contacto.nombre}</span>
-            <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
-          </div>
-          <div class="chat-item-linea">${conv.lineaReceptora}</div>
-          <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
-        </div>
-        ${botonAccionChat(conv)}
-        <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
-      </div>
-    `;
+    return buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indicadorClase, activaClase);
   }).join('');
 
-  // Asociar clics en cada ítem
   document.querySelectorAll('.chat-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      if (e.target.closest('.chat-item-accion')) return;
+      if (e.target.closest('.chat-item-accion') || e.target.closest('.chat-chip-etiqueta')) return;
       chatActivoId = item.dataset.convId;
       renderTodo();
     });
@@ -1750,6 +1732,22 @@ function init() {
       document.getElementById('archivos-panel').classList.toggle('hidden', pestana !== 'archivos');
       document.getElementById('notas-panel').classList.toggle('hidden', pestana !== 'notas');
     });
+  });
+
+  // Búsqueda por etiqueta (clic en chip)
+  document.addEventListener('click', (e) => {
+    const chipEtiqueta = e.target.closest('.chat-chip-etiqueta');
+    if (chipEtiqueta) {
+      e.stopPropagation();
+      const etiqueta = chipEtiqueta.dataset.etiqueta;
+      if (etiquetaFiltrada && etiquetaFiltrada.toLowerCase() === etiqueta.toLowerCase()) {
+        etiquetaFiltrada = null;
+      } else {
+        etiquetaFiltrada = etiqueta;
+      }
+      renderListaChats();
+      return;
+    }
   });
 
   // Eliminar nota interna (delegación)

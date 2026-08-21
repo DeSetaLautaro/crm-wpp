@@ -336,6 +336,30 @@ function renderChatActivo() {
   toggle.checked = conv.botActivo;
   estadoBot.textContent = conv.botActivo ? 'Bot Activo' : 'Pausado';
 
+  // ===== Candado de cliente bloqueado =====
+  let lockInd = document.getElementById('bloqueado-indicador');
+  if (!lockInd) {
+    const toggleEl = document.getElementById('toggle-bot');
+    if (toggleEl && toggleEl.parentNode) {
+      lockInd = document.createElement('span');
+      lockInd.id = 'bloqueado-indicador';
+      lockInd.style.marginLeft = '8px';
+      lockInd.style.fontSize = '14px';
+      lockInd.style.color = '#ef4444';
+      toggleEl.parentNode.insertBefore(lockInd, toggleEl.nextSibling);
+    }
+  }
+  if (lockInd) {
+    if (contacto.bloqueado) {
+      lockInd.textContent = ' 🔒';
+      lockInd.title = 'Cliente bloqueado';
+      lockInd.style.display = 'inline';
+    } else {
+      lockInd.textContent = '';
+      lockInd.style.display = 'none';
+    }
+  }
+
   // Mensajes
   const areaMensajes = document.getElementById('area-mensajes');
   const mensajes = getMensajesDeConversacion(conv._id);

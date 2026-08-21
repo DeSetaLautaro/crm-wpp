@@ -11,7 +11,7 @@ const ConversacionSchema = new Schema(
     },
     contactoId: {
       type: Types.ObjectId,
-      ref: 'Contacto',
+      ref: 'Cliente',
       required: true
     },
     lineaReceptora: {

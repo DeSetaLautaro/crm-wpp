@@ -113,7 +113,7 @@ const PedidoSchema = new Schema(
     },
     contactoId: {
       type: Types.ObjectId,
-      ref: 'Contacto',
+      ref: 'Cliente',
       default: null
     },
     direccionEntrega: {

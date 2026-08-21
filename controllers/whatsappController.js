@@ -1,7 +1,7 @@
 const { generarTexto } = require('../services/iaService');
 const mongoose = require('mongoose');
 const Empresa = require('../models/Empresa');
-const Contacto = require('../models/Contacto');
+const Cliente = require('../models/Cliente');
 const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
 const Producto = require('../models/Producto');
@@ -127,10 +127,10 @@ const recibirMensaje = async (req, res) => {
     const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
     const productos = usuario?.platos || [];
 
-    let contacto = await Contacto.findOne({ empresaId: empresa._id, telefono: telefonoCliente });
+    let contacto = await Cliente.findOne({ empresaId: empresa._id, telefono: telefonoCliente });
     if (!contacto) {
-      console.log("👤 [7] Creando nuevo contacto...");
-      contacto = await Contacto.create({ empresaId: empresa._id, telefono: telefonoCliente, nombre: nombre });
+      console.log("👤 [7] Creando nuevo cliente...");
+      contacto = await Cliente.create({ localId: usuario._id, empresaId: empresa._id, telefono: telefonoCliente, nombre: nombre });
     }
 
     let conversacion = await Conversacion.findOne({ empresaId: empresa._id, contactoId: contacto._id })
@@ -217,13 +217,13 @@ JSON:`;
           const jsonStr = rawText.substring(startIdx, endIdx + 1);
           const data = JSON.parse(jsonStr);
           if (data && data.direccion && typeof data.direccion === 'string') {
-            await Contacto.findByIdAndUpdate(contacto._id, { $set: { direccion: data.direccion } });
+            await Cliente.findByIdAndUpdate(contacto._id, { $set: { direccion: data.direccion } });
           }
           if (data && data.pisoDepto && typeof data.pisoDepto === 'string') {
-            await Contacto.findByIdAndUpdate(contacto._id, { $set: { pisoDepto: data.pisoDepto } });
+            await Cliente.findByIdAndUpdate(contacto._id, { $set: { pisoDepto: data.pisoDepto } });
           }
           if (data && data.codigoPostal && typeof data.codigoPostal === 'string') {
-            await Contacto.findByIdAndUpdate(contacto._id, { $set: { codigoPostal: data.codigoPostal } });
+            await Cliente.findByIdAndUpdate(contacto._id, { $set: { codigoPostal: data.codigoPostal } });
           }
         }
       } else {
@@ -592,7 +592,7 @@ const actualizarContacto = async (req, res) => {
       return res.status(400).json({ error: 'Debes enviar al menos direccion, pisoDepto o codigoPostal' });
     }
 
-    const contacto = await Contacto.findByIdAndUpdate(
+    const contacto = await Cliente.findByIdAndUpdate(
       contactoId,
       { $set: updates },
       { new: true }
@@ -702,7 +702,7 @@ const agregarEtiqueta = async (req, res) => {
       return res.status(400).json({ error: 'Etiqueta inválida' });
     }
 
-    const contacto = await Contacto.findById(contactoId);
+    const contacto = await Cliente.findById(contactoId);
     if (!contacto) {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
@@ -711,7 +711,7 @@ const agregarEtiqueta = async (req, res) => {
     const actualizadas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
     if (!actualizadas.includes(nueva)) {
       actualizadas.push(nueva);
-      await Contacto.findByIdAndUpdate(contactoId, { $set: { etiquetas: actualizadas } }, { new: true });
+      await Cliente.findByIdAndUpdate(contactoId, { $set: { etiquetas: actualizadas } }, { new: true });
     }
 
     return res.json({ ok: true, etiquetas: actualizadas });
@@ -730,14 +730,14 @@ const eliminarEtiqueta = async (req, res) => {
       return res.status(400).json({ error: 'Etiqueta requerida' });
     }
 
-    const contacto = await Contacto.findById(contactoId);
+    const contacto = await Cliente.findById(contactoId);
     if (!contacto) {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
     const actuales = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
     const filtradas = actuales.filter(e => e !== etiqueta);
-    await Contacto.findByIdAndUpdate(contactoId, { $set: { etiquetas: filtradas } }, { new: true });
+    await Cliente.findByIdAndUpdate(contactoId, { $set: { etiquetas: filtradas } }, { new: true });
 
     return res.json({ ok: true, etiquetas: filtradas });
   } catch (error) {
@@ -755,14 +755,14 @@ const eliminarNota = async (req, res) => {
       return res.status(400).json({ error: 'Nota requerida' });
     }
 
-    const contacto = await Contacto.findById(contactoId);
+    const contacto = await Cliente.findById(contactoId);
     if (!contacto) {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
     const actuales = Array.isArray(contacto.notas) ? contacto.notas : [];
     const filtradas = actuales.filter(n => n !== nota);
-    await Contacto.findByIdAndUpdate(
+    await Cliente.findByIdAndUpdate(
       contactoId,
       { $set: { notas: filtradas } },
       { new: true }
@@ -785,14 +785,14 @@ const agregarNota = async (req, res) => {
       return res.status(400).json({ error: 'Nota inválida' });
     }
 
-    const contacto = await Contacto.findById(contactoId);
+    const contacto = await Cliente.findById(contactoId);
     if (!contacto) {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
     const actuales = Array.isArray(contacto.notas) ? contacto.notas : [];
     actuales.push(nota.trim());
-    const actualizado = await Contacto.findByIdAndUpdate(
+    const actualizado = await Cliente.findByIdAndUpdate(
       contactoId,
       { $set: { notas: actuales } },
       { new: true }

@@ -406,17 +406,13 @@ function armarBotonCerrarPerfilMovil() {
 
 function abrirDetallesDesdeMenu() {
   const app = document.getElementById('app');
-  if (app && window.innerWidth <= 768) {
-    app.classList.add('perfil-abierto');
-  }
+  if (app) app.classList.add('perfil-abierto');
   abrirDetallesModal();
 }
 
 function abrirArchivosNotasDesdeMenu() {
   const app = document.getElementById('app');
-  if (app && window.innerWidth <= 768) {
-    app.classList.add('perfil-abierto');
-  }
+  if (app) app.classList.add('perfil-abierto');
   const modal = document.getElementById('modal-detalles');
   if (modal) modal.classList.add('hidden');
 
@@ -552,6 +548,12 @@ function renderPerfil(contacto) {
         </div>
       `).join('');
     }
+  }
+
+  // Eliminar el botón original "Detalles" para que no compita con los ítems nuevos
+  const btnOriginalDetalles = document.getElementById('btn-detalles-modal');
+  if (btnOriginalDetalles && btnOriginalDetalles.parentNode) {
+    btnOriginalDetalles.parentNode.removeChild(btnOriginalDetalles);
   }
 
   // Opción de bloqueo dentro del menú del perfil (tres puntos)

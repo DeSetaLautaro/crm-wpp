@@ -404,18 +404,21 @@ function renderPerfil(contacto) {
     }
   }
 
-  // Botón de bloqueo / desbloqueo
-  const perfilHeader = document.querySelector('.perfil-header');
-  if (perfilHeader) {
-    let btnBloqueo = document.getElementById('btn-bloquear-cliente');
-    if (!btnBloqueo) {
-      btnBloqueo = document.createElement('button');
-      btnBloqueo.id = 'btn-bloquear-cliente';
-      btnBloqueo.className = 'btn-bloquear-cliente';
-      perfilHeader.appendChild(btnBloqueo);
+  // Opción de bloqueo dentro del menú del perfil (tres puntos)
+  const perfilMenu = document.getElementById('perfil-menu');
+  if (perfilMenu) {
+    let itemBloqueo = document.getElementById('menu-item-bloquear');
+    if (!itemBloqueo) {
+      itemBloqueo = document.createElement('div');
+      itemBloqueo.id = 'menu-item-bloquear';
+      itemBloqueo.className = 'perfil-menu-item';
+      perfilMenu.appendChild(itemBloqueo);
     }
-    btnBloqueo.textContent = contacto.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear';
-    btnBloqueo.onclick = () => confirmarBloqueoCliente();
+    itemBloqueo.textContent = contacto.bloqueado ? '🔓 Desbloquear' : '🔒 Bloquear';
+    itemBloqueo.onclick = () => {
+      perfilMenu.classList.add('hidden');
+      confirmarBloqueoCliente();
+    };
   }
 }
 

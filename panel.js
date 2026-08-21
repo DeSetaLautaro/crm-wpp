@@ -321,7 +321,7 @@ function armarHeaderMovil(contacto, conv) {
   }
   avatar.textContent = (contacto.nombre || '?').charAt(0).toUpperCase();
 
-  // Botón teléfono (solo visible en celular)
+ /* // Botón teléfono (solo visible en celular)
   let btnTel = document.getElementById('btn-llamar-movil');
   if (!btnTel) {
     btnTel = document.createElement('a');
@@ -332,7 +332,7 @@ function armarHeaderMovil(contacto, conv) {
     const toggleWrap = document.querySelector('.toggle-wrapper');
     if (toggleWrap) toggleWrap.parentNode.insertBefore(btnTel, toggleWrap);
   }
-  btnTel.href = `tel:${contacto.telefono || ''}`;
+  btnTel.href = `tel:${contacto.telefono || ''}`;*/
 
   // Botón "⋯" que abre el menú en celular
   let btnMenu = document.getElementById('btn-mas-movil');

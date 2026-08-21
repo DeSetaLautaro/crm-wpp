@@ -450,6 +450,15 @@ function renderTodo() {
   renderListaChats();
   renderChatActivo();
   updateVisibilidad();
+
+  const appEl = document.getElementById('app');
+  if (appEl) {
+    if (chatActivoId) {
+      appEl.classList.add('chat-abierto');
+    } else {
+      appEl.classList.remove('chat-abierto');
+    }
+  }
 }
 
 // ===== Alternancia de vistas (Sidebar) =====
@@ -1591,6 +1600,20 @@ function init() {
   // Guardar nota interna
   const btnGuardarNota = document.getElementById('guardar-nota');
   if (btnGuardarNota) btnGuardarNota.addEventListener('click', guardarNota);
+
+  // Botón "volver" para móvil
+  const chatHeader = document.querySelector('.chat-header');
+  if (chatHeader && !document.getElementById('btn-volver')) {
+    const backBtn = document.createElement('button');
+    backBtn.id = 'btn-volver';
+    backBtn.className = 'btn-volver';
+    backBtn.textContent = '←';
+    backBtn.title = 'Volver a la lista';
+    backBtn.addEventListener('click', () => {
+      document.getElementById('app').classList.remove('chat-abierto');
+    });
+    chatHeader.insertBefore(backBtn, chatHeader.firstChild);
+  }
 }
 
 function ocultarBotonLlamarEnEscritorio() {

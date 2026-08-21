@@ -1275,3 +1275,58 @@ body.modo-login #app {
   pointer-events: none;
   user-select: none;
 }
+
+/* ===== Responsive: vista móvil tipo WhatsApp ===== */
+.btn-volver {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  #slim-sidebar {
+    display: none;
+  }
+
+  #inbox-view {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+  }
+
+  #inbox-view > .col {
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+  }
+
+  #col-central,
+  #col-derecha {
+    display: none;
+  }
+
+  #col-izquierda {
+    display: flex;
+  }
+
+  #app.chat-abierto #col-izquierda {
+    display: none;
+  }
+
+  #app.chat-abierto #col-central {
+    display: flex;
+  }
+
+  #app.chat-abierto #col-derecha {
+    display: none;
+  }
+
+  .btn-volver {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    margin-right: 8px;
+    padding: 4px;
+    color: #2563EB;
+  }
+}

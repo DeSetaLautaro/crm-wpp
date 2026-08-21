@@ -1375,8 +1375,12 @@ body.modo-login #app {
     background: #F9FAFB;
   }
 
+  #app.perfil-abierto #col-central {
+    display: none !important;
+  }
+
   #app.perfil-abierto #col-derecha {
-    display: flex;
+    display: flex !important;
     position: fixed;
     inset: 0;
     z-index: 50;

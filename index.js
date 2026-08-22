@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 
 const whatsappRoutes = require('./routes/whatsappRoutes');
@@ -14,6 +15,7 @@ const app = express();
 
 app.use(express.json());
 app.use(express.static(__dirname));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Endpoint para listar conversaciones de la Parrilla (protegido)
 app.get('/api/conversaciones', auth, obtenerConversaciones);

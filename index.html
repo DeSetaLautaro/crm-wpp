@@ -267,6 +267,15 @@
               <h3>Mensaje de Bienvenida</h3>
               <textarea id="config-bienvenida" rows="3" placeholder="¡Hola! Soy el asistente virtual de tu negocio. ¿En qué puedo ayudarte?"></textarea>
 
+              <h3>Estado del Local</h3>
+              <input type="text" id="config-estado" placeholder="Ej: Abierto hasta las 23hs">
+
+              <h3>Foto de Perfil</h3>
+              <input type="file" id="config-foto" accept="image/*">
+              <img id="config-foto-preview" alt="Preview" style="max-width:100px; margin-top:8px; border-radius:8px; display:none;">
+
+              <button id="btn-guardar-config-datos" class="btn-guardar-config">Guardar Ajustes</button>
+
               <h3>Respuestas Rápidas / Atajos</h3>
               <div class="atajo-form">
                 <input type="text" id="atajo-comando" placeholder="/comando">

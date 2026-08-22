@@ -669,6 +669,48 @@ function initConfigSidebar() {
   });
 }
 
+function previewFoto() {
+  const input = document.getElementById('config-foto');
+  const preview = document.getElementById('config-foto-preview');
+  if (!input || !preview) return;
+  if (!input.files || input.files.length === 0) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function guardarConfigDesdePanel() {
+  const estadoEl = document.getElementById('config-estado');
+  const estado = (estadoEl?.value || '').trim();
+  const inputFoto = document.getElementById('config-foto');
+  const formData = new FormData();
+  formData.append('estado', estado);
+  if (inputFoto && inputFoto.files && inputFoto.files.length > 0) {
+    formData.append('foto', inputFoto.files[0]);
+  }
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/config', {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('Error al guardar config:', data.error || res.status);
+      alert('Error al guardar configuración');
+      return;
+    }
+    alert('Configuración guardada correctamente');
+  } catch (error) {
+    console.error('Error de red al guardar config:', error);
+  }
+}
+
 function updateVisibilidad() {
   const app = document.getElementById('app');
   if (chatActivoId) {
@@ -1593,6 +1635,12 @@ function init() {
 
   // Configuración del Bot
   initConfigSidebar();
+
+  // Configuración general (foto y estado)
+  const btnGuardarConfigDatos = document.getElementById('btn-guardar-config-datos');
+  if (btnGuardarConfigDatos) btnGuardarConfigDatos.addEventListener('click', guardarConfigDesdePanel);
+  const inputFoto = document.getElementById('config-foto');
+  if (inputFoto) inputFoto.addEventListener('change', previewFoto);
 
   // Selector de cuenta WhatsApp
   const selectWhatsapp = document.getElementById('select-whatsapp');

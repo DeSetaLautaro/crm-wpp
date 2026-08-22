@@ -590,6 +590,30 @@ const actualizarBotActivo = async (req, res) => {
   }
 };
 
+const actualizarConfig = async (req, res) => {
+  try {
+    const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
+    if (!empresaId) {
+      return res.status(400).json({ error: 'No se pudo identificar la empresa' });
+    }
+    const updates = {};
+    if (req.body.estado && typeof req.body.estado === 'string') {
+      updates.estado = req.body.estado.trim();
+    }
+    if (req.file) {
+      updates.fotoPerfil = `/uploads/${req.file.filename}`;
+    }
+    const empresa = await Empresa.findByIdAndUpdate(empresaId, { $set: updates }, { new: true });
+    if (!empresa) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+    return res.json({ ok: true, empresa });
+  } catch (error) {
+    console.error('Error al actualizar config:', error);
+    return res.status(500).json({ error: 'Error interno al actualizar config' });
+  }
+};
+
 // ===== Actualizar datos manuales del cliente =====
 const actualizarContacto = async (req, res) => {
   try {
@@ -868,5 +892,6 @@ module.exports = {
   agregarNota,
   eliminarNota,
   bloquearCliente,
-  desbloquearCliente
+  desbloquearCliente,
+  actualizarConfig
 };

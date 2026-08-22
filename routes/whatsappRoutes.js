@@ -1,5 +1,24 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const uploadDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function(req, file, cb) {
+    const ext = path.extname(file.originalname);
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, unique + ext);
+  }
+});
+const upload = multer({ storage });
 
 const auth = require('../middlewares/auth');
 const { loginConPin } = require('../controllers/authController');
@@ -17,7 +36,8 @@ const {
   agregarNota,
   eliminarNota,
   bloquearCliente,
-  desbloquearCliente
+  desbloquearCliente,
+  actualizarConfig
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -64,6 +84,9 @@ router.put('/contacto/:contactoId/bloquear', auth, bloquearCliente);
 
 // Desbloquear cliente (PUT)
 router.put('/contacto/:contactoId/desbloquear', auth, desbloquearCliente);
+
+// Actualizar configuración general (foto y estado)
+router.put('/config', auth, upload.single('foto'), actualizarConfig);
 
 module.exports = router;
 

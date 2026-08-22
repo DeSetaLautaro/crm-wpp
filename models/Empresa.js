@@ -44,6 +44,14 @@ const EmpresaSchema = new Schema(
     botActivo: {
       type: Boolean,
       default: true
+    },
+    fotoPerfil: {
+      type: String,
+      default: ''
+    },
+    estado: {
+      type: String,
+      default: ''
     }
  
   },

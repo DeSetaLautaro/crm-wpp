@@ -877,6 +877,7 @@ body {
 /* ===== Configuración Master-Detail ===== */
 .config-layout {
   display: flex;
+  flex-direction: row-reverse;
   gap: 16px;
   flex: 1;
   min-height: 0;
@@ -1424,6 +1425,14 @@ body.modo-login #app {
 }
 
 @media (max-width: 768px) {
+  .config-layout {
+    flex-direction: column;
+  }
+
+  .config-sidebar {
+    width: 100%;
+  }
+
   .chat-avatar-movil {
     display: flex;
     width: 36px;

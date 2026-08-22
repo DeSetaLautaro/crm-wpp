@@ -45,10 +45,17 @@ body {
   flex-shrink: 0;
 }
 
-.panel-header h2 {
+.panel-header-titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-header-titulo h2 {
   font-size: 1.25rem;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .buscador input {
@@ -73,21 +80,10 @@ body {
 }
 
 .mensajes-restantes {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
   font-size: 0.85rem;
-  color: #4B5563;
-  background: #EFF6FF;
-  border-radius: 8px;
-  padding: 4px 10px;
-  border: 1px solid #BFDBFE;
-}
-
-.mensajes-restantes strong {
   font-weight: 600;
-  color: #1D4ED8;
+  color: #2563EB;
+  white-space: nowrap;
 }
 
 .whatsapp-selector label {

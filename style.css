@@ -1299,6 +1299,114 @@ body.modo-login #app {
   user-select: none;
 }
 
+/* ===== Editar Perfil (estilo WhatsApp Web) ===== */
+.perfil-edicion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.perfil-foto-wrapper {
+  position: relative;
+}
+
+.perfil-foto-grande {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #E5E7EB;
+  display: block;
+}
+
+.perfil-foto-cambiar {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid #FFFFFF;
+  background: #2563EB;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s;
+}
+
+.perfil-foto-cambiar:hover {
+  background: #1D4ED8;
+}
+
+.perfil-nombre-fila {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #FAFAFA;
+  border: 1px solid #F0F0F0;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.perfil-campo {
+  flex: 1;
+  min-width: 0;
+}
+
+.perfil-campo-label {
+  display: block;
+  font-size: 12px;
+  color: #9CA3AF;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.perfil-campo-valor {
+  font-size: 16px;
+  color: #1F2937;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.perfil-campo-editar {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.perfil-campo-editar:hover {
+  background: #F3F4F6;
+}
+
+.perfil-nombre-input {
+  width: 100%;
+  border: none;
+  border-bottom: 2px solid #2563EB;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+  outline: none;
+  padding: 4px 0;
+  font-family: inherit;
+}
+
 /* ===== Responsive: vista móvil tipo WhatsApp ===== */
 .btn-volver {
   display: none;

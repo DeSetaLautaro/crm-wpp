@@ -264,15 +264,28 @@
           <div class="config-content">
             <!-- Panel Ajustes Generales -->
             <section id="config-generales" class="config-panel">
+              <!-- Perfil del Negocio -->
+              <div class="perfil-edicion">
+                <div class="perfil-foto-wrapper">
+                  <img id="perfil-foto-grande" src="" alt="Foto de perfil" class="perfil-foto-grande">
+                  <label for="config-foto" class="perfil-foto-cambiar" title="Cambiar foto">📷</label>
+                  <input type="file" id="config-foto" accept="image/*" style="display:none">
+                </div>
+                <div class="perfil-nombre-fila">
+                  <div class="perfil-campo">
+                    <label class="perfil-campo-label">Nombre</label>
+                    <span class="perfil-campo-valor" id="perfil-nombre-display">Mi Local</span>
+                  </div>
+                  <button class="perfil-campo-editar" id="btn-editar-nombre" title="Editar nombre">✏️</button>
+                </div>
+              </div>
+
               <h3>Mensaje de Bienvenida</h3>
               <textarea id="config-bienvenida" rows="3" placeholder="¡Hola! Soy el asistente virtual de tu negocio. ¿En qué puedo ayudarte?"></textarea>
 
               <h3>Estado del Local</h3>
               <input type="text" id="config-estado" placeholder="Ej: Abierto hasta las 23hs">
 
-              <h3>Foto de Perfil</h3>
-              <input type="file" id="config-foto" accept="image/*">
-              <img id="config-foto-preview" alt="Preview" style="max-width:100px; margin-top:8px; border-radius:8px; display:none;">
 
               <button id="btn-guardar-config-datos" class="btn-guardar-config">Guardar Ajustes</button>
 

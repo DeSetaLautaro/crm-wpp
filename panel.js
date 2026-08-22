@@ -99,6 +99,9 @@ let socket = null;
 let miEmpresaId = null;
 let whatsappSeleccionado = null;
 let etiquetaFiltrada = null;
+let usuarioActual = null;
+let editandoNombre = false;
+let guardandoNombre = false;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -672,15 +675,121 @@ function initConfigSidebar() {
 function previewFoto() {
   const input = document.getElementById('config-foto');
   const preview = document.getElementById('config-foto-preview');
-  if (!input || !preview) return;
-  if (!input.files || input.files.length === 0) return;
+  const fotoGrande = document.getElementById('perfil-foto-grande');
+  if (!input || input.files.length === 0) return;
   const file = input.files[0];
   const reader = new FileReader();
   reader.onload = function(e) {
-    preview.src = e.target.result;
-    preview.style.display = 'block';
+    if (preview) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    }
+    if (fotoGrande) {
+      fotoGrande.src = e.target.result;
+    }
   };
   reader.readAsDataURL(file);
+}
+
+function activarEdicionNombre() {
+  if (editandoNombre || guardandoNombre) return;
+
+  const display = document.getElementById('perfil-nombre-display');
+  if (!display) return;
+
+  const valorActual = display.textContent.trim();
+
+  // Ocultar texto estático y crear input
+  display.style.display = 'none';
+  let input = document.getElementById('perfil-nombre-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.id = 'perfil-nombre-input';
+    input.type = 'text';
+    input.maxLength = 60;
+    input.className = 'perfil-nombre-input';
+    display.parentNode.appendChild(input);
+  }
+  input.style.display = 'block';
+  input.value = valorActual;
+
+  editandoNombre = true;
+
+  // Foco inmediato para escribir sin clic extra
+  input.focus();
+
+  input.addEventListener('keydown', function handler(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      guardarNombreDesdePerfil();
+    }
+  });
+
+  input.addEventListener('blur', guardarNombreDesdePerfil);
+}
+
+async function guardarNombreDesdePerfil() {
+  // Evita doble envío si se apreta Enter y después blur
+  if (!editandoNombre || guardandoNombre) return;
+  guardandoNombre = true;
+
+  const input = document.getElementById('perfil-nombre-input');
+  const display = document.getElementById('perfil-nombre-display');
+  const valorNuevo = (input?.value || '').trim();
+  const valorAnterior = (display?.textContent || '').trim();
+
+  if (valorNuevo && valorNuevo !== valorAnterior) {
+    try {
+      const token = localStorage.getItem('token') || '';
+      const res = await fetch('/api/usuarios/modificarDatos', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ nombre: valorNuevo })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar');
+
+      // Actualizar el texto estático
+      if (display) display.textContent = valorNuevo;
+      if (usuarioActual) usuarioActual.nombreDelLocal = valorNuevo;
+
+      // También actualizamos la empresa en el selector si está visible
+      const select = document.getElementById('select-whatsapp');
+      if (select && select.options.length > 0) {
+        const opt = select.options[select.selectedIndex];
+        if (opt && opt.textContent) {
+          opt.textContent = opt.textContent.replace(/^[^(]+/, valorNuevo);
+        }
+      }
+    } catch (error) {
+      console.error('Error al guardar nombre:', error);
+      // Si falla, revertimos el input al valor anterior
+      if (input) input.value = valorAnterior;
+    }
+  }
+
+  // Volver a modo texto
+  editandoNombre = false;
+  guardandoNombre = false;
+  if (input) input.remove();
+  if (display) display.style.display = '';
+}
+
+function initEditarPerfil() {
+  const btnEditar = document.getElementById('btn-editar-nombre');
+  if (btnEditar) {
+    btnEditar.addEventListener('click', activarEdicionNombre);
+  }
+
+  // Si ya hay usuario cargado, mostramos su nombre
+  const display = document.getElementById('perfil-nombre-display');
+  if (display && usuarioActual?.nombreDelLocal) {
+    display.textContent = usuarioActual.nombreDelLocal;
+  }
 }
 
 async function guardarConfigDesdePanel() {
@@ -1556,6 +1665,7 @@ async function manejarLogin() {
     }
 
     localStorage.setItem('token', data.token);
+    usuarioActual = data.usuario || null;
     ocultarModalLogin();
 
     // Arrancamos el CRM recién después de autenticar
@@ -1637,6 +1747,7 @@ function init() {
   initConfigSidebar();
 
   // Configuración general (foto y estado)
+  initEditarPerfil();
   const btnGuardarConfigDatos = document.getElementById('btn-guardar-config-datos');
   if (btnGuardarConfigDatos) btnGuardarConfigDatos.addEventListener('click', guardarConfigDesdePanel);
   const inputFoto = document.getElementById('config-foto');

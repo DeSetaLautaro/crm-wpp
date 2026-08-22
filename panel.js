@@ -643,24 +643,21 @@ function showView(vista) {
   }
 }
 
+function activarPanelConfig(panelId) {
+  document.querySelectorAll('.config-item[data-panel]').forEach(i => i.classList.remove('activo'));
+  const item = document.querySelector(`.config-item[data-panel="${panelId}"]`);
+  if (item) item.classList.add('activo');
+  document.querySelectorAll('.config-panel').forEach(p => p.classList.add('hidden'));
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.remove('hidden');
+}
+
 function initConfigSidebar() {
   // Mostrar/ocultar paneles de configuración
   const configItems = document.querySelectorAll('.config-item[data-panel]');
   configItems.forEach(item => {
     item.addEventListener('click', () => {
-      // quitar activo de todos
-      document.querySelectorAll('.config-item[data-panel]').forEach(i => i.classList.remove('activo'));
-      item.classList.add('activo');
-
-      // ocultar todos los paneles
-      document.querySelectorAll('.config-panel').forEach(p => p.classList.add('hidden'));
-
-      // mostrar el panel correspondiente
-      const panelId = item.dataset.panel;
-      const panel = document.getElementById(panelId);
-      if (panel) {
-        panel.classList.remove('hidden');
-      }
+      activarPanelConfig(item.dataset.panel);
     });
   });
 

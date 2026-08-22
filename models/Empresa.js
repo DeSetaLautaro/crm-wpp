@@ -56,6 +56,16 @@ const EmpresaSchema = new Schema(
     bienvenida: {
       type: String,
       default: ''
+    },
+
+    // Contador de conversaciones iniciadas en las últimas 24 horas
+    conversacionesUsadas24h: {
+      type: Number,
+      default: 0
+    },
+    limiteConversaciones24h: {
+      type: Number,
+      default: 250
     }
  
   },

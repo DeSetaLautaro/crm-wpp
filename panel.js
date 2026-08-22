@@ -1223,6 +1223,23 @@ function poblarSelectorWhatsApp(items) {
   }
 }
 
+async function actualizarUsoConversaciones() {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/uso-conversaciones', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const numEl = document.getElementById('uso-conversaciones-num');
+    const maxEl = document.getElementById('uso-conversaciones-max');
+    if (numEl) numEl.textContent = data.usados;
+    if (maxEl) maxEl.textContent = data.maximo;
+  } catch (error) {
+    console.error('Error al obtener uso conversaciones:', error);
+  }
+}
+
 function setupSocketListeners() {
   if (!socket) return;
 
@@ -1311,6 +1328,7 @@ async function enviarMensajeDesdePanel() {
       conv.estado = 'Abierto';
       renderListaChats();
     }
+    actualizarUsoConversaciones();
   } catch (error) {
     console.error('Error de red al enviar mensaje:', error);
   }
@@ -2036,6 +2054,9 @@ async function init() {
 
     // Cargar conversaciones (fetch o mock)
     cargarConversaciones();
+
+    // Actualizar contador de conversaciones usadas en 24 hs
+    actualizarUsoConversaciones();
   }
 
   // Envío manual de mensaje

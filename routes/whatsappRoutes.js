@@ -37,7 +37,8 @@ const {
   eliminarNota,
   bloquearCliente,
   desbloquearCliente,
-  actualizarConfig
+  actualizarConfig,
+  obtenerUsoConversaciones
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -48,6 +49,9 @@ router.post('/webhook', recibirMensaje);
 
 // Login con PIN para acceder al CRM
 router.post('/login-pin', loginConPin);
+
+// Obtener uso de conversaciones en las últimas 24 h
+router.get('/uso-conversaciones', auth, obtenerUsoConversaciones);
 
 // Envío de mensaje desde el dashboard (POST)
 router.post('/enviar', auth, enviarMensaje);

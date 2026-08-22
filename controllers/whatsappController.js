@@ -51,6 +51,39 @@ function detectarMetodoPago(texto) {
   return null;
 }
 
+async function incrementarContadorConversaciones(empresaId, conversacionId) {
+  const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const existeMensajeSaliente = await Mensaje.findOne({
+    conversacionId,
+    remitente: { $in: ['ia', 'empresa', 'humano', 'bot'] },
+    createdAt: { $gte: hace24h }
+  });
+  if (!existeMensajeSaliente) {
+    await Empresa.findByIdAndUpdate(empresaId, {
+      $inc: { conversacionesUsadas24h: 1 }
+    });
+  }
+}
+
+const obtenerUsoConversaciones = async (req, res) => {
+  try {
+    const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
+    if (!empresaId) {
+      return res.status(400).json({ error: 'No se pudo identificar la empresa' });
+    }
+    const empresa = await Empresa.findById(empresaId).lean();
+    if (!empresa) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+    const usados = empresa.conversacionesUsadas24h || 0;
+    const maximo = empresa.limiteConversaciones24h || 250;
+    return res.json({ ok: true, usados, maximo });
+  } catch (error) {
+    console.error('Error al obtener uso conversaciones:', error);
+    return res.status(500).json({ error: 'Error interno al obtener uso' });
+  }
+};
+
 const verificarWebhook = (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -304,6 +337,9 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
     }
 
     if (respuestaIA) {
+      // Incrementar contador de conversaciones si es primera en 24 h
+      await incrementarContadorConversaciones(empresa._id, conversacion._id);
+
       // Enviar la respuesta al cliente por WhatsApp
       const phoneNumberId = metadata?.phone_number_id || whatsappPhoneId;
       const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
@@ -513,6 +549,9 @@ const enviarMensaje = async (req, res) => {
     if (!enviado) {
       return res.status(502).json({ error: 'El envío a WhatsApp falló', detalle: respuestaWhatsApp });
     }
+
+    // Incrementar contador de conversaciones si es la primera en 24 h
+    await incrementarContadorConversaciones(conversacion.empresaId, conversacion._id);
 
     const nuevoMensaje = await Mensaje.create({
       conversacionId: conversacion._id,
@@ -896,5 +935,6 @@ module.exports = {
   eliminarNota,
   bloquearCliente,
   desbloquearCliente,
-  actualizarConfig
+  actualizarConfig,
+  obtenerUsoConversaciones
 };

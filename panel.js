@@ -102,6 +102,8 @@ let etiquetaFiltrada = null;
 let usuarioActual = null;
 let editandoNombre = false;
 let guardandoNombre = false;
+let editandoEstado = false;
+let guardandoEstado = false;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -792,9 +794,98 @@ function initEditarPerfil() {
   }
 }
 
+function activarEdicionEstado() {
+  if (editandoEstado || guardandoEstado) return;
+
+  const display = document.getElementById('perfil-estado-display');
+  if (!display) return;
+
+  const valorActual = display.textContent.trim();
+
+  // Ocultar texto estático y crear input
+  display.style.display = 'none';
+  let input = document.getElementById('perfil-estado-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.id = 'perfil-estado-input';
+    input.type = 'text';
+    input.maxLength = 200;
+    input.className = 'perfil-nombre-input';
+    display.parentNode.appendChild(input);
+  }
+  input.style.display = 'block';
+  input.value = valorActual;
+
+  editandoEstado = true;
+
+  // Foco inmediato
+  input.focus();
+
+  input.addEventListener('keydown', function handler(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      guardarEstadoDesdePerfil();
+    }
+  });
+
+  input.addEventListener('blur', guardarEstadoDesdePerfil);
+}
+
+async function guardarEstadoDesdePerfil() {
+  // Evita doble envío si se apreta Enter y después blur
+  if (!editandoEstado || guardandoEstado) return;
+  guardandoEstado = true;
+
+  const input = document.getElementById('perfil-estado-input');
+  const display = document.getElementById('perfil-estado-display');
+  const valorNuevo = (input?.value || '').trim();
+  const valorAnterior = (display?.textContent || '').trim();
+
+  if (valorNuevo && valorNuevo !== valorAnterior) {
+    try {
+      const token = localStorage.getItem('token') || '';
+      const formData = new FormData();
+      formData.append('estado', valorNuevo);
+      const res = await fetch('/api/whatsapp/config', {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('Error al guardar estado');
+
+      // Actualizar el texto estático
+      if (display) display.textContent = valorNuevo;
+    } catch (error) {
+      console.error('Error al guardar estado:', error);
+      // Si falla, revertimos el input al valor anterior
+      if (input) input.value = valorAnterior;
+    }
+  }
+
+  // Volver a modo texto
+  editandoEstado = false;
+  guardandoEstado = false;
+  if (input) input.remove();
+  if (display) display.style.display = '';
+}
+
+function initEditarEstado() {
+  const btnEditar = document.getElementById('btn-editar-estado');
+  if (btnEditar) {
+    btnEditar.addEventListener('click', activarEdicionEstado);
+  }
+
+  // Si ya hay estado cargado en la empresa, mostrarlo
+  const display = document.getElementById('perfil-estado-display');
+  if (display && usuarioActual?.estado) {
+    display.textContent = usuarioActual.estado;
+  }
+}
+
 async function guardarConfigDesdePanel() {
-  const estadoEl = document.getElementById('config-estado');
-  const estado = (estadoEl?.value || '').trim();
+  const estadoDisplay = document.getElementById('perfil-estado-display');
+  const estado = (estadoDisplay?.textContent || '').trim();
   const inputFoto = document.getElementById('config-foto');
   const formData = new FormData();
   formData.append('estado', estado);
@@ -1748,6 +1839,7 @@ function init() {
 
   // Configuración general (foto y estado)
   initEditarPerfil();
+  initEditarEstado();
   const btnGuardarConfigDatos = document.getElementById('btn-guardar-config-datos');
   if (btnGuardarConfigDatos) btnGuardarConfigDatos.addEventListener('click', guardarConfigDesdePanel);
   const inputFoto = document.getElementById('config-foto');

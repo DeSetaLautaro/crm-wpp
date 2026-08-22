@@ -284,7 +284,13 @@
               <textarea id="config-bienvenida" rows="3" placeholder="¡Hola! Soy el asistente virtual de tu negocio. ¿En qué puedo ayudarte?"></textarea>
 
               <h3>Estado del Local</h3>
-              <input type="text" id="config-estado" placeholder="Ej: Abierto hasta las 23hs">
+              <div class="perfil-nombre-fila">
+                <div class="perfil-campo">
+                  <label class="perfil-campo-label">Estado</label>
+                  <span class="perfil-campo-valor" id="perfil-estado-display">Abierto hasta las 23hs</span>
+                </div>
+                <button class="perfil-campo-editar" id="btn-editar-estado" title="Editar estado">✏️</button>
+              </div>
 
 
               <button id="btn-guardar-config-datos" class="btn-guardar-config">Guardar Ajustes</button>

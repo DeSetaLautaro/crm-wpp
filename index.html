@@ -91,6 +91,7 @@
       <div class="sidebar-buttons">
         <button id="btn-inbox" class="sidebar-btn activo" title="Bandeja"><span>💬</span></button>
         <button id="btn-config" class="sidebar-btn" title="Configuración"><span>⚙️</span></button>
+        <button id="btn-perfil" class="sidebar-btn" title="Perfil"><span>👤</span></button>
         <button id="btn-logout" class="sidebar-btn" title="Cerrar sesión"><span>⏻</span></button>
       </div>
     </nav>
@@ -254,7 +255,8 @@
         <div class="config-layout">
           <aside class="config-sidebar">
             <div class="config-menu">
-              <button class="config-item activo" data-ajustes="generales" data-panel="config-generales">⚙️ Ajustes Generales</button>
+              <button class="config-item activo" data-ajustes="perfil" data-panel="config-perfil">👤 Perfil</button>
+              <button class="config-item" data-ajustes="generales" data-panel="config-generales">⚙️ Ajustes Generales</button>
               <p class="config-agentes-titulo">Perfiles de IA</p>
               <button class="config-item agente" data-ajustes="agente" data-panel="config-bot-ventas">Bot Ventas</button>
               <button class="config-item agente" data-ajustes="agente" data-panel="config-bot-reclamos">Bot Reclamos</button>
@@ -262,8 +264,8 @@
             </div>
           </aside>
           <div class="config-content">
-            <!-- Panel Ajustes Generales -->
-            <section id="config-generales" class="config-panel">
+            <!-- Panel Perfil -->
+            <section id="config-perfil" class="config-panel">
               <!-- Perfil del Negocio -->
               <div class="perfil-edicion">
                 <div class="perfil-foto-wrapper">
@@ -300,6 +302,11 @@
 
              
 
+            </section>
+
+            <!-- Panel Ajustes Generales -->
+            <section id="config-generales" class="config-panel hidden">
+              <p style="color:#9CA3AF;">No hay ajustes generales configurados todavía.</p>
             </section>
 
             <!-- Panel Bot Ventas -->

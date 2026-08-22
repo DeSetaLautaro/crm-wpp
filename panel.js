@@ -1912,9 +1912,16 @@ function init() {
     }
   });
 
-  // Sidebar: alternar entre Inbox y Configuración
+  // Sidebar: alternar entre Inbox, Configuración y Perfil
   document.getElementById('btn-inbox').addEventListener('click', () => showView('inbox'));
   document.getElementById('btn-config').addEventListener('click', () => showView('config'));
+  const btnPerfil = document.getElementById('btn-perfil');
+  if (btnPerfil) {
+    btnPerfil.addEventListener('click', () => {
+      showView('config');
+      activarPanelConfig('config-perfil');
+    });
+  }
 
   // Cerrar sesión
   const btnLogout = document.getElementById('btn-logout');

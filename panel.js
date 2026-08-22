@@ -104,6 +104,8 @@ let editandoNombre = false;
 let guardandoNombre = false;
 let editandoEstado = false;
 let guardandoEstado = false;
+let editandoBienvenida = false;
+let guardandoBienvenida = false;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -880,6 +882,95 @@ function initEditarEstado() {
   const display = document.getElementById('perfil-estado-display');
   if (display && usuarioActual?.estado) {
     display.textContent = usuarioActual.estado;
+  }
+}
+
+function activarEdicionBienvenida() {
+  if (editandoBienvenida || guardandoBienvenida) return;
+
+  const display = document.getElementById('perfil-bienvenida-display');
+  if (!display) return;
+
+  const valorActual = display.textContent.trim();
+
+  // Ocultar texto estático y crear input
+  display.style.display = 'none';
+  let input = document.getElementById('perfil-bienvenida-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.id = 'perfil-bienvenida-input';
+    input.type = 'text';
+    input.maxLength = 500;
+    input.className = 'perfil-nombre-input';
+    display.parentNode.appendChild(input);
+  }
+  input.style.display = 'block';
+  input.value = valorActual;
+
+  editandoBienvenida = true;
+
+  // Foco inmediato
+  input.focus();
+
+  input.addEventListener('keydown', function handler(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      guardarBienvenidaDesdePerfil();
+    }
+  });
+
+  input.addEventListener('blur', guardarBienvenidaDesdePerfil);
+}
+
+async function guardarBienvenidaDesdePerfil() {
+  // Evita doble envío si se apreta Enter y después blur
+  if (!editandoBienvenida || guardandoBienvenida) return;
+  guardandoBienvenida = true;
+
+  const input = document.getElementById('perfil-bienvenida-input');
+  const display = document.getElementById('perfil-bienvenida-display');
+  const valorNuevo = (input?.value || '').trim();
+  const valorAnterior = (display?.textContent || '').trim();
+
+  if (valorNuevo && valorNuevo !== valorAnterior) {
+    try {
+      const token = localStorage.getItem('token') || '';
+      const formData = new FormData();
+      formData.append('bienvenida', valorNuevo);
+      const res = await fetch('/api/whatsapp/config', {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('Error al guardar bienvenida');
+
+      // Actualizar el texto estático
+      if (display) display.textContent = valorNuevo;
+    } catch (error) {
+      console.error('Error al guardar bienvenida:', error);
+      // Si falla, revertimos el input al valor anterior
+      if (input) input.value = valorAnterior;
+    }
+  }
+
+  // Volver a modo texto
+  editandoBienvenida = false;
+  guardandoBienvenida = false;
+  if (input) input.remove();
+  if (display) display.style.display = '';
+}
+
+function initEditarBienvenida() {
+  const btnEditar = document.getElementById('btn-editar-bienvenida');
+  if (btnEditar) {
+    btnEditar.addEventListener('click', activarEdicionBienvenida);
+  }
+
+  // Si ya hay bienvenida cargado en la empresa, mostrarla
+  const display = document.getElementById('perfil-bienvenida-display');
+  if (display && usuarioActual?.bienvenida) {
+    display.textContent = usuarioActual.bienvenida;
   }
 }
 
@@ -1840,6 +1931,7 @@ function init() {
   // Configuración general (foto y estado)
   initEditarPerfil();
   initEditarEstado();
+  initEditarBienvenida();
   const btnGuardarConfigDatos = document.getElementById('btn-guardar-config-datos');
   if (btnGuardarConfigDatos) btnGuardarConfigDatos.addEventListener('click', guardarConfigDesdePanel);
   const inputFoto = document.getElementById('config-foto');

@@ -52,6 +52,10 @@ const EmpresaSchema = new Schema(
     estado: {
       type: String,
       default: ''
+    },
+    bienvenida: {
+      type: String,
+      default: ''
     }
  
   },

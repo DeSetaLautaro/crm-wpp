@@ -1301,6 +1301,21 @@ body.modo-login #app {
 }
 
 /* ===== Editar Perfil (estilo WhatsApp Web) ===== */
+#perfil-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #F9FAFB;
+  overflow-y: auto;
+}
+
+#perfil-view #config-perfil {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .perfil-edicion {
   display: flex;
   flex-direction: column;
@@ -1313,6 +1328,8 @@ body.modo-login #app {
   max-width: none;
   width: 100%;
   margin: 0;
+  flex: 1;
+  min-height: 100vh;
 }
 
 .perfil-foto-wrapper {

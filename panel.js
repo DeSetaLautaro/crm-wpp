@@ -1036,6 +1036,10 @@ function abrirDetallesModal() {
 function cerrarDetallesModal() {
   const modal = document.getElementById('modal-detalles');
   if (modal) modal.classList.add('hidden');
+
+  // Volver al chat: si el perfil está abierto como overlay, lo cerramos
+  const app = document.getElementById('app');
+  if (app) app.classList.remove('perfil-abierto');
 }
 
 async function guardarDetallesDesdeModal() {

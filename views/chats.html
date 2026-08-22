@@ -1,0 +1,150 @@
+<div id="inbox-view" class="view">
+  <!-- Columna Izquierda -->
+  <aside id="col-izquierda" class="col">
+    <div class="panel-header">
+      <h2>Bandeja de entrada</h2>
+      <div class="whatsapp-selector">
+        <label for="select-whatsapp">Línea:</label>
+        <select id="select-whatsapp"></select>
+      </div>
+      <div class="buscador">
+        <input type="search" id="buscador" placeholder="Buscar chats...">
+      </div>
+      <div class="pestanas">
+        <button class="pestana" data-pestana="todos">Todos</button>
+        <button class="pestana activa" data-pestana="pendientes">
+          Bot inactivo
+          <span class="pestana-alerta"></span>
+        </button>
+        <button class="pestana" data-pestana="resueltos">Atendidos</button>
+      </div>
+    </div>
+    <div id="lista-chats" class="lista-chats">
+      <!-- Chats renderizados -->
+    </div>
+  </aside>
+
+  <!-- Vista Vacía -->
+  <div id="empty-state" class="empty-state">
+    <div class="empty-state-icon">💬</div>
+    <p>Aquí se mostrará el chat que selecciones</p>
+  </div>
+
+  <!-- Columna Central -->
+  <main id="col-central" class="col">
+    <div class="chat-header">
+      <div class="info-chat">
+        <strong id="chat-nombre"></strong>
+        <span id="chat-linea"></span>
+      </div>
+      <div class="toggle-wrapper">
+        <label class="toggle" for="toggle-bot">
+          <input type="checkbox" id="toggle-bot">
+          <span class="slider"></span>
+        </label>
+        <span id="estado-bot">Bot Activo</span>
+      </div>
+    </div>
+    <div id="area-mensajes" class="area-mensajes">
+      <!-- Mensajes -->
+    </div>
+    <div class="composer">
+      <input type="text" id="input-mensaje" placeholder="Escribí un mensaje..." disabled>
+      <button id="btn-enviar" disabled>Enviar</button>
+    </div>
+  </main>
+
+  <!-- Columna Derecha -->
+  <aside id="col-derecha" class="col">
+    <div class="perfil-header">
+      <div class="perfil-avatar" id="perfil-avatar">M</div>
+      <div class="perfil-datos">
+        <span class="perfil-nombre" id="perfil-nombre-texto">Martina</span>
+        <span class="perfil-telefono" id="perfil-telefono-texto">5491100000001</span>
+      </div>
+      <div class="perfil-acciones">
+        <!--<button class="perfil-accion" title="Llamar">📞</button>-->
+        <button class="perfil-accion" id="btn-mas" title="Más">⋯</button>
+        <div id="perfil-menu" class="perfil-menu hidden">
+          <button id="btn-detalles-modal" class="perfil-menu-item">Detalles</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="perfil-etiquetas">
+      <div class="perfil-seccion-titulo">Etiquetas</div>
+      <div class="etiquetas-input-wrapp">
+        <input type="text" id="nueva-etiqueta-input" placeholder="Nueva etiqueta..." />
+        <button id="btn-agregar-etiqueta" type="button" class="etiqueta-btn-add">+</button>
+      </div>
+      <div id="lista-etiquetas" class="etiquetas-list">
+        <!-- Etiquetas -->
+      </div>
+    </div>
+
+    <div class="perfil-pedido">
+      <div class="perfil-seccion-titulo">📦 Pedido en Curso / Último Pedido</div>
+      <div id="pedido-info" class="pedido-info">
+        <span style="color:#9CA3AF;">Sin pedidos en curso</span>
+      </div>
+    </div>
+
+    <div class="perfil-archivos">
+      <div class="perfil-seccion-titulo">Compartidos</div>
+      <div class="archivos-switch">
+        <button class="archivos-switch-btn activo" data-pestana-archivo="notas" type="button">Notas</button>
+        <button class="archivos-switch-btn" data-pestana-archivo="archivos" type="button">Archivos</button>
+      </div>
+      <div id="notas-panel" class="archivos-panel">
+        <textarea id="nota-interna-textarea" rows="3" placeholder="Escribí una nota invisible para el cliente..."></textarea>
+        <button id="guardar-nota" type="button">Guardar Nota</button>
+        <div id="lista-notas" class="lista-notas"></div>
+      </div>
+      <div id="archivos-panel" class="archivos-panel hidden">
+        <div class="archivos-grid">
+          <div class="archivo-miniatura"></div>
+          <div class="archivo-miniatura"></div>
+          <div class="archivo-miniatura"></div>
+          <div class="archivo-miniatura"></div>
+          <div class="archivo-miniatura"></div>
+          <div class="archivo-miniatura"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de detalles (se abre desde el menú de tres puntos) -->
+    <div id="modal-detalles" class="modal-detalles hidden">
+      <div class="modal-header">
+        <button id="btn-cerrar-detalles" class="btn-cerrar" title="Volver al chat">←</button>
+        <span>Detalles del Contacto</span>
+      </div>
+      <div class="modal-body">
+        <div class="detalle-item">
+          <span class="detalle-la">Nombre</span>
+          <input type="text" id="modal-nombre" class="detalle-input" disabled>
+        </div>
+        <div class="detalle-item">
+          <span class="detalle-la">Teléfono</span>
+          <input type="text" id="modal-telefono" class="detalle-input" disabled>
+        </div>
+        <div class="detalle-item">
+          <span class="detalle-la">Dirección</span>
+          <input type="text" id="modal-direccion" class="detalle-input">
+        </div>
+        <div class="detalle-item">
+          <span class="detalle-la">Piso / Depto</span>
+          <input type="text" id="modal-pisodpto" class="detalle-input">
+        </div>
+        <div class="detalle-item">
+          <span class="detalle-la">Código Postal / Localidad</span>
+          <input type="text" id="modal-codigopostal" class="detalle-input">
+        </div>
+        <button id="modal-guardar-detalles" class="btn-guardar-detalles">Guardar Cambios</button>
+      </div>
+    </div>
+
+    <!-- Campos ocultos para compatibilidad con panel.js -->
+    <input type="hidden" id="perfil-nombre" value="">
+    <input type="hidden" id="perfil-telefono" value="">
+  </aside>
+</div>

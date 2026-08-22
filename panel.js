@@ -100,6 +100,7 @@ let miEmpresaId = null;
 let whatsappSeleccionado = null;
 let etiquetaFiltrada = null;
 let usuarioActual = null;
+let vistasCache = {};
 let editandoNombre = false;
 let guardandoNombre = false;
 let editandoEstado = false;
@@ -627,19 +628,27 @@ function renderTodo() {
 function showView(vista) {
   const inboxView = document.getElementById('inbox-view');
   const configView = document.getElementById('config-view');
+  const perfilView = document.getElementById('perfil-view');
   const btnInbox = document.getElementById('btn-inbox');
   const btnConfig = document.getElementById('btn-config');
+  const btnPerfil = document.getElementById('btn-perfil');
+
+  if (inboxView) inboxView.classList.add('hidden');
+  if (configView) configView.classList.add('hidden');
+  if (perfilView) perfilView.classList.add('hidden');
+  if (btnInbox) btnInbox.classList.remove('activo');
+  if (btnConfig) btnConfig.classList.remove('activo');
+  if (btnPerfil) btnPerfil.classList.remove('activo');
 
   if (vista === 'inbox') {
-    inboxView.classList.remove('hidden');
-    configView.classList.add('hidden');
-    btnInbox.classList.add('activo');
-    btnConfig.classList.remove('activo');
-  } else {
-    inboxView.classList.add('hidden');
-    configView.classList.remove('hidden');
-    btnInbox.classList.remove('activo');
-    btnConfig.classList.add('activo');
+    inboxView?.classList.remove('hidden');
+    btnInbox?.classList.add('activo');
+  } else if (vista === 'config') {
+    configView?.classList.remove('hidden');
+    btnConfig?.classList.add('activo');
+  } else if (vista === 'perfil') {
+    perfilView?.classList.remove('hidden');
+    btnPerfil?.classList.add('activo');
   }
 }
 
@@ -1860,7 +1869,30 @@ async function manejarLogin() {
 }
 
 // ===== Eventos =====
-function init() {
+function precargarVistas() {
+  const archivos = ['chats', 'config', 'perfil'];
+  return Promise.all(archivos.map(async (nombre) => {
+    if (vistasCache[nombre]) return;
+    try {
+      const res = await fetch(`/views/${nombre}.html`);
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      vistasCache[nombre] = await res.text();
+    } catch (error) {
+      console.error(`No se pudo cargar views/${nombre}.html:`, error);
+    }
+  })).then(() => {
+    // Inyectar el HTML precargado en los contenedores correspondientes
+    const inboxView = document.getElementById('inbox-view');
+    if (inboxView && vistasCache['chats']) inboxView.innerHTML = vistasCache['chats'];
+    const configView = document.getElementById('config-view');
+    if (configView && vistasCache['config']) configView.innerHTML = vistasCache['config'];
+    const perfilView = document.getElementById('perfil-view');
+    if (perfilView && vistasCache['perfil']) perfilView.innerHTML = vistasCache['perfil'];
+  });
+}
+
+async function init() {
+  await precargarVistas();
   // Pestañas
   document.querySelectorAll('.pestana').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1915,8 +1947,7 @@ function init() {
   const btnPerfil = document.getElementById('btn-perfil');
   if (btnPerfil) {
     btnPerfil.addEventListener('click', () => {
-      showView('config');
-      activarPanelConfig('config-perfil');
+      showView('perfil');
     });
   }
 
@@ -2150,5 +2181,8 @@ function ocultarBotonLlamarEnEscritorio() {
   document.head.appendChild(style);
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', async () => {
+  await precargarVistas();
+  init();
+});
 document.addEventListener('DOMContentLoaded', ocultarBotonLlamarEnEscritorio);

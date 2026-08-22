@@ -180,7 +180,7 @@ function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indic
                 <span class="chat-item-nombre">${contacto.nombre}</span>
                 <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
               </div>
-              <div class="chat-item-linea">${conv.lineaReceptora}</div>
+              <div class="chat-item-linea">${conv.numeroReceptor || conv.lineaReceptora}</div>
               <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
               <div class="chat-item-etiquetas">${(contacto.etiquetas || []).map(et => `<span class="chat-chip-etiqueta" data-etiqueta="${et}">${et}</span>`).join('')}</div>
             </div>
@@ -421,7 +421,7 @@ function renderChatActivo() {
   armarHeaderMovil(contacto, conv);
 
   document.getElementById('chat-nombre').textContent = contacto.nombre;
-  document.getElementById('chat-linea').textContent = conv.lineaReceptora;
+  document.getElementById('chat-linea').textContent = conv.numeroReceptor || conv.lineaReceptora;
 
   // Mostrar etiquetas del contacto en el header del chat
   const lineaHeader = document.getElementById('chat-linea');
@@ -759,6 +759,7 @@ async function cargarConversaciones() {
         empresaId: conv.empresaId,
         contactoId: cId,
         lineaReceptora: conv.lineaReceptora || '',
+        numeroReceptor: conv.numeroReceptor || '',
         botActivo: conv.botActivo ?? true,
         estado: conv.estado || 'Abierto',
         ultimoMensaje: conv.ultimoMensaje || '',

@@ -18,6 +18,10 @@ const ConversacionSchema = new Schema(
       type: String,
       default: ''
     },
+    numeroReceptor: {
+      type: String,
+      default: ''
+    },
     botActivo: {
       type: Boolean,
       default: true

@@ -55,6 +55,7 @@ const obtenerConversaciones = async (req, res) => {
           empresaId: conv.empresaId,
           contactoId: conv.contactoId,
           lineaReceptora: conv.lineaReceptora,
+          numeroReceptor: conv.numeroReceptor || '',
           botActivo: conv.botActivo,
           estado: conv.estado,
           ultimoMensaje: conv.ultimoMensaje,

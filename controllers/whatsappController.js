@@ -82,6 +82,7 @@ const recibirMensaje = async (req, res) => {
     // 2. Extraemos el nombre de forma segura (si no viene, le ponemos 'Cliente' por defecto)
     const nombre = contact?.profile?.name || 'Cliente';    
     const whatsappPhoneId = metadata?.phone_number_id || metadata?.display_phone_number || '';
+    const displayPhoneNumber = metadata?.display_phone_number || '';
     const mensaje = value?.messages?.[0];
 
     if (!mensaje) {
@@ -147,6 +148,7 @@ const recibirMensaje = async (req, res) => {
         empresaId: empresa._id,
         contactoId: contacto._id,
         lineaReceptora: whatsappPhoneId,
+        numeroReceptor: displayPhoneNumber,
         botActivo: empresa.botActivo !== false,
         estado: 'Abierto',
         ultimoMensaje: textoMensaje
@@ -164,7 +166,12 @@ const recibirMensaje = async (req, res) => {
       whatsappMsgId
     });
 
-    await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: textoMensaje });
+    await Conversacion.findByIdAndUpdate(conversacion._id, {
+      $set: {
+        ultimoMensaje: textoMensaje,
+        numeroReceptor: displayPhoneNumber
+      }
+    });
 
     // Emitir el mensaje entrante ANTES de procesar el carrito para que el panel lo muestre al instante
     const ioEntrante = req.app.get('io');

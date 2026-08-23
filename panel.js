@@ -932,12 +932,21 @@ function cerrarModalFoto() {
 function calcularRectImagen() {
   const img = document.getElementById('crop-imagen');
   const area = document.getElementById('crop-area');
-  if (!img || !area) return null;
+  if (!img || !area) {
+    return null;
+  }
+
   const natW = img.naturalWidth;
   const natH = img.naturalHeight;
-  if (!natW || !natH) return null;
   const W = area.clientWidth;
   const H = area.clientHeight;
+
+  // Fallback: si la imagen no cargó, usamos el área como cuadrado
+  if (!natW || !natH) {
+    const D = Math.min(W, H);
+    return { imgW: W, imgH: H, imgX: 0, imgY: 0, D };
+  }
+
   const ratio = natW / natH;
   let imgW, imgH;
   if (ratio >= 1) {

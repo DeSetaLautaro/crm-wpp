@@ -16,9 +16,13 @@
 <div class="config-card">
   <h3>Atajos</h3>
   <div class="atajo-form">
-    <input type="text" id="atajo-comando-input" placeholder="Ej: horarios">
-    <input type="text" id="atajo-respuesta-input" placeholder="Ej: Nuestro horario es de 9 a 18hs">
-    <button id="atajo-agregar" type="button">Agregar</button>
+    <div class="atajo-input-group">
+      <input type="text" id="atajo-comando-input" placeholder="Comando (ej: horarios)">
+    </div>
+    <div class="atajo-input-group">
+      <input type="text" id="atajo-respuesta-input" placeholder="Respuesta (ej: Nuestro horario...)">
+    </div>
+    <button id="atajo-agregar" type="button">+ Agregar</button>
   </div>
   <table class="atajos-tabla">
     <thead>
@@ -27,7 +31,7 @@
     <tbody id="atajos-body"></tbody>
   </table>
   <br>
-  <label>
+  <label class="checkbox-linea">
     <input type="checkbox" id="aplicar-atajos-todas">
     Aplicar a todas las líneas
   </label>

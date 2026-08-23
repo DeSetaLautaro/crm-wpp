@@ -822,53 +822,128 @@ body {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+/* ===== Mejora visual para el formulario de atajos ===== */
 .atajo-form {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
-.atajo-form input {
+.atajo-input-group {
   flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #D1D5DB;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  outline: none;
+  min-width: 150px;
 }
 
-.atajo-form button {
-  padding: 8px 20px;
+.atajo-input-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #f9fafb;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.atajo-input-group input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: #fff;
+}
+
+#atajo-agregar {
+  padding: 10px 16px;
+  background: #2563eb;
+  color: #fff;
   border: none;
   border-radius: 8px;
-  background: #2563EB;
-  color: white;
-  font-weight: 500;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
   transition: background 0.2s;
 }
 
-.atajo-form button:hover {
-  background: #1D4ED8;
+#atajo-agregar:hover {
+  background: #1d4ed8;
 }
 
 .atajos-tabla {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.atajos-tabla th,
-.atajos-tabla td {
-  text-align: left;
-  padding: 8px 12px;
-  border-bottom: 1px solid #E5E7EB;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  margin-top: 8px;
 }
 
 .atajos-tabla th {
-  font-weight: 600;
-  color: #6B7280;
-  background: #F9FAFB;
+  text-align: left;
+  padding: 4px 8px;
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.atajos-tabla td {
+  padding: 6px 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.atajos-tabla td:first-child {
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.atajos-tabla td:last-child {
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.atajos-tabla input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.atajos-tabla input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.atajo-eliminar {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 4px 6px;
+  line-height: 1;
+}
+
+.atajo-eliminar:hover {
+  background: #fee2e2;
+}
+
+.checkbox-linea {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.checkbox-linea input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
 }
 
 .btn-guardar-config {

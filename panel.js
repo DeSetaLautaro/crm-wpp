@@ -737,12 +737,13 @@ async function cargarConfiguracion() {
 async function guardarPromptDesdePanel() {
   const prompt = document.getElementById('prompt-ia');
   if (!prompt) return;
+  const aplicarATodasPrompt = document.getElementById('aplicar-prompt-todas')?.checked || false;
   const token = localStorage.getItem('token') || '';
   try {
     const res = await fetch('/api/whatsapp/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ promptIA: prompt.value })
+      body: JSON.stringify({ promptIA: prompt.value, aplicarATodasPrompt })
     });
     if (!res.ok) throw new Error('Error al guardar prompt');
     alert('Prompt guardado correctamente');
@@ -759,12 +760,14 @@ async function guardarAtajosDesdePanel() {
     respuesta: tr.querySelector('.atajo-respuesta')?.value?.trim() || ''
   })).filter(a => a.comando && a.respuesta);
 
+  const aplicarATodasAtajos = document.getElementById('aplicar-atajos-todas')?.checked || false;
+
   const token = localStorage.getItem('token') || '';
   try {
     const res = await fetch('/api/whatsapp/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ atajos })
+      body: JSON.stringify({ atajos, aplicarATodasAtajos })
     });
     if (!res.ok) throw new Error('Error al guardar atajos');
     alert('Atajos guardados correctamente');

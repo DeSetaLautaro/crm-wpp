@@ -644,8 +644,18 @@ const actualizarConfig = async (req, res) => {
     if (req.body.bienvenida && typeof req.body.bienvenida === 'string') {
       updates.bienvenida = req.body.bienvenida.trim();
     }
+
+    // Prompt: puede aplicar solo a la línea actual o a todas las líneas del usuario
     if (typeof req.body.promptIA === 'string') {
-      updates.promptIA = req.body.promptIA.trim();
+      const promptIA = req.body.promptIA.trim();
+      if (req.body.aplicarATodasPrompt === true) {
+        await Empresa.updateMany(
+          { usuarioAppId: req.usuario.id },
+          { $set: { promptIA } }
+        );
+      } else {
+        updates.promptIA = promptIA;
+      }
     }
 
     // Atajos: puede venir como array (JSON) o como string JSON (FormData)
@@ -672,7 +682,15 @@ const actualizarConfig = async (req, res) => {
         return res.status(400).json({ error: 'El formato de atajos es inválido' });
       }
     }
-    if (atajos) {
+
+    if (req.body.aplicarATodasAtajos === true) {
+      if (atajos) {
+        await Empresa.updateMany(
+          { usuarioAppId: req.usuario.id },
+          { $set: { atajos } }
+        );
+      }
+    } else if (atajos) {
       updates.atajos = atajos;
     }
 

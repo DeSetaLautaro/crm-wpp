@@ -725,6 +725,17 @@ async function cargarConfiguracion() {
     const nombreDisplay = document.getElementById('perfil-nombre-display');
     if (nombreDisplay && config.nombre) nombreDisplay.textContent = config.nombre;
 
+    const fotoGrande = document.getElementById('perfil-foto-grande');
+    if (fotoGrande && config.fotoPerfil) {
+      fotoGrande.src = config.fotoPerfil;
+    }
+
+    const fotoPreview = document.getElementById('config-foto-preview');
+    if (fotoPreview && config.fotoPerfil) {
+      fotoPreview.src = config.fotoPerfil;
+      fotoPreview.style.display = 'block';
+    }
+
     renderAtajos(config.atajos || []);
 
     const estadoDisplay = document.getElementById('perfil-estado-display');

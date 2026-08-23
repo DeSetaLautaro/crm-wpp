@@ -697,6 +697,10 @@ const actualizarConfig = async (req, res) => {
       updates.atajos = atajos;
     }
 
+    if (req.body.fotoPosicion && typeof req.body.fotoPosicion === 'string') {
+      updates.fotoPosicion = req.body.fotoPosicion.trim();
+    }
+
     if (req.file) {
       updates.fotoPerfil = `/uploads/${req.file.filename}`;
     }
@@ -732,7 +736,8 @@ const obtenerConfig = async (req, res) => {
         atajos: empresa.atajos || [],
         estado: empresa.estado || '',
         bienvenida: empresa.bienvenida || '',
-        fotoPerfil: empresa.fotoPerfil || ''
+        fotoPerfil: empresa.fotoPerfil || '',
+        fotoPosicion: empresa.fotoPosicion || '50% 50%'
       }
     });
   } catch (error) {

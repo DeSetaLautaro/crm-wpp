@@ -108,6 +108,16 @@ let guardandoEstado = false;
 let editandoBienvenida = false;
 let guardandoBienvenida = false;
 
+// Variables para el recorte de foto de perfil
+let fotoCropFile = null;
+let fotoCropX = 50;
+let fotoCropY = 50;
+let fotoCropArrastrando = false;
+let fotoCropInicioX = 0;
+let fotoCropInicioY = 0;
+let fotoCropAncho = 0;
+let fotoCropAlto = 0;
+
 // ===== Helpers =====
 function getContactoPorId(id) {
   return CONTACTOS.find(c => c._id === id);
@@ -728,11 +738,13 @@ async function cargarConfiguracion() {
     const fotoGrande = document.getElementById('perfil-foto-grande');
     if (fotoGrande && config.fotoPerfil) {
       fotoGrande.src = config.fotoPerfil;
+      fotoGrande.style.objectPosition = config.fotoPosicion || '50% 50%';
     }
 
     const fotoPreview = document.getElementById('config-foto-preview');
     if (fotoPreview && config.fotoPerfil) {
       fotoPreview.src = config.fotoPerfil;
+      fotoPreview.style.objectPosition = config.fotoPosicion || '50% 50%';
       fotoPreview.style.display = 'block';
     }
 
@@ -847,10 +859,11 @@ function initConfigSidebar() {
   cargarConfiguracion();
 }
 
-async function guardarFotoPerfil(file) {
+async function guardarFotoPerfil(file, posicion) {
   const token = localStorage.getItem('token') || '';
   const formData = new FormData();
   formData.append('foto', file);
+  formData.append('fotoPosicion', posicion || '50% 50%');
   
   const estadoDisplay = document.getElementById('perfil-estado-display');
   const bienvenidaDisplay = document.getElementById('perfil-bienvenida-display');
@@ -863,33 +876,113 @@ async function guardarFotoPerfil(file) {
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
     });
-    if (!res.ok) {
-      console.error('Error al guardar foto');
+    if (!res.ok) throw new Error('Error al guardar foto');
+    const data = await res.json();
+    const nuevaFoto = data.empresa?.fotoPerfil;
+    const nuevaPos = data.empresa?.fotoPosicion || posicion || '50% 50%';
+    if (nuevaFoto) {
+      const fotoGrande = document.getElementById('perfil-foto-grande');
+      if (fotoGrande) {
+        fotoGrande.src = nuevaFoto;
+        fotoGrande.style.objectPosition = nuevaPos;
+      }
+      const fotoPreview = document.getElementById('config-foto-preview');
+      if (fotoPreview) {
+        fotoPreview.src = nuevaFoto;
+        fotoPreview.style.objectPosition = nuevaPos;
+        fotoPreview.style.display = 'block';
+      }
     }
   } catch (error) {
     console.error('Error de red al guardar foto:', error);
   }
 }
 
-function previewFoto() {
-  const input = document.getElementById('config-foto');
-  const preview = document.getElementById('config-foto-preview');
-  const fotoGrande = document.getElementById('perfil-foto-grande');
-  if (!input || input.files.length === 0) return;
-  const file = input.files[0];
+function abrirModalFoto(file) {
+  fotoCropFile = file;
+  fotoCropX = 50;
+  fotoCropY = 50;
+  const img = document.getElementById('crop-imagen');
+  const modal = document.getElementById('modal-foto-recortar');
+  if (!img || !modal) return;
   const reader = new FileReader();
   reader.onload = function(e) {
-    if (preview) {
-      preview.src = e.target.result;
-      preview.style.display = 'block';
-    }
-    if (fotoGrande) {
-      fotoGrande.src = e.target.result;
-    }
+    img.src = e.target.result;
+    img.style.objectPosition = '50% 50%';
+    modal.classList.remove('hidden');
   };
   reader.readAsDataURL(file);
-  
-  guardarFotoPerfil(file);
+  const input = document.getElementById('config-foto');
+  if (input) input.value = '';
+}
+
+function cerrarModalFoto() {
+  const modal = document.getElementById('modal-foto-recortar');
+  if (modal) modal.classList.add('hidden');
+  fotoCropFile = null;
+}
+
+function iniciarArrastreFoto(e) {
+  e.preventDefault();
+  fotoCropArrastrando = true;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  fotoCropInicioX = clientX;
+  fotoCropInicioY = clientY;
+  const area = document.getElementById('crop-area');
+  if (area) {
+    fotoCropAncho = area.clientWidth;
+    fotoCropAlto = area.clientHeight;
+  }
+}
+
+function moverArrastreFoto(e) {
+  if (!fotoCropArrastrando) return;
+  e.preventDefault();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const deltaX = ((clientX - fotoCropInicioX) / fotoCropAncho) * 100;
+  const deltaY = ((clientY - fotoCropInicioY) / fotoCropAlto) * 100;
+  fotoCropInicioX = clientX;
+  fotoCropInicioY = clientY;
+  fotoCropX = Math.min(100, Math.max(0, fotoCropX + deltaX));
+  fotoCropY = Math.min(100, Math.max(0, fotoCropY + deltaY));
+  aplicarPosicionCrop();
+}
+
+function terminarArrastreFoto() {
+  fotoCropArrastrando = false;
+}
+
+function aplicarPosicionCrop() {
+  const img = document.getElementById('crop-imagen');
+  if (img) img.style.objectPosition = `${fotoCropX}% ${fotoCropY}%`;
+}
+
+async function aceptarFoto() {
+  if (!fotoCropFile) return;
+  await guardarFotoPerfil(fotoCropFile, `${fotoCropX}% ${fotoCropY}%`);
+  cerrarModalFoto();
+}
+
+function previewFoto() {
+  const input = document.getElementById('config-foto');
+  if (!input || input.files.length === 0) return;
+  abrirModalFoto(input.files[0]);
+}
+
+// Eventos del modal de recorte
+document.getElementById('crop-aceptar')?.addEventListener('click', aceptarFoto);
+document.getElementById('crop-cancelar')?.addEventListener('click', cerrarModalFoto);
+const cropArea = document.getElementById('crop-area');
+if (cropArea) {
+  cropArea.addEventListener('mousedown', iniciarArrastreFoto);
+  cropArea.addEventListener('mousemove', moverArrastreFoto);
+  cropArea.addEventListener('mouseup', terminarArrastreFoto);
+  cropArea.addEventListener('mouseleave', terminarArrastreFoto);
+  cropArea.addEventListener('touchstart', iniciarArrastreFoto);
+  cropArea.addEventListener('touchmove', moverArrastreFoto);
+  cropArea.addEventListener('touchend', terminarArrastreFoto);
 }
 
 function activarEdicionNombre() {

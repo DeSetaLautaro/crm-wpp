@@ -28,4 +28,21 @@
       <button class="perfil-campo-editar" id="btn-editar-bienvenida" title="Editar bienvenida">✏️</button>
     </div>
   </div>
+
+  <!-- Modal para ajustar la foto de perfil -->
+  <div id="modal-foto-recortar" class="modal-crop hidden">
+    <div class="modal-crop-overlay"></div>
+    <div class="modal-crop-contenedor">
+      <h3>Ajustá tu foto</h3>
+      <div class="crop-area" id="crop-area">
+        <img id="crop-imagen" alt="Foto a ajustar" draggable="false">
+        <div class="crop-circulo"></div>
+      </div>
+      <p class="crop-instrucciones">Arrastrá la imagen para encuadrarla dentro del círculo.</p>
+      <div class="crop-botones">
+        <button id="crop-cancelar" type="button">Cancelar</button>
+        <button id="crop-aceptar" type="button">Aceptar</button>
+      </div>
+    </div>
+  </div>
 </div>

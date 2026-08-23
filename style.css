@@ -1871,3 +1871,97 @@ body.modo-login #app {
     font-size: 0.85rem;
   }
 }
+
+/* ===== Modal de recorte de foto ===== */
+.modal-crop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-crop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.modal-crop-contenedor {
+  position: relative;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+}
+
+.modal-crop-contenedor h3 {
+  margin-bottom: 12px;
+  color: #1F2937;
+}
+
+.crop-area {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin: 0 auto 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.crop-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.crop-circulo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.crop-instrucciones {
+  font-size: 0.85rem;
+  color: #6B7280;
+  margin-bottom: 12px;
+}
+
+.crop-botones {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.crop-botones button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#crop-cancelar {
+  background: #E5E7EB;
+  color: #374151;
+}
+
+#crop-aceptar {
+  background: #2563EB;
+  color: #fff;
+}

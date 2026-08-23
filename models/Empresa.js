@@ -50,6 +50,10 @@ const EmpresaSchema = new Schema(
       type: String,
       default: ''
     },
+    fotoPosicion: {
+      type: String,
+      default: '50% 50%'
+    },
     estado: {
       type: String,
       default: ''

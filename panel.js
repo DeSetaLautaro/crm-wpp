@@ -954,7 +954,23 @@ function calcularRectImagen() {
 function aplicarPosicionCrop() {
   const circle = document.getElementById('crop-circulo');
   const rect = fotoCropRect || calcularRectImagen();
-  if (!circle || !rect) return;
+  if (!circle) return;
+
+  if (!rect) {
+    // Fallback por si la imagen todavía no cargó: círculo centrado de 200px
+    const area = document.getElementById('crop-area');
+    if (area) {
+      const W = area.clientWidth;
+      const H = area.clientHeight;
+      const D = Math.min(200, W, H);
+      circle.style.width = `${D}px`;
+      circle.style.height = `${D}px`;
+      circle.style.left = `${(W - D) / 2}px`;
+      circle.style.top = `${(H - D) / 2}px`;
+    }
+    return;
+  }
+
   const { imgW, imgH, imgX, imgY, D } = rect;
   const cx = imgX + D / 2 + (fotoCropX / 100) * (imgW - D);
   const cy = imgY + D / 2 + (fotoCropY / 100) * (imgH - D);

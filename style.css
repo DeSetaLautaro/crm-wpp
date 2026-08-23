@@ -1929,6 +1929,8 @@ body.modo-login #app {
 
 .crop-circulo {
   position: absolute;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
   border: 3px solid #fff;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
@@ -1936,6 +1938,7 @@ body.modo-login #app {
   touch-action: none;
   user-select: none;
   -webkit-user-drag: none;
+  z-index: 1;
 }
 
 .crop-instrucciones {

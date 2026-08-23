@@ -110,19 +110,6 @@ let guardandoBienvenida = false;
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
-let fotoCropX = 50;
-let fotoCropY = 50;
-let fotoCropArrastrando = false;
-let fotoCropInicioX = 0;
-let fotoCropInicioY = 0;
-let fotoCropRect = null;
-let fotoCropCircleLeft = 0;
-let fotoCropCircleTop = 0;
-let fotoCropMaxLeft = 0;
-let fotoCropMaxTop = 0;
-let fotoCropPointerId = null;
-let fotoCropOffsetX = 0;
-let fotoCropOffsetY = 0;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -906,26 +893,15 @@ async function guardarFotoPerfil(file, posicion) {
 
 function abrirModalFoto(file) {
   fotoCropFile = file;
-  fotoCropX = 50;
-  fotoCropY = 50;
-  fotoCropRect = null;
   const img = document.getElementById('crop-imagen');
   const modal = document.getElementById('modal-foto-recortar');
   if (!img || !modal) return;
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    img.onload = () => {
-      fotoCropRect = calcularRectImagen();
-      requestAnimationFrame(() => aplicarPosicionCrop());
-    };
     img.src = e.target.result;
     img.style.objectPosition = '50% 50%';
     modal.classList.remove('hidden');
-
-    // Forzamos el círculo centrado apenas se muestra el modal
-    setTimeout(() => aplicarPosicionCrop(), 30);
-    requestAnimationFrame(() => aplicarPosicionCrop());
   };
   reader.readAsDataURL(file);
   const input = document.getElementById('config-foto');
@@ -936,151 +912,16 @@ function cerrarModalFoto() {
   const modal = document.getElementById('modal-foto-recortar');
   if (modal) modal.classList.add('hidden');
   fotoCropFile = null;
-  fotoCropRect = null;
 }
 
-function calcularRectImagen() {
-  const img = document.getElementById('crop-imagen');
-  const area = document.getElementById('crop-area');
-  if (!img || !area) return null;
 
-  const W = area.clientWidth;
-  const H = area.clientHeight;
-  if (W === 0 || H === 0) return null; // layout todavía no listo
 
-  const natW = img.naturalWidth;
-  const natH = img.naturalHeight;
 
-  if (!natW || !natH) {
-    const D = Math.min(W, H) * 0.8;
-    return { imgW: W, imgH: H, imgX: 0, imgY: 0, D };
-  }
 
-  const ratio = natW / natH;
-  let imgW, imgH;
-  if (ratio >= 1) {
-    imgW = W;
-    imgH = W / ratio;
-  } else {
-    imgW = H * ratio;
-    imgH = H;
-  }
-  const imgX = (W - imgW) / 2;
-  const imgY = (H - imgH) / 2;
-  const D = Math.max(50, Math.min(200, Math.min(imgW, imgH) * 0.8));
-  return { imgW, imgH, imgX, imgY, D };
-}
-
-function aplicarPosicionCrop() {
-  const circle = document.getElementById('crop-circulo');
-  const area = document.getElementById('crop-area');
-  if (!circle || !area) return;
-
-  const W = area.clientWidth;
-  const H = area.clientHeight;
-  if (W === 0 || H === 0) return; // todavía no se puede calcular
-
-  const rect = fotoCropRect || calcularRectImagen();
-
-  if (!rect) {
-    const D = Math.min(200, W, H);
-    circle.style.width = `${D}px`;
-    circle.style.height = `${D}px`;
-    circle.style.left = `${(W - D) / 2}px`;
-    circle.style.top = `${(H - D) / 2}px`;
-    return;
-  }
-
-  const { imgW, imgH, imgX, imgY, D } = rect;
-  const cx = imgX + D / 2 + (fotoCropX / 100) * (imgW - D);
-  const cy = imgY + D / 2 + (fotoCropY / 100) * (imgH - D);
-  circle.style.width = `${D}px`;
-  circle.style.height = `${D}px`;
-  circle.style.left = `${cx - D / 2}px`;
-  circle.style.top = `${cy - D / 2}px`;
-}
-
-function iniciarArrastreFoto(e) {
-  e.preventDefault();
-  fotoCropArrastrando = true;
-
-  const area = document.getElementById('crop-area');
-  const circle = document.getElementById('crop-circulo');
-  if (!circle || !area) return;
-
-  const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-  const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-
-  const areaRect = area.getBoundingClientRect();
-  const circleRect = circle.getBoundingClientRect();
-
-  // Offset: distancia entre el cursor y la esquina superior izquierda del círculo
-  fotoCropOffsetX = clientX - circleRect.left;
-  fotoCropOffsetY = clientY - circleRect.top;
-
-  // Límites de movimiento
-  fotoCropMaxLeft = area.clientWidth - circleRect.width;
-  fotoCropMaxTop = area.clientHeight - circleRect.height;
-
-  document.addEventListener('mousemove', moverArrastreFoto);
-  document.addEventListener('mouseup', terminarArrastreFoto);
-  document.addEventListener('touchmove', moverArrastreFoto, { passive: false });
-  document.addEventListener('touchend', terminarArrastreFoto);
-  document.addEventListener('touchcancel', terminarArrastreFoto);
-}
-
-function moverArrastreFoto(e) {
-  if (!fotoCropArrastrando) return;
-  e.preventDefault();
-
-  const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
-  const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
-
-  const area = document.getElementById('crop-area');
-  if (!area) return;
-  const areaRect = area.getBoundingClientRect();
-
-  // El círculo se mueve siguiendo al cursor, respetando el offset inicial
-  const nuevoLeft = Math.min(fotoCropMaxLeft, Math.max(0, (clientX - areaRect.left) - fotoCropOffsetX));
-  const nuevoTop = Math.min(fotoCropMaxTop, Math.max(0, (clientY - areaRect.top) - fotoCropOffsetY));
-
-  const circle = document.getElementById('crop-circulo');
-  if (circle) {
-    circle.style.left = nuevoLeft + 'px';
-    circle.style.top = nuevoTop + 'px';
-  }
-}
-
-function terminarArrastreFoto() {
-  if (!fotoCropArrastrando) return;
-
-  const area = document.getElementById('crop-area');
-  const circle = document.getElementById('crop-circulo');
-  if (area && circle) {
-    const areaRect = area.getBoundingClientRect();
-    const circleRect = circle.getBoundingClientRect();
-
-    const left = circleRect.left - areaRect.left;
-    const top = circleRect.top - areaRect.top;
-    const maxLeft = area.clientWidth - circleRect.width;
-    const maxTop = area.clientHeight - circleRect.height;
-
-    fotoCropX = maxLeft > 0 ? (left / maxLeft) * 100 : 50;
-    fotoCropY = maxTop > 0 ? (top / maxTop) * 100 : 50;
-  }
-
-  fotoCropArrastrando = false;
-
-  document.removeEventListener('mousemove', moverArrastreFoto);
-  document.removeEventListener('mouseup', terminarArrastreFoto);
-  document.removeEventListener('touchmove', moverArrastreFoto);
-  document.removeEventListener('touchend', terminarArrastreFoto);
-  document.removeEventListener('touchcancel', terminarArrastreFoto);
-}
 
 async function aceptarFoto() {
   if (!fotoCropFile) return;
-  await guardarFotoPerfil(fotoCropFile, `${fotoCropX}% ${fotoCropY}%`);
+  await guardarFotoPerfil(fotoCropFile, '50% 50%');
   cerrarModalFoto();
 }
 
@@ -1096,12 +937,6 @@ function setupCropFotoEventos() {
 
   const btnCancelar = document.getElementById('crop-cancelar');
   if (btnCancelar) btnCancelar.addEventListener('click', cerrarModalFoto);
-
-  const circle = document.getElementById('crop-circulo');
-  if (circle) {
-    circle.addEventListener('mousedown', iniciarArrastreFoto);
-    circle.addEventListener('touchstart', iniciarArrastreFoto, { passive: false });
-  }
 }
 
 function activarEdicionNombre() {

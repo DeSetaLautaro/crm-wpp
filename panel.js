@@ -1104,7 +1104,6 @@ function setupCropFotoEventos() {
   }
 
   area.addEventListener('mousedown', (e) => {
-    if (!e.target.closest('#crop-circulo')) return;
     e.preventDefault();
     iniciarArrastreFoto(e);
     document.addEventListener('mousemove', onMouseMove);
@@ -1112,7 +1111,6 @@ function setupCropFotoEventos() {
   });
 
   area.addEventListener('touchstart', (e) => {
-    if (!e.target.closest('#crop-circulo')) return;
     e.preventDefault();
     iniciarArrastreFoto(e);
     document.addEventListener('touchmove', onTouchMove, { passive: false });

@@ -910,17 +910,18 @@ function abrirModalFoto(file) {
   const img = document.getElementById('crop-imagen');
   const modal = document.getElementById('modal-foto-recortar');
   if (!img || !modal) return;
+
   const reader = new FileReader();
   reader.onload = function(e) {
     img.onload = () => {
       fotoCropRect = calcularRectImagen();
-      aplicarPosicionCrop();
+      requestAnimationFrame(() => aplicarPosicionCrop());
     };
     img.src = e.target.result;
     img.style.objectPosition = '50% 50%';
     modal.classList.remove('hidden');
-    // Llamada inmediata para que el círculo aparezca aunque la imagen todavía esté cargando
-    aplicarPosicionCrop();
+    // Esperar a que el navegador calcule el layout antes de posicionar
+    requestAnimationFrame(() => aplicarPosicionCrop());
   };
   reader.readAsDataURL(file);
   const input = document.getElementById('config-foto');
@@ -937,16 +938,15 @@ function cerrarModalFoto() {
 function calcularRectImagen() {
   const img = document.getElementById('crop-imagen');
   const area = document.getElementById('crop-area');
-  if (!img || !area) {
-    return null;
-  }
+  if (!img || !area) return null;
+
+  const W = area.clientWidth;
+  const H = area.clientHeight;
+  if (W === 0 || H === 0) return null; // layout todavía no listo
 
   const natW = img.naturalWidth;
   const natH = img.naturalHeight;
-  const W = area.clientWidth;
-  const H = area.clientHeight;
 
-  // Fallback: si la imagen no cargó, usamos el área como cuadrado
   if (!natW || !natH) {
     const D = Math.min(W, H) * 0.8;
     return { imgW: W, imgH: H, imgX: 0, imgY: 0, D };
@@ -963,28 +963,27 @@ function calcularRectImagen() {
   }
   const imgX = (W - imgW) / 2;
   const imgY = (H - imgH) / 2;
-  // Diámetro del círculo: 80% del lado menor, máximo 200px, mínimo 50px
   const D = Math.max(50, Math.min(200, Math.min(imgW, imgH) * 0.8));
   return { imgW, imgH, imgX, imgY, D };
 }
 
 function aplicarPosicionCrop() {
   const circle = document.getElementById('crop-circulo');
+  const area = document.getElementById('crop-area');
+  if (!circle || !area) return;
+
+  const W = area.clientWidth;
+  const H = area.clientHeight;
+  if (W === 0 || H === 0) return; // todavía no se puede calcular
+
   const rect = fotoCropRect || calcularRectImagen();
-  if (!circle) return;
 
   if (!rect) {
-    // Fallback por si la imagen todavía no cargó: círculo centrado de 200px
-    const area = document.getElementById('crop-area');
-    if (area) {
-      const W = area.clientWidth;
-      const H = area.clientHeight;
-      const D = Math.min(200, W, H);
-      circle.style.width = `${D}px`;
-      circle.style.height = `${D}px`;
-      circle.style.left = `${(W - D) / 2}px`;
-      circle.style.top = `${(H - D) / 2}px`;
-    }
+    const D = Math.min(200, W, H);
+    circle.style.width = `${D}px`;
+    circle.style.height = `${D}px`;
+    circle.style.left = `${(W - D) / 2}px`;
+    circle.style.top = `${(H - D) / 2}px`;
     return;
   }
 
@@ -1001,7 +1000,7 @@ function iniciarArrastreFoto(e) {
   e.preventDefault();
   fotoCropArrastrando = true;
 
-  const area = e.currentTarget || document.getElementById('crop-area');
+  const area = document.getElementById('crop-area');
   const circle = document.getElementById('crop-circulo');
   if (!circle || !area) return;
 
@@ -1092,10 +1091,17 @@ function setupCropFotoEventos() {
   if (btnCancelar) btnCancelar.addEventListener('click', cerrarModalFoto);
 
   const area = document.getElementById('crop-area');
-  if (!area) return;
+  if (area) {
+    area.addEventListener('mousedown', iniciarArrastreFoto);
+    area.addEventListener('touchstart', iniciarArrastreFoto, { passive: false });
+  }
 
-  area.addEventListener('mousedown', iniciarArrastreFoto);
-  area.addEventListener('touchstart', iniciarArrastreFoto, { passive: false });
+  // También permitir agarrar el círculo directamente
+  const circle = document.getElementById('crop-circulo');
+  if (circle) {
+    circle.addEventListener('mousedown', iniciarArrastreFoto);
+    circle.addEventListener('touchstart', iniciarArrastreFoto, { passive: false });
+  }
 }
 
 function activarEdicionNombre() {

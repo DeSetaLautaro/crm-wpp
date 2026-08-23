@@ -120,6 +120,7 @@ let fotoCropCircleLeft = 0;
 let fotoCropCircleTop = 0;
 let fotoCropMaxLeft = 0;
 let fotoCropMaxTop = 0;
+let fotoCropPointerId = null;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -997,18 +998,26 @@ function aplicarPosicionCrop() {
 }
 
 function iniciarArrastreFoto(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
   e.preventDefault();
   fotoCropArrastrando = true;
+  fotoCropPointerId = e.pointerId;
 
+  const area = e.currentTarget;
   const circle = document.getElementById('crop-circulo');
-  const area = document.getElementById('crop-area');
   if (!circle || !area) return;
+
+  if (area.setPointerCapture) {
+    try {
+      area.setPointerCapture(e.pointerId);
+    } catch (err) {}
+  }
 
   const areaRect = area.getBoundingClientRect();
   const circleRect = circle.getBoundingClientRect();
 
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const clientX = e.clientX;
+  const clientY = e.clientY;
 
   fotoCropInicioX = clientX;
   fotoCropInicioY = clientY;
@@ -1021,11 +1030,15 @@ function iniciarArrastreFoto(e) {
 }
 
 function moverArrastreFoto(e) {
-  if (!fotoCropArrastrando) return;
+  if (!fotoCropArrastrando || e.pointerId !== fotoCropPointerId) return;
   e.preventDefault();
 
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const area = e.currentTarget;
+  const circle = document.getElementById('crop-circulo');
+  if (!circle || !area) return;
+
+  const clientX = e.clientX;
+  const clientY = e.clientY;
 
   const deltaX = clientX - fotoCropInicioX;
   const deltaY = clientY - fotoCropInicioY;
@@ -1033,32 +1046,35 @@ function moverArrastreFoto(e) {
   const nuevoLeft = Math.min(fotoCropMaxLeft, Math.max(0, fotoCropCircleLeft + deltaX));
   const nuevoTop = Math.min(fotoCropMaxTop, Math.max(0, fotoCropCircleTop + deltaY));
 
-  const circle = document.getElementById('crop-circulo');
-  if (circle) {
-    circle.style.left = nuevoLeft + 'px';
-    circle.style.top = nuevoTop + 'px';
-  }
+  circle.style.left = nuevoLeft + 'px';
+  circle.style.top = nuevoTop + 'px';
 }
 
-function terminarArrastreFoto() {
+function terminarArrastreFoto(e) {
   if (!fotoCropArrastrando) return;
-  fotoCropArrastrando = false;
+  if (e && e.pointerId !== fotoCropPointerId) return;
 
+  const area = e ? e.currentTarget : document.getElementById('crop-area');
   const circle = document.getElementById('crop-circulo');
-  const area = document.getElementById('crop-area');
-  if (!circle || !area) return;
+  if (area && circle) {
+    const areaRect = area.getBoundingClientRect();
+    const circleRect = circle.getBoundingClientRect();
 
-  const areaRect = area.getBoundingClientRect();
-  const circleRect = circle.getBoundingClientRect();
+    const left = circleRect.left - areaRect.left;
+    const top = circleRect.top - areaRect.top;
+    const maxLeft = area.clientWidth - circleRect.width;
+    const maxTop = area.clientHeight - circleRect.height;
 
-  const left = circleRect.left - areaRect.left;
-  const top = circleRect.top - areaRect.top;
+    fotoCropX = maxLeft > 0 ? (left / maxLeft) * 100 : 50;
+    fotoCropY = maxTop > 0 ? (top / maxTop) * 100 : 50;
+  }
 
-  const maxLeft = area.clientWidth - circleRect.width;
-  const maxTop = area.clientHeight - circleRect.height;
+  if (area && area.hasPointerCapture && e && area.hasPointerCapture(e.pointerId)) {
+    area.releasePointerCapture(e.pointerId);
+  }
 
-  fotoCropX = maxLeft > 0 ? (left / maxLeft) * 100 : 50;
-  fotoCropY = maxTop > 0 ? (top / maxTop) * 100 : 50;
+  fotoCropArrastrando = false;
+  fotoCropPointerId = null;
 }
 
 async function aceptarFoto() {
@@ -1083,39 +1099,10 @@ function setupCropFotoEventos() {
   const area = document.getElementById('crop-area');
   if (!area) return;
 
-  function onMouseMove(e) {
-    moverArrastreFoto(e);
-  }
-
-  function onMouseUp() {
-    terminarArrastreFoto();
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
-  }
-
-  function onTouchMove(e) {
-    moverArrastreFoto(e);
-  }
-
-  function onTouchEnd() {
-    terminarArrastreFoto();
-    document.removeEventListener('touchmove', onTouchMove);
-    document.removeEventListener('touchend', onTouchEnd);
-  }
-
-  area.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    iniciarArrastreFoto(e);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  });
-
-  area.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    iniciarArrastreFoto(e);
-    document.addEventListener('touchmove', onTouchMove, { passive: false });
-    document.addEventListener('touchend', onTouchEnd);
-  }, { passive: false });
+  area.addEventListener('pointerdown', iniciarArrastreFoto);
+  area.addEventListener('pointermove', moverArrastreFoto);
+  area.addEventListener('pointerup', terminarArrastreFoto);
+  area.addEventListener('pointercancel', terminarArrastreFoto);
 }
 
 function activarEdicionNombre() {

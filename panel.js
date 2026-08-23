@@ -115,8 +115,7 @@ let fotoCropY = 50;
 let fotoCropArrastrando = false;
 let fotoCropInicioX = 0;
 let fotoCropInicioY = 0;
-let fotoCropAncho = 0;
-let fotoCropAlto = 0;
+let fotoCropRect = null;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -902,11 +901,16 @@ function abrirModalFoto(file) {
   fotoCropFile = file;
   fotoCropX = 50;
   fotoCropY = 50;
+  fotoCropRect = null;
   const img = document.getElementById('crop-imagen');
   const modal = document.getElementById('modal-foto-recortar');
   if (!img || !modal) return;
   const reader = new FileReader();
   reader.onload = function(e) {
+    img.onload = () => {
+      fotoCropRect = calcularRectImagen();
+      aplicarPosicionCrop();
+    };
     img.src = e.target.result;
     img.style.objectPosition = '50% 50%';
     modal.classList.remove('hidden');
@@ -920,6 +924,44 @@ function cerrarModalFoto() {
   const modal = document.getElementById('modal-foto-recortar');
   if (modal) modal.classList.add('hidden');
   fotoCropFile = null;
+  fotoCropRect = null;
+}
+
+function calcularRectImagen() {
+  const img = document.getElementById('crop-imagen');
+  const area = document.getElementById('crop-area');
+  if (!img || !area) return null;
+  const natW = img.naturalWidth;
+  const natH = img.naturalHeight;
+  if (!natW || !natH) return null;
+  const W = area.clientWidth;
+  const H = area.clientHeight;
+  const ratio = natW / natH;
+  let imgW, imgH;
+  if (ratio >= 1) {
+    imgW = W;
+    imgH = W / ratio;
+  } else {
+    imgW = H * ratio;
+    imgH = H;
+  }
+  const imgX = (W - imgW) / 2;
+  const imgY = (H - imgH) / 2;
+  const D = Math.min(imgW, imgH);
+  return { imgW, imgH, imgX, imgY, D };
+}
+
+function aplicarPosicionCrop() {
+  const circle = document.getElementById('crop-circulo');
+  const rect = fotoCropRect || calcularRectImagen();
+  if (!circle || !rect) return;
+  const { imgW, imgH, imgX, imgY, D } = rect;
+  const cx = imgX + D / 2 + (fotoCropX / 100) * (imgW - D);
+  const cy = imgY + D / 2 + (fotoCropY / 100) * (imgH - D);
+  circle.style.width = `${D}px`;
+  circle.style.height = `${D}px`;
+  circle.style.left = `${cx - D / 2}px`;
+  circle.style.top = `${cy - D / 2}px`;
 }
 
 function iniciarArrastreFoto(e) {
@@ -929,11 +971,6 @@ function iniciarArrastreFoto(e) {
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
   fotoCropInicioX = clientX;
   fotoCropInicioY = clientY;
-  const area = document.getElementById('crop-area');
-  if (area) {
-    fotoCropAncho = area.clientWidth;
-    fotoCropAlto = area.clientHeight;
-  }
 }
 
 function moverArrastreFoto(e) {
@@ -941,22 +978,27 @@ function moverArrastreFoto(e) {
   e.preventDefault();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  const deltaX = ((clientX - fotoCropInicioX) / fotoCropAncho) * 100;
-  const deltaY = ((clientY - fotoCropInicioY) / fotoCropAlto) * 100;
+  const deltaX = clientX - fotoCropInicioX;
+  const deltaY = clientY - fotoCropInicioY;
   fotoCropInicioX = clientX;
   fotoCropInicioY = clientY;
-  fotoCropX = Math.min(100, Math.max(0, fotoCropX + deltaX));
-  fotoCropY = Math.min(100, Math.max(0, fotoCropY + deltaY));
+  const rect = fotoCropRect || calcularRectImagen();
+  if (!rect) return;
+  const rangoX = rect.imgW - rect.D;
+  const rangoY = rect.imgH - rect.D;
+  if (rangoX > 0) {
+    const deltaPX = (deltaX / rangoX) * 100;
+    fotoCropX = Math.min(100, Math.max(0, fotoCropX + deltaPX));
+  }
+  if (rangoY > 0) {
+    const deltaPY = (deltaY / rangoY) * 100;
+    fotoCropY = Math.min(100, Math.max(0, fotoCropY + deltaPY));
+  }
   aplicarPosicionCrop();
 }
 
 function terminarArrastreFoto() {
   fotoCropArrastrando = false;
-}
-
-function aplicarPosicionCrop() {
-  const img = document.getElementById('crop-imagen');
-  if (img) img.style.objectPosition = `${fotoCropX}% ${fotoCropY}%`;
 }
 
 async function aceptarFoto() {
@@ -971,18 +1013,32 @@ function previewFoto() {
   abrirModalFoto(input.files[0]);
 }
 
-// Eventos del modal de recorte
-document.getElementById('crop-aceptar')?.addEventListener('click', aceptarFoto);
-document.getElementById('crop-cancelar')?.addEventListener('click', cerrarModalFoto);
-const cropArea = document.getElementById('crop-area');
-if (cropArea) {
-  cropArea.addEventListener('mousedown', iniciarArrastreFoto);
-  cropArea.addEventListener('mousemove', moverArrastreFoto);
-  cropArea.addEventListener('mouseup', terminarArrastreFoto);
-  cropArea.addEventListener('mouseleave', terminarArrastreFoto);
-  cropArea.addEventListener('touchstart', iniciarArrastreFoto);
-  cropArea.addEventListener('touchmove', moverArrastreFoto);
-  cropArea.addEventListener('touchend', terminarArrastreFoto);
+function setupCropFotoEventos() {
+  const btnAceptar = document.getElementById('crop-aceptar');
+  if (btnAceptar) btnAceptar.addEventListener('click', aceptarFoto);
+
+  const btnCancelar = document.getElementById('crop-cancelar');
+  if (btnCancelar) btnCancelar.addEventListener('click', cerrarModalFoto);
+
+  const area = document.getElementById('crop-area');
+  if (!area) return;
+
+  area.addEventListener('mousedown', (e) => {
+    if (e.target === document.getElementById('crop-circulo')) {
+      iniciarArrastreFoto(e);
+    }
+  });
+  area.addEventListener('mousemove', moverArrastreFoto);
+  area.addEventListener('mouseup', terminarArrastreFoto);
+  area.addEventListener('mouseleave', terminarArrastreFoto);
+
+  area.addEventListener('touchstart', (e) => {
+    if (e.target === document.getElementById('crop-circulo')) {
+      iniciarArrastreFoto(e);
+    }
+  }, { passive: false });
+  area.addEventListener('touchmove', moverArrastreFoto, { passive: false });
+  area.addEventListener('touchend', terminarArrastreFoto);
 }
 
 function activarEdicionNombre() {
@@ -1084,6 +1140,9 @@ function initEditarPerfil() {
   if (display && usuarioActual?.nombreDelLocal) {
     display.textContent = usuarioActual.nombreDelLocal;
   }
+
+  // Configurar eventos del modal de recorte de foto
+  setupCropFotoEventos();
 }
 
 function activarEdicionEstado() {

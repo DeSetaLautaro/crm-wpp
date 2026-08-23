@@ -1103,22 +1103,8 @@ function setupCropFotoEventos() {
     document.removeEventListener('touchend', onTouchEnd);
   }
 
-  function esClicEnCirculo(e) {
-    const circle = document.getElementById('crop-circulo');
-    if (!circle) return false;
-    const circleRect = circle.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    // Calcular si el punto está dentro del círculo (distancia al centro <= radio)
-    const centroX = circleRect.left + circleRect.width / 2;
-    const centroY = circleRect.top + circleRect.height / 2;
-    const radio = circleRect.width / 2;
-    const distancia = Math.hypot(clientX - centroX, clientY - centroY);
-    return distancia <= radio;
-  }
-
   area.addEventListener('mousedown', (e) => {
-    if (!esClicEnCirculo(e)) return;
+    if (!e.target.closest('#crop-circulo')) return;
     e.preventDefault();
     iniciarArrastreFoto(e);
     document.addEventListener('mousemove', onMouseMove);
@@ -1126,7 +1112,7 @@ function setupCropFotoEventos() {
   });
 
   area.addEventListener('touchstart', (e) => {
-    if (!esClicEnCirculo(e)) return;
+    if (!e.target.closest('#crop-circulo')) return;
     e.preventDefault();
     iniciarArrastreFoto(e);
     document.addEventListener('touchmove', onTouchMove, { passive: false });

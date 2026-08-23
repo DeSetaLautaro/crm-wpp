@@ -943,7 +943,7 @@ function calcularRectImagen() {
 
   // Fallback: si la imagen no cargó, usamos el área como cuadrado
   if (!natW || !natH) {
-    const D = Math.min(W, H);
+    const D = Math.min(W, H) * 0.8;
     return { imgW: W, imgH: H, imgX: 0, imgY: 0, D };
   }
 
@@ -958,7 +958,8 @@ function calcularRectImagen() {
   }
   const imgX = (W - imgW) / 2;
   const imgY = (H - imgH) / 2;
-  const D = Math.min(imgW, imgH);
+  // Diámetro del círculo: 80% del lado menor, máximo 200px, mínimo 50px
+  const D = Math.max(50, Math.min(200, Math.min(imgW, imgH) * 0.8));
   return { imgW, imgH, imgX, imgY, D };
 }
 
@@ -1050,22 +1051,39 @@ function setupCropFotoEventos() {
   const area = document.getElementById('crop-area');
   if (!area) return;
 
+  function onMouseMove(e) {
+    moverArrastreFoto(e);
+  }
+
+  function onMouseUp() {
+    terminarArrastreFoto();
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+
+  function onTouchMove(e) {
+    moverArrastreFoto(e);
+  }
+
+  function onTouchEnd() {
+    terminarArrastreFoto();
+    document.removeEventListener('touchmove', onTouchMove);
+    document.removeEventListener('touchend', onTouchEnd);
+  }
+
   area.addEventListener('mousedown', (e) => {
-    if (e.target === document.getElementById('crop-circulo')) {
-      iniciarArrastreFoto(e);
-    }
+    e.preventDefault();
+    iniciarArrastreFoto(e);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   });
-  area.addEventListener('mousemove', moverArrastreFoto);
-  area.addEventListener('mouseup', terminarArrastreFoto);
-  area.addEventListener('mouseleave', terminarArrastreFoto);
 
   area.addEventListener('touchstart', (e) => {
-    if (e.target === document.getElementById('crop-circulo')) {
-      iniciarArrastreFoto(e);
-    }
+    e.preventDefault();
+    iniciarArrastreFoto(e);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
   }, { passive: false });
-  area.addEventListener('touchmove', moverArrastreFoto, { passive: false });
-  area.addEventListener('touchend', terminarArrastreFoto);
 }
 
 function activarEdicionNombre() {

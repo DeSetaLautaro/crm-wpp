@@ -1434,9 +1434,10 @@ body.modo-login #app {
 .perfil-foto-grande {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   display: block;
+  background: #E5E7EB;
 }
 
 .perfil-foto-cambiar {

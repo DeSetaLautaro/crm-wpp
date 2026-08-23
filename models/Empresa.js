@@ -10,7 +10,7 @@ const EmpresaSchema = new Schema(
     
     // 1. EL PUENTE: Conecta este bot con el usuario dueño en la App de Delivery
     usuarioAppId: { 
-      type: mongoose.Schema.Types.ObjectId, 
+      type: String, 
       ref: 'Usuario', // O como se llame tu modelo en la App Delivery
       required: true 
     },

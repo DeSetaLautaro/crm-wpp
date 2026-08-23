@@ -635,16 +635,51 @@ const actualizarConfig = async (req, res) => {
     if (!empresaId) {
       return res.status(400).json({ error: 'No se pudo identificar la empresa' });
     }
+
     const updates = {};
+
     if (req.body.estado && typeof req.body.estado === 'string') {
       updates.estado = req.body.estado.trim();
     }
     if (req.body.bienvenida && typeof req.body.bienvenida === 'string') {
       updates.bienvenida = req.body.bienvenida.trim();
     }
+    if (typeof req.body.promptIA === 'string') {
+      updates.promptIA = req.body.promptIA.trim();
+    }
+
+    // Atajos: puede venir como array (JSON) o como string JSON (FormData)
+    let atajos = null;
+    if (Array.isArray(req.body.atajos)) {
+      atajos = req.body.atajos
+        .map(a => ({
+          comando: (a.comando || '').trim(),
+          respuesta: (a.respuesta || '').trim()
+        }))
+        .filter(a => a.comando && a.respuesta);
+    } else if (typeof req.body.atajos === 'string' && req.body.atajos.trim() !== '') {
+      try {
+        const parsed = JSON.parse(req.body.atajos);
+        if (Array.isArray(parsed)) {
+          atajos = parsed
+            .map(a => ({
+              comando: (a.comando || '').trim(),
+              respuesta: (a.respuesta || '').trim()
+            }))
+            .filter(a => a.comando && a.respuesta);
+        }
+      } catch (e) {
+        return res.status(400).json({ error: 'El formato de atajos es inválido' });
+      }
+    }
+    if (atajos) {
+      updates.atajos = atajos;
+    }
+
     if (req.file) {
       updates.fotoPerfil = `/uploads/${req.file.filename}`;
     }
+
     const empresa = await Empresa.findByIdAndUpdate(empresaId, { $set: updates }, { new: true });
     if (!empresa) {
       return res.status(404).json({ error: 'Empresa no encontrada' });
@@ -653,6 +688,34 @@ const actualizarConfig = async (req, res) => {
   } catch (error) {
     console.error('Error al actualizar config:', error);
     return res.status(500).json({ error: 'Error interno al actualizar config' });
+  }
+};
+
+const obtenerConfig = async (req, res) => {
+  try {
+    const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
+    if (!empresaId) {
+      return res.status(400).json({ error: 'No se pudo identificar la empresa' });
+    }
+
+    const empresa = await Empresa.findById(empresaId).lean();
+    if (!empresa) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    return res.json({
+      ok: true,
+      config: {
+        promptIA: empresa.promptIA || '',
+        atajos: empresa.atajos || [],
+        estado: empresa.estado || '',
+        bienvenida: empresa.bienvenida || '',
+        fotoPerfil: empresa.fotoPerfil || ''
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener config:', error);
+    return res.status(500).json({ error: 'Error interno al obtener config' });
   }
 };
 
@@ -936,5 +999,6 @@ module.exports = {
   bloquearCliente,
   desbloquearCliente,
   actualizarConfig,
-  obtenerUsoConversaciones
+  obtenerUsoConversaciones,
+  obtenerConfig
 };

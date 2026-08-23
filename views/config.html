@@ -10,15 +10,16 @@
 <div class="config-card">
   <h3>Atajos</h3>
   <div class="atajo-form">
-    <input type="text" id="atajo-input" placeholder="Ej: horarios">
+    <input type="text" id="atajo-comando-input" placeholder="Ej: horarios">
+    <input type="text" id="atajo-respuesta-input" placeholder="Ej: Nuestro horario es de 9 a 18hs">
     <button id="atajo-agregar" type="button">Agregar</button>
   </div>
   <table class="atajos-tabla">
     <thead>
       <tr><th>Comando</th><th>Respuesta</th><th></th></tr>
     </thead>
-    <tbody id="atajos-body">
-      <tr><td>horarios</td><td>Nuestro horario es de 9 a 18hs</td><td><button class="atajo-eliminar">×</button></td></tr>
-    </tbody>
+    <tbody id="atajos-body"></tbody>
   </table>
+  <br>
+  <button class="btn-guardar-config" id="btn-guardar-atajos">Guardar Atajos</button>
 </div>

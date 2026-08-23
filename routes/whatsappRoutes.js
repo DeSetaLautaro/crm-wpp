@@ -38,7 +38,8 @@ const {
   bloquearCliente,
   desbloquearCliente,
   actualizarConfig,
-  obtenerUsoConversaciones
+  obtenerUsoConversaciones,
+  obtenerConfig
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -89,7 +90,10 @@ router.put('/contacto/:contactoId/bloquear', auth, bloquearCliente);
 // Desbloquear cliente (PUT)
 router.put('/contacto/:contactoId/desbloquear', auth, desbloquearCliente);
 
-// Actualizar configuración general (foto y estado)
+// Obtener configuración actual (prompt, atajos, estado, bienvenida)
+router.get('/config', auth, obtenerConfig);
+
+// Actualizar configuración general (foto, estado, prompt y atajos)
 router.put('/config', auth, upload.single('foto'), actualizarConfig);
 
 module.exports = router;

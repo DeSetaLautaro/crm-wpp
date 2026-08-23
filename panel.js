@@ -694,6 +694,102 @@ function activarPanelConfig(panelId) {
   if (panel) panel.classList.remove('hidden');
 }
 
+function renderAtajos(atajos) {
+  const tbody = document.getElementById('atajos-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  (atajos || []).forEach(atajo => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="atajo-comando" value="${atajo.comando}"></td>
+      <td><input type="text" class="atajo-respuesta" value="${atajo.respuesta}"></td>
+      <td><button class="atajo-eliminar" type="button">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function cargarConfiguracion() {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/config', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const config = data.config || {};
+
+    const prompt = document.getElementById('prompt-ia');
+    if (prompt) prompt.value = config.promptIA || '';
+
+    renderAtajos(config.atajos || []);
+
+    const estadoDisplay = document.getElementById('perfil-estado-display');
+    if (estadoDisplay && config.estado) estadoDisplay.textContent = config.estado;
+
+    const bienvenidaDisplay = document.getElementById('perfil-bienvenida-display');
+    if (bienvenidaDisplay && config.bienvenida) bienvenidaDisplay.textContent = config.bienvenida;
+  } catch (error) {
+    console.error('Error al cargar configuración:', error);
+  }
+}
+
+async function guardarPromptDesdePanel() {
+  const prompt = document.getElementById('prompt-ia');
+  if (!prompt) return;
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ promptIA: prompt.value })
+    });
+    if (!res.ok) throw new Error('Error al guardar prompt');
+    alert('Prompt guardado correctamente');
+  } catch (error) {
+    console.error('Error al guardar prompt:', error);
+  }
+}
+
+async function guardarAtajosDesdePanel() {
+  const tbody = document.getElementById('atajos-body');
+  if (!tbody) return;
+  const atajos = Array.from(tbody.querySelectorAll('tr')).map(tr => ({
+    comando: tr.querySelector('.atajo-comando')?.value?.trim() || '',
+    respuesta: tr.querySelector('.atajo-respuesta')?.value?.trim() || ''
+  })).filter(a => a.comando && a.respuesta);
+
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ atajos })
+    });
+    if (!res.ok) throw new Error('Error al guardar atajos');
+    alert('Atajos guardados correctamente');
+  } catch (error) {
+    console.error('Error al guardar atajos:', error);
+  }
+}
+
+function agregarAtajo() {
+  const comando = document.getElementById('atajo-comando-input')?.value?.trim() || '';
+  const respuesta = document.getElementById('atajo-respuesta-input')?.value?.trim() || '';
+  if (!comando || !respuesta) return;
+  const tbody = document.getElementById('atajos-body');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" class="atajo-comando" value="${comando}"></td>
+    <td><input type="text" class="atajo-respuesta" value="${respuesta}"></td>
+    <td><button class="atajo-eliminar" type="button">×</button></td>
+  `;
+  tbody.appendChild(tr);
+  document.getElementById('atajo-comando-input').value = '';
+  document.getElementById('atajo-respuesta-input').value = '';
+}
+
 function initConfigSidebar() {
   // Mostrar/ocultar paneles de configuración
   const configItems = document.querySelectorAll('.config-item[data-panel]');
@@ -713,6 +809,25 @@ function initConfigSidebar() {
       }
     });
   });
+
+  // Botones de guardado de prompt y atajos
+  const btnGuardarPrompt = document.getElementById('btn-guardar-prompt');
+  if (btnGuardarPrompt) btnGuardarPrompt.addEventListener('click', guardarPromptDesdePanel);
+
+  const btnGuardarAtajos = document.getElementById('btn-guardar-atajos');
+  if (btnGuardarAtajos) btnGuardarAtajos.addEventListener('click', guardarAtajosDesdePanel);
+
+  const btnAgregarAtajo = document.getElementById('atajo-agregar');
+  if (btnAgregarAtajo) btnAgregarAtajo.addEventListener('click', agregarAtajo);
+
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('atajo-eliminar')) {
+      e.target.closest('tr')?.remove();
+    }
+  });
+
+  // Cargar configuración guardada al abrir la pantalla
+  cargarConfiguracion();
 }
 
 function previewFoto() {

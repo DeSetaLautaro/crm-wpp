@@ -33,6 +33,14 @@ const EmpresaSchema = new Schema(
       default: ''
     },
 
+    // Atajos: comandos rápidos que detecta el bot
+    atajos: [
+      {
+        comando: { type: String, default: '' },
+        respuesta: { type: String, default: '' }
+      }
+    ],
+
     // 6. ESTADO: Para prender o apagar el bot
     botActivo: {
       type: Boolean,

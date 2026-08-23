@@ -1014,10 +1014,11 @@ function iniciarArrastreFoto(e) {
   const areaRect = area.getBoundingClientRect();
   const circleRect = circle.getBoundingClientRect();
 
-  fotoCropInicioX = clientX;
-  fotoCropInicioY = clientY;
-  fotoCropCircleLeft = circleRect.left - areaRect.left;
-  fotoCropCircleTop = circleRect.top - areaRect.top;
+  // Offset: distancia entre el cursor y la esquina superior izquierda del círculo
+  fotoCropOffsetX = clientX - circleRect.left;
+  fotoCropOffsetY = clientY - circleRect.top;
+
+  // Límites de movimiento
   fotoCropMaxLeft = area.clientWidth - circleRect.width;
   fotoCropMaxTop = area.clientHeight - circleRect.height;
 

@@ -491,6 +491,11 @@ function renderChatActivo() {
     return `<div class="bubble ${claseBurbuja}">${msg.contenido}</div>`;
   }).join('');
 
+  // Scroll al último mensaje al abrir el chat
+  if (areaMensajes) {
+    areaMensajes.scrollTop = areaMensajes.scrollHeight;
+  }
+
   // Habilitar campo de envío de mensajes para el chat activo
   const inputMensaje = document.getElementById('input-mensaje');
   const btnEnviar = document.getElementById('btn-enviar');

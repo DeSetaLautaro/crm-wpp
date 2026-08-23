@@ -121,6 +121,8 @@ let fotoCropCircleTop = 0;
 let fotoCropMaxLeft = 0;
 let fotoCropMaxTop = 0;
 let fotoCropPointerId = null;
+let fotoCropOffsetX = 0;
+let fotoCropOffsetY = 0;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -920,7 +922,9 @@ function abrirModalFoto(file) {
     img.src = e.target.result;
     img.style.objectPosition = '50% 50%';
     modal.classList.remove('hidden');
-    // Esperar a que el navegador calcule el layout antes de posicionar
+
+    // Forzamos el círculo centrado apenas se muestra el modal
+    setTimeout(() => aplicarPosicionCrop(), 30);
     requestAnimationFrame(() => aplicarPosicionCrop());
   };
   reader.readAsDataURL(file);
@@ -1031,11 +1035,13 @@ function moverArrastreFoto(e) {
   const clientX = e.clientX ?? e.touches?.[0]?.clientX ?? 0;
   const clientY = e.clientY ?? e.touches?.[0]?.clientY ?? 0;
 
-  const deltaX = clientX - fotoCropInicioX;
-  const deltaY = clientY - fotoCropInicioY;
+  const area = document.getElementById('crop-area');
+  if (!area) return;
+  const areaRect = area.getBoundingClientRect();
 
-  const nuevoLeft = Math.min(fotoCropMaxLeft, Math.max(0, fotoCropCircleLeft + deltaX));
-  const nuevoTop = Math.min(fotoCropMaxTop, Math.max(0, fotoCropCircleTop + deltaY));
+  // El círculo se mueve siguiendo al cursor, respetando el offset inicial
+  const nuevoLeft = Math.min(fotoCropMaxLeft, Math.max(0, (clientX - areaRect.left) - fotoCropOffsetX));
+  const nuevoTop = Math.min(fotoCropMaxTop, Math.max(0, (clientY - areaRect.top) - fotoCropOffsetY));
 
   const circle = document.getElementById('crop-circulo');
   if (circle) {
@@ -1090,13 +1096,6 @@ function setupCropFotoEventos() {
   const btnCancelar = document.getElementById('crop-cancelar');
   if (btnCancelar) btnCancelar.addEventListener('click', cerrarModalFoto);
 
-  const area = document.getElementById('crop-area');
-  if (area) {
-    area.addEventListener('mousedown', iniciarArrastreFoto);
-    area.addEventListener('touchstart', iniciarArrastreFoto, { passive: false });
-  }
-
-  // También permitir agarrar el círculo directamente
   const circle = document.getElementById('crop-circulo');
   if (circle) {
     circle.addEventListener('mousedown', iniciarArrastreFoto);

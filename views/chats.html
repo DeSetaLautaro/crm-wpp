@@ -1,3 +1,15 @@
+<style>
+  .pestana-contador {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #e5e7eb;
+    color: #374151;
+  }
+</style>
 <div id="inbox-view" class="view">
   <!-- Columna Izquierda -->
   <aside id="col-izquierda" class="col">
@@ -18,12 +30,16 @@
         <input type="search" id="buscador" placeholder="Buscar chats...">
       </div>
       <div class="pestanas">
-        <button class="pestana" data-pestana="todos">Todos</button>
+        <button class="pestana" data-pestana="todos">
+          Todos <span class="pestana-contador" data-contador="todos"></span>
+        </button>
         <button class="pestana activa" data-pestana="pendientes">
           Bot inactivo
-          <span class="pestana-alerta"></span>
+          <span class="pestana-contador" data-contador="pendientes"></span>
         </button>
-        <button class="pestana" data-pestana="resueltos">Atendidos</button>
+        <button class="pestana" data-pestana="resueltos">
+          Atendidos <span class="pestana-contador" data-contador="resueltos"></span>
+        </button>
       </div>
     </div>
     <div id="lista-chats" class="lista-chats">

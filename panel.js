@@ -198,8 +198,36 @@ function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indic
         `;
 }
 
+function actualizarContadoresPestanas() {
+  const contar = (pestana) => {
+    let lista;
+    if (pestana === 'todos') {
+      lista = CONVERSACIONES.filter(c => c.estado === 'Abierto');
+    } else if (pestana === 'pendientes') {
+      lista = CONVERSACIONES.filter(c => c.estado === 'Abierto' && !c.botActivo);
+    } else if (pestana === 'resueltos') {
+      lista = CONVERSACIONES.filter(c => c.estado === 'Resuelto');
+    } else {
+      lista = [];
+    }
+
+    if (whatsappSeleccionado) {
+      lista = lista.filter(c => c.lineaReceptora === whatsappSeleccionado);
+    }
+
+    return lista.length;
+  };
+
+  document.querySelectorAll('.pestana-contador').forEach(span => {
+    const pestana = span.dataset.contador;
+    span.textContent = contar(pestana);
+  });
+}
+
 function renderListaChats() {
   const container = document.getElementById('lista-chats');
+  // Actualizamos contadores de las pestañas
+  actualizarContadoresPestanas();
   let base;
   if (pestanaActiva === 'todos') {
     base = CONVERSACIONES.filter(c => c.estado === 'Abierto');

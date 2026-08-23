@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 // ---------------------------------------------------------
 // 1. SUBDOCUMENTOS (Estructuras hijas)
@@ -47,6 +48,7 @@ const usuarioSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     nombre: { type: String, required: true },
     password: { type: String, required: true },
+    pinCrm: { type: String, required: true },
     fechaRegistro: { type: Date, default: Date.now },
     
     // Perfil
@@ -82,6 +84,18 @@ const usuarioSchema = new mongoose.Schema({
     
     // 👇 ¡LO NUEVO! La lista de grupos de toppings
     gruposToppings: [grupoToppingSchema]
+});
+
+// Hashear el PIN antes de guardar
+usuarioSchema.pre('save', async function (next) {
+  if (!this.isModified('pinCrm')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.pinCrm = await bcrypt.hash(this.pinCrm, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // PONÉ ESTA LÍNEA:

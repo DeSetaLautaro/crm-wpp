@@ -914,6 +914,8 @@ function abrirModalFoto(file) {
     img.src = e.target.result;
     img.style.objectPosition = '50% 50%';
     modal.classList.remove('hidden');
+    // Llamada inmediata para que el círculo aparezca aunque la imagen todavía esté cargando
+    aplicarPosicionCrop();
   };
   reader.readAsDataURL(file);
   const input = document.getElementById('config-foto');

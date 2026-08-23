@@ -638,6 +638,9 @@ const actualizarConfig = async (req, res) => {
 
     const updates = {};
 
+    if (req.body.nombre && typeof req.body.nombre === 'string') {
+      updates.nombre = req.body.nombre.trim();
+    }
     if (req.body.estado && typeof req.body.estado === 'string') {
       updates.estado = req.body.estado.trim();
     }
@@ -724,6 +727,7 @@ const obtenerConfig = async (req, res) => {
     return res.json({
       ok: true,
       config: {
+        nombre: empresa.nombre || '',
         promptIA: empresa.promptIA || '',
         atajos: empresa.atajos || [],
         estado: empresa.estado || '',

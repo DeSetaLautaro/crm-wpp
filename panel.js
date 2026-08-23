@@ -722,6 +722,9 @@ async function cargarConfiguracion() {
     const prompt = document.getElementById('prompt-ia');
     if (prompt) prompt.value = config.promptIA || '';
 
+    const nombreDisplay = document.getElementById('perfil-nombre-display');
+    if (nombreDisplay && config.nombre) nombreDisplay.textContent = config.nombre;
+
     renderAtajos(config.atajos || []);
 
     const estadoDisplay = document.getElementById('perfil-estado-display');
@@ -833,6 +836,30 @@ function initConfigSidebar() {
   cargarConfiguracion();
 }
 
+async function guardarFotoPerfil(file) {
+  const token = localStorage.getItem('token') || '';
+  const formData = new FormData();
+  formData.append('foto', file);
+  
+  const estadoDisplay = document.getElementById('perfil-estado-display');
+  const bienvenidaDisplay = document.getElementById('perfil-bienvenida-display');
+  formData.append('estado', estadoDisplay?.textContent?.trim() || '');
+  formData.append('bienvenida', bienvenidaDisplay?.textContent?.trim() || '');
+  
+  try {
+    const res = await fetch('/api/whatsapp/config', {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    if (!res.ok) {
+      console.error('Error al guardar foto');
+    }
+  } catch (error) {
+    console.error('Error de red al guardar foto:', error);
+  }
+}
+
 function previewFoto() {
   const input = document.getElementById('config-foto');
   const preview = document.getElementById('config-foto-preview');
@@ -850,6 +877,8 @@ function previewFoto() {
     }
   };
   reader.readAsDataURL(file);
+  
+  guardarFotoPerfil(file);
 }
 
 function activarEdicionNombre() {
@@ -902,7 +931,7 @@ async function guardarNombreDesdePerfil() {
   if (valorNuevo && valorNuevo !== valorAnterior) {
     try {
       const token = localStorage.getItem('token') || '';
-      const res = await fetch('/api/usuarios/modificarDatos', {
+      const res = await fetch('/api/whatsapp/config', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

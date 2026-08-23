@@ -116,6 +116,10 @@ let fotoCropArrastrando = false;
 let fotoCropInicioX = 0;
 let fotoCropInicioY = 0;
 let fotoCropRect = null;
+let fotoCropCircleLeft = 0;
+let fotoCropCircleTop = 0;
+let fotoCropMaxLeft = 0;
+let fotoCropMaxTop = 0;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -995,38 +999,66 @@ function aplicarPosicionCrop() {
 function iniciarArrastreFoto(e) {
   e.preventDefault();
   fotoCropArrastrando = true;
+
+  const circle = document.getElementById('crop-circulo');
+  const area = document.getElementById('crop-area');
+  if (!circle || !area) return;
+
+  const areaRect = area.getBoundingClientRect();
+  const circleRect = circle.getBoundingClientRect();
+
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
   fotoCropInicioX = clientX;
   fotoCropInicioY = clientY;
+
+  fotoCropCircleLeft = circleRect.left - areaRect.left;
+  fotoCropCircleTop = circleRect.top - areaRect.top;
+
+  fotoCropMaxLeft = area.clientWidth - circleRect.width;
+  fotoCropMaxTop = area.clientHeight - circleRect.height;
 }
 
 function moverArrastreFoto(e) {
   if (!fotoCropArrastrando) return;
   e.preventDefault();
+
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
   const deltaX = clientX - fotoCropInicioX;
   const deltaY = clientY - fotoCropInicioY;
-  fotoCropInicioX = clientX;
-  fotoCropInicioY = clientY;
-  const rect = fotoCropRect || calcularRectImagen();
-  if (!rect) return;
-  const rangoX = rect.imgW - rect.D;
-  const rangoY = rect.imgH - rect.D;
-  if (rangoX > 0) {
-    const deltaPX = (deltaX / rangoX) * 100;
-    fotoCropX = Math.min(100, Math.max(0, fotoCropX + deltaPX));
+
+  const nuevoLeft = Math.min(fotoCropMaxLeft, Math.max(0, fotoCropCircleLeft + deltaX));
+  const nuevoTop = Math.min(fotoCropMaxTop, Math.max(0, fotoCropCircleTop + deltaY));
+
+  const circle = document.getElementById('crop-circulo');
+  if (circle) {
+    circle.style.left = nuevoLeft + 'px';
+    circle.style.top = nuevoTop + 'px';
   }
-  if (rangoY > 0) {
-    const deltaPY = (deltaY / rangoY) * 100;
-    fotoCropY = Math.min(100, Math.max(0, fotoCropY + deltaPY));
-  }
-  aplicarPosicionCrop();
 }
 
 function terminarArrastreFoto() {
+  if (!fotoCropArrastrando) return;
   fotoCropArrastrando = false;
+
+  const circle = document.getElementById('crop-circulo');
+  const area = document.getElementById('crop-area');
+  if (!circle || !area) return;
+
+  const areaRect = area.getBoundingClientRect();
+  const circleRect = circle.getBoundingClientRect();
+
+  const left = circleRect.left - areaRect.left;
+  const top = circleRect.top - areaRect.top;
+
+  const maxLeft = area.clientWidth - circleRect.width;
+  const maxTop = area.clientHeight - circleRect.height;
+
+  fotoCropX = maxLeft > 0 ? (left / maxLeft) * 100 : 50;
+  fotoCropY = maxTop > 0 ? (top / maxTop) * 100 : 50;
 }
 
 async function aceptarFoto() {
@@ -1071,7 +1103,22 @@ function setupCropFotoEventos() {
     document.removeEventListener('touchend', onTouchEnd);
   }
 
+  function esClicEnCirculo(e) {
+    const circle = document.getElementById('crop-circulo');
+    if (!circle) return false;
+    const circleRect = circle.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    // Calcular si el punto está dentro del círculo (distancia al centro <= radio)
+    const centroX = circleRect.left + circleRect.width / 2;
+    const centroY = circleRect.top + circleRect.height / 2;
+    const radio = circleRect.width / 2;
+    const distancia = Math.hypot(clientX - centroX, clientY - centroY);
+    return distancia <= radio;
+  }
+
   area.addEventListener('mousedown', (e) => {
+    if (!esClicEnCirculo(e)) return;
     e.preventDefault();
     iniciarArrastreFoto(e);
     document.addEventListener('mousemove', onMouseMove);
@@ -1079,6 +1126,7 @@ function setupCropFotoEventos() {
   });
 
   area.addEventListener('touchstart', (e) => {
+    if (!esClicEnCirculo(e)) return;
     e.preventDefault();
     iniciarArrastreFoto(e);
     document.addEventListener('touchmove', onTouchMove, { passive: false });

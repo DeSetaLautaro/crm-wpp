@@ -332,12 +332,12 @@ body {
 }
 
 .toggle input:checked + .slider {
-  background: #d1fae5; /* verde extra-pálido = encendido */
+  background: #bbf7d0; /* verde más presente = encendido */
 }
 
 .toggle input:checked + .slider::before {
   transform: translateX(24px);
-  background: #16a34a; /* verde clásico profesional = encendido */
+  background: #22c55e; /* verde brillante profesional = encendido */
 }
 
 #estado-bot {

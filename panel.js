@@ -237,7 +237,7 @@ function actualizarContadoresPestanas() {
     if (pestana === 'todos') {
       lista = CONVERSACIONES.filter(c => c.estado === 'Abierto');
     } else if (pestana === 'pendientes') {
-      lista = CONVERSACIONES.filter(c => c.estado === 'Abierto' && !c.botActivo);
+      lista = CONVERSACIONES.filter(c => !c.botActivo);
     } else if (pestana === 'resueltos') {
       lista = CONVERSACIONES.filter(c => c.estado === 'Resuelto');
     } else {
@@ -265,7 +265,7 @@ function renderListaChats() {
   if (pestanaActiva === 'todos') {
     base = CONVERSACIONES.filter(c => c.estado === 'Abierto');
   } else if (pestanaActiva === 'pendientes') {
-    base = CONVERSACIONES.filter(c => c.estado === 'Abierto' && !c.botActivo);
+    base = CONVERSACIONES.filter(c => !c.botActivo);
   } else if (pestanaActiva === 'resueltos') {
     base = CONVERSACIONES.filter(c => c.estado === 'Resuelto');
   } else {

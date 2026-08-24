@@ -9,6 +9,7 @@ const { Server } = require('socket.io');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const pedidosRoutes = require('./routes/pedidosRoutes');
 const auth = require('./middlewares/auth');
+const { iniciarCronHorarios } = require('./services/horariosCron');
 const { obtenerConversaciones } = require('./controllers/conversacionesController');
 
 const app = express();
@@ -46,6 +47,7 @@ mongoose.connect(MONGODB_URI)
     server.listen(PORT, () => {
       console.log(`Servidor escuchando en el puerto ${PORT}`);
     });
+    iniciarCronHorarios();
   })
   .catch((err) => {
     console.error('Error al conectar a MongoDB:', err.message);

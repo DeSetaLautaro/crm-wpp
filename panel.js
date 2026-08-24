@@ -750,9 +750,15 @@ async function cargarConfiguracion() {
     const res = await fetch('/api/whatsapp/config', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      console.log('[cargarConfiguracion] HTTP error:', res.status);
+      return;
+    }
     const data = await res.json();
     const config = data.config || {};
+    console.log('[cargarConfiguracion] respuesta completa:', data);
+    console.log('[cargarConfiguracion] config:', config);
+    console.log('[cargarConfiguracion] horariosEstructurados:', config.horariosEstructurados);
 
     const prompt = document.getElementById('prompt-ia');
     if (prompt) prompt.value = config.promptIA || '';
@@ -776,6 +782,7 @@ async function cargarConfiguracion() {
     renderAtajos(config.atajos || []);
 
     const horariosWrap = document.getElementById('horarios-container');
+    console.log('[cargarConfiguracion] horarios-container existe?', !!horariosWrap);
     if (horariosWrap) {
       horariosWrap.innerHTML = '';
       const horarios = config.horariosEstructurados || [];

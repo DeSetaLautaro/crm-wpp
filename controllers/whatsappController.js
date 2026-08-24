@@ -857,14 +857,21 @@ const obtenerConfig = async (req, res) => {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
 
+    console.log('[obtenerConfig] empresaId:', empresaId);
+    console.log('[obtenerConfig] horarios de EMPRESA:', empresa.horariosEstructurados);
+    console.log('[obtenerConfig] usuarioAppId:', empresa.usuarioAppId);
+
     // Si la empresa no tiene horarios cargados, usamos los del Usuario como referencia visual
     let horarios = empresa.horariosEstructurados || [];
     if ((!horarios || horarios.length === 0) && empresa.usuarioAppId) {
       const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
+      console.log('[obtenerConfig] horarios de USUARIO:', usuario?.horariosEstructurados);
       if (usuario && Array.isArray(usuario.horariosEstructurados) && usuario.horariosEstructurados.length > 0) {
         horarios = usuario.horariosEstructurados;
       }
     }
+
+    console.log('[obtenerConfig] horarios FINAL que se devuelven:', horarios);
 
     return res.json({
       ok: true,

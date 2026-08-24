@@ -849,6 +849,34 @@ async function guardarAtajosDesdePanel() {
   }
 }
 
+function guardarHorariosDesdePanel() {
+  const inputsOpen = document.querySelectorAll('.horario-apertura');
+  const inputsClose = document.querySelectorAll('.horario-cierre');
+  const horarios = [];
+
+  inputsOpen.forEach(inp => {
+    const dia = inp.dataset.dia;
+    const apertura = inp.value;
+    const cierre = inputsClose.find(c => c.dataset.dia === dia)?.value || '';
+    if (dia && apertura && cierre) {
+      horarios.push({ dia, apertura, cierre });
+    }
+  });
+
+  const token = localStorage.getItem('token') || '';
+  fetch('/api/whatsapp/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ horariosEstructurados: horarios })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.ok) alert('Horarios guardados correctamente');
+      else alert('Error al guardar horarios');
+    })
+    .catch(err => console.error(err));
+}
+
 function agregarAtajo() {
   const comando = document.getElementById('atajo-comando-input')?.value?.trim() || '';
   const respuesta = document.getElementById('atajo-respuesta-input')?.value?.trim() || '';

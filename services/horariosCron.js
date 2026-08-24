@@ -1,5 +1,5 @@
 const cron = require('node-cron');
-const Usuario = require('../models/usuario');
+const Empresa = require('../models/Empresa');
 
 function obtenerDiaActual() {
   const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -18,7 +18,7 @@ async function ejecutarActualizacionHorarios() {
   const horaActual = obtenerHoraActual();
 
   try {
-    const usuarios = await Usuario.find({
+    const empresas = await Empresa.find({
       horariosEstructurados: {
         $elemMatch: {
           dia: diaActual,
@@ -30,8 +30,8 @@ async function ejecutarActualizacionHorarios() {
       }
     });
 
-    for (const usuario of usuarios) {
-      const horario = usuario.horariosEstructurados.find(h =>
+    for (const empresa of empresas) {
+      const horario = empresa.horariosEstructurados.find(h =>
         h.dia === diaActual &&
         (h.apertura === horaActual || h.cierre === horaActual)
       );
@@ -39,16 +39,16 @@ async function ejecutarActualizacionHorarios() {
       if (!horario) continue;
 
       if (horario.apertura === horaActual) {
-        usuario.abierto = true;
-        console.log(`[${horaActual}] Local ${usuario.nombreDelLocal} ha ABIERTO automáticamente`);
+        empresa.abierto = true;
+        console.log(`[${horaActual}] Empresa ${empresa.nombre} ha ABIERTO automáticamente`);
       } else if (horario.cierre === horaActual) {
-        usuario.abierto = false;
-        console.log(`[${horaActual}] Local ${usuario.nombreDelLocal} ha CERRADO automáticamente`);
+        empresa.abierto = false;
+        console.log(`[${horaActual}] Empresa ${empresa.nombre} ha CERRADO automáticamente`);
       } else {
         continue;
       }
 
-      await usuario.save();
+      await empresa.save();
     }
   } catch (error) {
     console.error('Error en la actualización automática de horarios:', error);

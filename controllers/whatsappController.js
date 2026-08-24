@@ -1,4 +1,5 @@
 const { generarTexto } = require('../services/iaService');
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Empresa = require('../models/Empresa');
 const Cliente = require('../models/Cliente');
@@ -85,6 +86,24 @@ const obtenerUsoConversaciones = async (req, res) => {
   }
 };
 
+function verificarFirmaMeta(req, res, next) {
+  const firma = req.headers['x-hub-signature-256'];
+  if (!firma || !req.rawBody) {
+    return res.sendStatus(401);
+  }
+  const secret = process.env.WHATSAPP_APP_SECRET;
+  if (!secret) {
+    console.error('⚠️ Falta WHATSAPP_APP_SECRET en variables de entorno');
+    return res.sendStatus(401);
+  }
+  const hash = 'sha256=' + crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex');
+  if (hash !== firma) {
+    console.error('❌ Firma HMAC inválida');
+    return res.sendStatus(401);
+  }
+  next();
+}
+
 const verificarWebhook = (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -124,16 +143,18 @@ const recibirMensaje = async (req, res) => {
         return res.sendStatus(200);
     }
 
+    const esTexto = mensaje?.type === 'text';
     const telefonoCliente = mensaje?.from || '';
-    const textoMensaje = mensaje?.text?.body || '';
+    const textoMensaje = esTexto ? (mensaje?.text?.body || '') : '';
+    const contenidoEntrada = esTexto ? textoMensaje : '📎 Envío un mensaje multimedia';
 
     const whatsappMsgId = mensaje?.id || '';
     const t0 = performance.now();
 
-    console.log(`🔍 [3] Datos extraídos -> Cliente: ${telefonoCliente} | Mi Local ID: ${whatsappPhoneId} | Texto: ${textoMensaje}`);
+    console.log(`🔍 [3] Datos extraídos -> Cliente: ${telefonoCliente} | Mi Local ID: ${whatsappPhoneId} | Texto: ${esTexto ? textoMensaje : '[MULTIMEDIA]'}`);
 
-    if (!whatsappPhoneId || !telefonoCliente || !textoMensaje) {
-      console.log("🛑 [4] Falla: Faltan datos clave (Teléfono, ID o Texto).");
+    if (!whatsappPhoneId || !telefonoCliente) {
+      console.log("🛑 [4] Falla: Faltan datos clave (Teléfono, ID).");
       return res.sendStatus(200);
     }
 
@@ -197,13 +218,13 @@ const recibirMensaje = async (req, res) => {
     await Mensaje.create({
       conversacionId: conversacion._id,
       remitente: 'cliente',
-      contenido: textoMensaje,
+      contenido: contenidoEntrada,
       whatsappMsgId
     });
 
     await Conversacion.findByIdAndUpdate(conversacion._id, {
       $set: {
-        ultimoMensaje: textoMensaje,
+        ultimoMensaje: contenidoEntrada,
         numeroReceptor: displayPhoneNumber
       }
     });
@@ -215,15 +236,77 @@ const recibirMensaje = async (req, res) => {
         conversacionId: conversacion._id,
         mensaje: {
           remitente: 'cliente',
-          contenido: textoMensaje,
+          contenido: contenidoEntrada,
           fecha: new Date()
         },
         conversacion: {
           _id: conversacion._id,
-          ultimoMensaje: textoMensaje,
+          ultimoMensaje: contenidoEntrada,
           updatedAt: new Date()
         }
       });
+    }
+
+    // ===== Manejo de mensajes multimedia (imagen, audio, video, etc.) =====
+    if (!esTexto) {
+      const respuestaAutomatica = "Disculpá, por el momento mi sistema automático solo puede leer mensajes de texto. Por favor, escribime tu consulta.";
+
+      // Enviar respuesta al cliente por WhatsApp (si tenemos token)
+      const phoneNumberId = metadata?.phone_number_id || whatsappPhoneId;
+      const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+      if (accessToken) {
+        try {
+          const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: 'whatsapp',
+            to: telefonoCliente,
+            type: 'text',
+            text: { body: respuestaAutomatica }
+          };
+          await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          console.log('✅ Respuesta automática por multimedia enviada a WhatsApp');
+        } catch (error) {
+          console.error('❌ Error enviando respuesta automática de multimedia a WhatsApp:', error);
+        }
+      }
+
+      // Guardar mensaje del bot en BD
+      await Mensaje.create({
+        conversacionId: conversacion._id,
+        remitente: 'ia',
+        contenido: respuestaAutomatica
+      });
+
+      await Conversacion.findByIdAndUpdate(conversacion._id, {
+        $set: { ultimoMensaje: respuestaAutomatica }
+      });
+
+      const ioResp = req.app.get('io');
+      if (ioResp) {
+        ioResp.to(empresa._id.toString()).emit('mensaje-nuevo', {
+          conversacionId: conversacion._id,
+          mensaje: {
+            remitente: 'ia',
+            contenido: respuestaAutomatica,
+            fecha: new Date()
+          },
+          conversacion: {
+            _id: conversacion._id,
+            ultimoMensaje: respuestaAutomatica,
+            updatedAt: new Date()
+          }
+        });
+      }
+
+      // Finalizamos aquí, no procesamos carrito ni IA
+      return;
     }
 
     console.log(`⏱️ Tiempo hasta mensaje guardado: ${(performance.now() - t0).toFixed(0)} ms`);
@@ -1164,6 +1247,7 @@ const desbloquearCliente = async (req, res) => {
 };
 
 module.exports = {
+  verificarFirmaMeta,
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,

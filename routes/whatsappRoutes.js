@@ -23,6 +23,7 @@ const upload = multer({ storage });
 const auth = require('../middlewares/auth');
 const { loginConPin } = require('../controllers/authController');
 const {
+  verificarFirmaMeta,
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
@@ -46,7 +47,7 @@ const {
 router.get('/webhook', verificarWebhook);
 
 // Recepción de mensajes entrantes (POST)
-router.post('/webhook', recibirMensaje);
+router.post('/webhook', verificarFirmaMeta, recibirMensaje);
 
 // Login con PIN para acceder al CRM
 router.post('/login-pin', loginConPin);

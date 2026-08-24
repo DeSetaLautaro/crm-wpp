@@ -685,12 +685,16 @@ async function actualizarPerfilWhatsApp(empresa, estado, profilePictureHandle) {
   const payload = {
     messaging_product: 'whatsapp'
   };
-  if (estado) {
+  if (estado !== undefined && estado !== null && estado !== '') {
     payload.about = estado;
   }
   if (profilePictureHandle) {
     payload.profile_picture_handle = profilePictureHandle;
   }
+
+  console.log('📤 [META] Actualizando perfil WhatsApp...');
+  console.log('📤 [META] URL:', url);
+  console.log('📤 [META] Payload:', JSON.stringify(payload, null, 2));
 
   const resp = await fetch(url, {
     method: 'POST',
@@ -700,11 +704,28 @@ async function actualizarPerfilWhatsApp(empresa, estado, profilePictureHandle) {
     },
     body: JSON.stringify(payload)
   });
+
+  const respText = await resp.text();
+  console.log('📥 [META] Respuesta del POST:', resp.status, respText);
+
   if (!resp.ok) {
-    const body = await resp.text();
-    throw new Error(`Error actualizando perfil de WhatsApp: ${resp.status} ${body}`);
+    throw new Error(`Error actualizando perfil de WhatsApp: ${resp.status} ${respText}`);
   }
-  return await resp.json();
+
+  // Verificar con GET si el about se aplicó realmente
+  try {
+    const urlGet = `https://graph.facebook.com/v19.0/${phoneId}/whatsapp_business_profile?fields=about`;
+    const respGet = await fetch(urlGet, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const getText = await respGet.text();
+    console.log('📥 [META] Respuesta del GET de verificación:', respGet.status, getText);
+  } catch (e) {
+    console.warn('⚠️ [META] No se pudo verificar el perfil con GET:', e.message);
+  }
+
+  return JSON.parse(respText);
 }
 
 const actualizarConfig = async (req, res) => {

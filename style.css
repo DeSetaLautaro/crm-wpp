@@ -1933,8 +1933,8 @@ body.modo-login #app {
 
 .crop-circulo {
   position: absolute;
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
   border: 2px solid #fff;
   box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);

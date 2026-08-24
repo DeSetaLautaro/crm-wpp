@@ -581,7 +581,7 @@ function renderChatActivo() {
     else if (['bot', 'humano', 'ia', 'empresa'].includes(msg.remitente)) claseBurbuja = 'bubble-humano';
     else if (msg.remitente === 'nota_interna') claseBurbuja = 'bubble-nota';
 
-    return `<div class="bubble ${claseBurbuja}">${msg.contenido}</div>`;
+    return `<div class="bubble ${claseBurbuja}">${msg.contenido.replace(/\n/g, '<br>')}</div>`;
   }).join('');
 
   // Scroll al último mensaje al abrir el chat

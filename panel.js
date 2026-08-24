@@ -261,6 +261,7 @@ function renderListaChats() {
   const container = document.getElementById('lista-chats');
   // Actualizamos contadores de las pestañas
   actualizarContadoresPestanas();
+  console.log('[renderListaChats] pestanaActiva:', pestanaActiva, 'CONVERSACIONES:', CONVERSACIONES.length, 'pendientes:', CONVERSACIONES.filter(c => !c.botActivo).length, 'línea:', whatsappSeleccionado);
   let base;
   if (pestanaActiva === 'todos') {
     base = CONVERSACIONES.filter(c => c.estado === 'Abierto');
@@ -272,9 +273,11 @@ function renderListaChats() {
     base = CONVERSACIONES.filter(c => c.estado === 'Abierto');
   }
   const buscador = (document.getElementById('buscador') || {}).value || '';
-  const filtrados = base.filter(c =>
-    !whatsappSeleccionado ? true : c.lineaReceptora === whatsappSeleccionado
-  );
+  const filtrados = base.filter(c => {
+    if (!whatsappSeleccionado) return true;
+    if (!c.lineaReceptora) return true;
+    return c.lineaReceptora === whatsappSeleccionado;
+  });
 
   const conFiltroEtiqueta = etiquetaFiltrada
     ? filtrados.filter(c => {
@@ -1677,7 +1680,7 @@ async function cargarConversaciones() {
         contactoId: cId,
         lineaReceptora: conv.lineaReceptora || '',
         numeroReceptor: conv.numeroReceptor || '',
-        botActivo: conv.botActivo ?? true,
+        botActivo: conv.botActivo === false || conv.botActivo === 'false' ? false : true,
         estado: conv.estado || 'Abierto',
         ultimoMensaje: conv.ultimoMensaje || '',
         ultimaFecha: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
@@ -1781,23 +1784,13 @@ function poblarSelectorWhatsApp(items) {
     select.appendChild(opt);
   });
 
-  // Selección inicial: primera empresa / línea, o la que ya estaba
-  if (esObjeto) {
-    const lineas = items.map(e => e.whatsappPhoneId);
-    if (!whatsappSeleccionado || !lineas.includes(whatsappSeleccionado)) {
-      whatsappSeleccionado = lineas[0];
-      select.value = whatsappSeleccionado;
-    } else {
-      select.value = whatsappSeleccionado;
-    }
+  // Selección inicial: si no hay una línea elegida, dejar "Todas las líneas"
+  const lineas = esObjeto ? items.map(e => e.whatsappPhoneId) : items;
+  if (!whatsappSeleccionado || !lineas.includes(whatsappSeleccionado)) {
+    whatsappSeleccionado = '';
+    select.value = '';
   } else {
-    const lineas = items;
-    if (!whatsappSeleccionado || !lineas.includes(whatsappSeleccionado)) {
-      whatsappSeleccionado = lineas[0];
-      select.value = whatsappSeleccionado;
-    } else {
-      select.value = whatsappSeleccionado;
-    }
+    select.value = whatsappSeleccionado;
   }
 }
 

@@ -17,6 +17,12 @@ const PROMPT_IA_DEFAULT = `Sos el asistente virtual de {nombreLocal}. Respondé 
 
 Estado actual del local: {estadoLocal}.
 
+Horarios de atención:
+{horarios}
+
+Atajos disponibles:
+{atajos}
+
 Reglas obligatorias:
 - SIEMPRE pedí la dirección de entrega completa si todavía no la dio. No confirmes un pedido sin dirección.
 - Preguntá cómo quiere pagar: efectivo o transferencia.
@@ -33,6 +39,78 @@ Historial reciente:
 Mensaje del cliente: "{mensajeCliente}"
 
 Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si el cliente está por confirmar un pedido y todavía no dio dirección, pedísela sí o sí antes de confirmar.`;
+
+// Convierte los horarios estructurados en texto legible para la IA
+function formatearHorarios(horarios) {
+  if (!horarios || !Array.isArray(horarios) || horarios.length === 0) {
+    return 'No configurados';
+  }
+  const ordenDias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const ordenados = [...horarios].sort((a, b) => {
+    const da = ordenDias.indexOf(String(a.dia || '').toLowerCase());
+    const db = ordenDias.indexOf(String(b.dia || '').toLowerCase());
+    return (da === -1 ? 999 : da) - (db === -1 ? 999 : db);
+  });
+  return ordenados.map(h => `${h.dia}: ${h.apertura} a ${h.cierre}`).join(', ');
+}
+
+// Genera atajos automáticos basados en datos del Usuario (dueño del local)
+function generarAtajosAutomaticos(usuario) {
+  const atajos = [];
+  if (!usuario) return atajos;
+
+  // Dirección del local
+  if (usuario.direccion && typeof usuario.direccion === 'string' && usuario.direccion.trim() !== '') {
+    atajos.push({
+      comando: '/direccion',
+      respuesta: `Nuestro local está en ${usuario.direccion.trim()}`
+    });
+  }
+
+  // Métodos de pago (efectivo, transferencia con alias/CVU, etc.)
+  if (usuario.metodosPago && Array.isArray(usuario.metodosPago) && usuario.metodosPago.length > 0) {
+    const metodos = usuario.metodosPago.map(m => {
+      let texto = m.tipo || '';
+      if (m.tipo === 'transferencia' && m.alias) {
+        texto += ` (alias/CVU: ${m.alias})`;
+      }
+      if (m.titular) {
+        texto += ` - ${m.titular}`;
+      }
+      return texto;
+    }).filter(Boolean).join(', ');
+    atajos.push({
+      comando: '/pago',
+      respuesta: `Aceptamos ${metodos}`
+    });
+  }
+
+  return atajos;
+}
+
+// Combina atajos automáticos con los manuales guardados en la empresa
+function combinarAtajos(usuario, empresa) {
+  const atajosAuto = generarAtajosAutomaticos(usuario);
+  const atajosManuales = (empresa && Array.isArray(empresa.atajos)) ? empresa.atajos : [];
+
+  const comandosAuto = new Set(atajosAuto.map(a => a.comando));
+  const manualesPorComando = {};
+  atajosManuales.forEach(a => {
+    if (a.comando) manualesPorComando[a.comando] = a;
+  });
+
+  // Los automáticos pueden ser pisados por manuales con el mismo comando
+  const combinados = atajosAuto.map(a => manualesPorComando[a.comando] || a);
+
+  // Agregar manuales que no pisan ningún automático
+  atajosManuales.forEach(a => {
+    if (!comandosAuto.has(a.comando)) {
+      combinados.push(a);
+    }
+  });
+
+  return combinados.filter(a => a.comando && a.respuesta);
+}
 
 async function procesarCarrito(empresa, conversacion, texto, productos) {
   if (!process.env.GEMINI_API_KEY) return null;
@@ -576,12 +654,22 @@ JSON:`;
           ? empresa.promptIA.trim()
           : PROMPT_IA_DEFAULT;
 
+        const horariosEmpresa = (empresa.horariosEstructurados && empresa.horariosEstructurados.length > 0)
+          ? empresa.horariosEstructurados
+          : (usuario?.horariosEstructurados || []);
+        const horariosTexto = formatearHorarios(horariosEmpresa);
+
+        const atajosCombinados = combinarAtajos(usuario, empresa);
+        const atajosTexto = atajosCombinados.map(a => `- ${a.comando} → ${a.respuesta}`).join('\n');
+
         const prompt = promptIA
           .replaceAll('{nombreLocal}', empresa.nombre)
           .replaceAll('{estadoLocal}', estadoLocal)
           .replaceAll('{menuTexto}', menuTexto)
           .replaceAll('{historialTexto}', historialTexto)
-          .replaceAll('{mensajeCliente}', textoMensaje);
+          .replaceAll('{mensajeCliente}', textoMensaje)
+          .replaceAll('{horarios}', horariosTexto)
+          .replaceAll('{atajos}', atajosTexto);
 
         respuestaIA = await generarTexto(prompt);
       } catch (err) {
@@ -1118,10 +1206,11 @@ const obtenerConfig = async (req, res) => {
 
     // Si la empresa no tiene horarios cargados, usamos los del Usuario como referencia visual
     let horarios = empresa.horariosEstructurados || [];
-    if ((!horarios || horarios.length === 0) && empresa.usuarioAppId) {
-      const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
+    let usuario = null;
+    if (empresa.usuarioAppId) {
+      usuario = await Usuario.findById(empresa.usuarioAppId).lean();
       console.log('[obtenerConfig] horarios de USUARIO:', usuario?.horariosEstructurados);
-      if (usuario && Array.isArray(usuario.horariosEstructurados) && usuario.horariosEstructurados.length > 0) {
+      if ((!horarios || horarios.length === 0) && usuario && Array.isArray(usuario.horariosEstructurados) && usuario.horariosEstructurados.length > 0) {
         horarios = usuario.horariosEstructurados;
       }
     }
@@ -1134,6 +1223,8 @@ const obtenerConfig = async (req, res) => {
 
     console.log('[obtenerConfig] horarios FINAL que se devuelven:', horarios);
 
+    const atajos = combinarAtajos(usuario, empresa);
+
     return res.json({
       ok: true,
       config: {
@@ -1141,7 +1232,7 @@ const obtenerConfig = async (req, res) => {
         promptIA: empresa.promptIA && empresa.promptIA.trim() !== ''
           ? empresa.promptIA
           : PROMPT_IA_DEFAULT,
-        atajos: empresa.atajos || [],
+        atajos,
         estado: empresa.estado || '',
         bienvenida: empresa.bienvenida || '',
         fotoPerfil: empresa.fotoPerfil || '',

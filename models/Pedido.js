@@ -119,6 +119,14 @@ const PedidoSchema = new Schema(
     direccionEntrega: {
       type: String,
       default: ''
+    },
+    latitud: {
+      type: Number,
+      default: null
+    },
+    longitud: {
+      type: Number,
+      default: null
     }
   },
   { timestamps: true }

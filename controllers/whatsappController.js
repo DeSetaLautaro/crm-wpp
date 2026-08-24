@@ -338,6 +338,16 @@ const recibirMensaje = async (req, res) => {
           console.log('✅ Dirección guardada automáticamente desde la ubicación');
         }
 
+        // Guardar lat/lng en la conversación para usarlas en el pedido posteriormente
+        if (lat && lng) {
+          await Conversacion.findByIdAndUpdate(conversacion._id, {
+            $set: { latitud: lat, longitud: lng }
+          });
+          conversacion.latitud = lat;
+          conversacion.longitud = lng;
+          console.log('📍 Latitud/Longitud guardadas en la conversación');
+        }
+
         // Construir respuesta
         if (lat && lng && process.env.GEMINI_API_KEY) {
           const promptUbicacion = `Sos el asistente virtual de ${empresa.nombre}. El cliente compartió su ubicación: ${nombreLugar} ${direccionFinal} (lat:${lat}, lng:${lng}). Respondé de forma breve y amable. Si el negocio hace envíos, indicá que anotaron la dirección y confirmá el pedido. Si no hacen envíos, disculpate y explicá cómo retirar por el local.`;
@@ -657,15 +667,19 @@ Redactá una respuesta que sea útil para el cliente, indicando precios y opcion
               direccion: contacto.direccion || '',
               notas: '',
               fechaTurno: '',
-              fecha: new Date()
+              fecha: new Date(),
+              latitud: conversacion.latitud || null,
+              longitud: conversacion.longitud || null
             });
 
-            // Limpiar carrito después de confirmar
+            // Limpiar carrito y coordenadas después de confirmar
             await Conversacion.findByIdAndUpdate(conversacion._id, {
-              $set: { carrito: [], carritoTotal: 0 }
+              $set: { carrito: [], carritoTotal: 0, latitud: null, longitud: null }
             });
             conversacion.carrito = [];
             conversacion.carritoTotal = 0;
+            conversacion.latitud = null;
+            conversacion.longitud = null;
             const ioCarrito2 = req.app.get('io');
             if (ioCarrito2) {
               ioCarrito2.to(empresa._id.toString()).emit('carrito-actualizado', {

@@ -48,6 +48,14 @@ const ConversacionSchema = new Schema(
     carritoTotal: {
       type: Number,
       default: 0
+    },
+    latitud: {
+      type: Number,
+      default: null
+    },
+    longitud: {
+      type: Number,
+      default: null
     }
   },
   { timestamps: true }

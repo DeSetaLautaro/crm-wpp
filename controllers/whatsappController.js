@@ -743,7 +743,7 @@ const actualizarConfig = async (req, res) => {
     if (req.body.estado && typeof req.body.estado === 'string') {
       updates.estado = req.body.estado.trim();
     }
-    if (req.body.bienvenida && typeof req.body.bienvenida === 'string') {
+    if (typeof req.body.bienvenida === 'string') {
       updates.bienvenida = req.body.bienvenida.trim();
     }
 

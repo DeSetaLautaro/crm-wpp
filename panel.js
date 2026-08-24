@@ -107,6 +107,7 @@ let editandoEstado = false;
 let guardandoEstado = false;
 let editandoBienvenida = false;
 let guardandoBienvenida = false;
+let bienvenidaActual = '';
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
@@ -768,7 +769,10 @@ async function cargarConfiguracion() {
     if (estadoDisplay && config.estado) estadoDisplay.textContent = config.estado;
 
     const bienvenidaDisplay = document.getElementById('perfil-bienvenida-display');
-    if (bienvenidaDisplay && config.bienvenida) bienvenidaDisplay.textContent = config.bienvenida;
+    if (bienvenidaDisplay) {
+      bienvenidaActual = config.bienvenida || '';
+      bienvenidaDisplay.textContent = bienvenidaActual || 'Sin mensaje de bienvenida';
+    }
   } catch (error) {
     console.error('Error al cargar configuración:', error);
   }
@@ -1337,7 +1341,7 @@ function activarEdicionBienvenida() {
   const display = document.getElementById('perfil-bienvenida-display');
   if (!display) return;
 
-  const valorActual = display.textContent.trim();
+  const valorActual = bienvenidaActual;
 
   // Ocultar texto estático y crear input
   display.style.display = 'none';
@@ -1376,9 +1380,9 @@ async function guardarBienvenidaDesdePerfil() {
   const input = document.getElementById('perfil-bienvenida-input');
   const display = document.getElementById('perfil-bienvenida-display');
   const valorNuevo = (input?.value || '').trim();
-  const valorAnterior = (display?.textContent || '').trim();
+  const valorAnterior = bienvenidaActual;
 
-  if (valorNuevo && valorNuevo !== valorAnterior) {
+  if (valorNuevo !== valorAnterior) {
     try {
       const token = localStorage.getItem('token') || '';
       const formData = new FormData();
@@ -1391,8 +1395,9 @@ async function guardarBienvenidaDesdePerfil() {
 
       if (!res.ok) throw new Error('Error al guardar bienvenida');
 
-      // Actualizar el texto estático
-      if (display) display.textContent = valorNuevo;
+      // Actualizar estado global y texto en la interfaz
+      bienvenidaActual = valorNuevo;
+      if (display) display.textContent = valorNuevo || 'Sin mensaje de bienvenida';
     } catch (error) {
       console.error('Error al guardar bienvenida:', error);
       // Si falla, revertimos el input al valor anterior

@@ -712,9 +712,11 @@ function showView(vista) {
   } else if (vista === 'config') {
     configView?.classList.remove('hidden');
     btnConfig?.classList.add('activo');
+    cargarConfiguracion();
   } else if (vista === 'perfil') {
     perfilView?.classList.remove('hidden');
     btnPerfil?.classList.add('activo');
+    cargarConfiguracion();
   }
 }
 
@@ -2446,6 +2448,7 @@ async function manejarLogin() {
     // Arrancamos el CRM recién después de autenticar
     await cargarDatosUsuario();
     await cargarConversaciones();
+    await cargarConfiguracion();
   } catch (error) {
     console.error('Error al iniciar sesión:', error);
     if (errorEl) {

@@ -967,7 +967,7 @@ function inicializarRecorteFoto() {
   const imgX = (areaW - dispW) / 2;
   const imgY = (areaH - dispH) / 2;
 
-  const D = Math.min(dispW, dispH) * 0.8;
+  const D = Math.min(120, Math.min(dispW, dispH) * 0.8);
   circle.style.width = D + 'px';
   circle.style.height = D + 'px';
   circle.style.left = (imgX + (dispW - D) / 2) + 'px';

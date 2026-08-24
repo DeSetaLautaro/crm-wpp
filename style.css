@@ -1912,7 +1912,7 @@ body.modo-login #app {
   margin: 0 auto 12px;
   border-radius: 8px;
   overflow: hidden;
-  background: #000;
+  background: #fff;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -1930,22 +1930,23 @@ body.modo-login #app {
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
-  will-change: left, top;
+  will-change: transform;
 }
 
 .crop-circulo {
   position: absolute;
+  inset: 0;
+  margin: auto;
   width: 150px;
   height: 150px;
   border-radius: 50%;
   border: 2px solid #fff;
-  box-shadow: 0 0 0 1000px rgba(200,200,200,0.5);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
   z-index: 2;
   pointer-events: none;
   touch-action: none;
   user-select: none;
   -webkit-user-drag: none;
-  cursor: move;
 }
 
 

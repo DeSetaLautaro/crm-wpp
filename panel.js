@@ -121,6 +121,16 @@ let fotoCropImgBaseLeft = 0;
 let fotoCropImgBaseTop = 0;
 let fotoCropImgLeft = 0;
 let fotoCropImgTop = 0;
+let fotoCropTranslateX = 0;
+let fotoCropTranslateY = 0;
+let fotoCropDragStartX = 0;
+let fotoCropDragStartY = 0;
+let fotoCropDragStartTranslateX = 0;
+let fotoCropDragStartTranslateY = 0;
+let fotoCropMaxTranslateX = 0;
+let fotoCropMinTranslateX = 0;
+let fotoCropMaxTranslateY = 0;
+let fotoCropMinTranslateY = 0;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -937,15 +947,15 @@ function cerrarModalFoto() {
 async function aceptarFoto() {
   if (!fotoCropFile) return;
   try {
-    const blob = await generarRecorteCircular();
-    if (blob) {
-      // Vista previa inmediata con el blob recortado (sin esperar al servidor)
-      const previewUrl = URL.createObjectURL(blob);
+    const dataUrl = await generarRecorteCircular();
+    if (dataUrl) {
       const fotoGrande = document.getElementById('perfil-foto-grande');
       if (fotoGrande) {
-        fotoGrande.src = previewUrl;
+        fotoGrande.src = dataUrl;
         fotoGrande.style.objectPosition = '50% 50%';
       }
+      // Convertir dataUrl a Blob para subir al servidor
+      const blob = await (await fetch(dataUrl)).blob();
       await guardarFotoPerfil(blob, '50% 50%');
     } else {
       await guardarFotoPerfil(fotoCropFile, '50% 50%');
@@ -980,34 +990,32 @@ function inicializarRecorteFoto() {
   const scale = Math.max(areaW / imgNatW, areaH / imgNatH);
   const dispW = imgNatW * scale;
   const dispH = imgNatH * scale;
-  const imgX = (areaW - dispW) / 2;
-  const imgY = (areaH - dispH) / 2;
 
   const D = Math.min(150, Math.min(dispW, dispH) * 0.8);
+  // El visor ya está centrado con CSS (inset:0; margin:auto)
+  // solo aseguramos su tamaño
   circle.style.width = D + 'px';
   circle.style.height = D + 'px';
-  circle.style.left = ((areaW - D) / 2) + 'px';
-  circle.style.top = ((areaH - D) / 2) + 'px';
 
-  // Configurar imagen como elemento arrastrable
+  // Posicionamos la imagen en el origen del contenedor
   img.style.position = 'absolute';
+  img.style.left = '0px';
+  img.style.top = '0px';
   img.style.width = dispW + 'px';
   img.style.height = dispH + 'px';
-  img.style.left = imgX + 'px';
-  img.style.top = imgY + 'px';
   img.style.objectFit = 'fill';
   img.style.objectPosition = '0 0';
 
-  fotoCropImgBaseLeft = imgX;
-  fotoCropImgBaseTop = imgY;
-  fotoCropImgLeft = imgX;
-  fotoCropImgTop = imgY;
+  // Translate inicial centrado
+  fotoCropTranslateX = (areaW - dispW) / 2;
+  fotoCropTranslateY = (areaH - dispH) / 2;
+  img.style.transform = `translate(${fotoCropTranslateX}px, ${fotoCropTranslateY}px)`;
 
-  // Límites de arrastre (la imagen siempre cubre todo el área)
-  fotoCropMinLeft = imgX + (areaW - dispW); // negativo
-  fotoCropMinTop = imgY + (areaH - dispH);
-  fotoCropMaxLeft = imgX;
-  fotoCropMaxTop = imgY;
+  // Límites para que el visor nunca quede fuera de la imagen
+  fotoCropMinTranslateX = areaW / 2 - (dispW - D / 2);
+  fotoCropMaxTranslateX = areaW / 2 - D / 2;
+  fotoCropMinTranslateY = areaH / 2 - (dispH - D / 2);
+  fotoCropMaxTranslateY = areaH / 2 - D / 2;
 }
 
 function generarRecorteCircular() {
@@ -1018,62 +1026,61 @@ function generarRecorteCircular() {
     if (!area || !circle || !img) return resolve(null);
     if (!img.complete || img.naturalWidth === 0) return resolve(null);
 
-    // Si el círculo no está inicializado, lo centramos ahora
-    if (circle.style.left === '' && circle.style.top === '') {
-      inicializarRecorteFoto();
-    }
+    const areaRect = area.getBoundingClientRect();
+    const circleRect = circle.getBoundingClientRect();
+
+    const areaW = area.clientWidth || areaRect.width;
+    const areaH = area.clientHeight || areaRect.height;
+
+    const D = circleRect.width;
+    const centerXenArea = circleRect.left - areaRect.left + D / 2;
+    const centerYenArea = circleRect.top - areaRect.top + D / 2;
 
     const imgNatW = img.naturalWidth;
     const imgNatH = img.naturalHeight;
-    const areaW = area.clientWidth;
-    const areaH = area.clientHeight;
 
-    // Usamos la escala de cobertura (la misma usada al inicializar)
     const scale = Math.max(areaW / imgNatW, areaH / imgNatH);
     const dispW = imgNatW * scale;
     const dispH = imgNatH * scale;
 
-    const D = parseInt(circle.style.width) || 150;
-    const circleLeft = parseInt(circle.style.left) || (areaW - D) / 2;
-    const circleTop = parseInt(circle.style.top) || (areaH - D) / 2;
-    const centerXenArea = circleLeft + D / 2;
-    const centerYenArea = circleTop + D / 2;
+    const translateX = fotoCropTranslateX;
+    const translateY = fotoCropTranslateY;
 
-    const imgLeft = fotoCropImgLeft ?? 0;
-    const imgTop = fotoCropImgTop ?? 0;
+    // Punto del visor en coordenadas de la imagen (en px de la imagen renderizada)
+    const imgCoordX = centerXenArea - translateX;
+    const imgCoordY = centerYenArea - translateY;
 
-    const relLeft = centerXenArea - imgLeft;
-    const relTop = centerYenArea - imgTop;
+    // Convertir a coordenadas originales de la imagen (natural)
+    const srcScaleX = imgNatW / dispW;
+    const srcScaleY = imgNatH / dispH;
 
-    const centerX = (relLeft / dispW) * imgNatW;
-    const centerY = (relTop / dispH) * imgNatH;
-    const radius = (D / dispW) * imgNatW;
+    const centerXOrig = imgCoordX * srcScaleX;
+    const centerYOrig = imgCoordY * srcScaleY;
+    const radiusOrig = (D / 2) * srcScaleX; // asumiendo cuadrado
 
-    const size = Math.max(1, Math.round(radius * 2));
+    const size = Math.max(1, Math.round(radiusOrig * 2));
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    // Fondo blanco para que el JPEG no exporte espacio vacío
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, size, size);
 
     ctx.drawImage(
       img,
-      centerX - radius,
-      centerY - radius,
-      radius * 2,
-      radius * 2,
+      centerXOrig - radiusOrig,
+      centerYOrig - radiusOrig,
+      radiusOrig * 2,
+      radiusOrig * 2,
       0,
       0,
       size,
       size
     );
 
-    canvas.toBlob((blob) => {
-      resolve(blob);
-    }, 'image/jpeg', 0.92);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    resolve(dataUrl);
   });
 }
 
@@ -1088,11 +1095,23 @@ function setupCropFotoEventos() {
   const circle = document.getElementById('crop-circulo');
   if (!area || !circle) return;
 
+  const img = document.getElementById('crop-imagen');
+  if (!img) return;
+
+  function aplicarTranslate(x, y) {
+    x = Math.min(fotoCropMaxTranslateX, Math.max(fotoCropMinTranslateX, x));
+    y = Math.min(fotoCropMaxTranslateY, Math.max(fotoCropMinTranslateY, y));
+    fotoCropTranslateX = x;
+    fotoCropTranslateY = y;
+    img.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
   area.addEventListener('pointerdown', (e) => {
-    // Permitimos arrastrar desde cualquier parte del área (incluido el círculo)
     e.preventDefault();
-    fotoCropInicioX = e.clientX;
-    fotoCropInicioY = e.clientY;
+    fotoCropDragStartX = e.clientX;
+    fotoCropDragStartY = e.clientY;
+    fotoCropDragStartTranslateX = fotoCropTranslateX;
+    fotoCropDragStartTranslateY = fotoCropTranslateY;
     fotoCropArrastrando = true;
     if (area.setPointerCapture) {
       try { area.setPointerCapture(e.pointerId); } catch (_) {}
@@ -1102,20 +1121,9 @@ function setupCropFotoEventos() {
   area.addEventListener('pointermove', (e) => {
     if (!fotoCropArrastrando) return;
     e.preventDefault();
-
-    const deltaX = e.clientX - fotoCropInicioX;
-    const deltaY = e.clientY - fotoCropInicioY;
-
-    const nuevoLeft = Math.min(fotoCropMaxLeft, Math.max(fotoCropMinLeft, fotoCropImgBaseLeft + deltaX));
-    const nuevoTop = Math.min(fotoCropMaxTop, Math.max(fotoCropMinTop, fotoCropImgBaseTop + deltaY));
-
-    const img = document.getElementById('crop-imagen');
-    if (img) {
-      img.style.left = nuevoLeft + 'px';
-      img.style.top = nuevoTop + 'px';
-      fotoCropImgLeft = nuevoLeft;
-      fotoCropImgTop = nuevoTop;
-    }
+    const deltaX = e.clientX - fotoCropDragStartX;
+    const deltaY = e.clientY - fotoCropDragStartY;
+    aplicarTranslate(fotoCropDragStartTranslateX + deltaX, fotoCropDragStartTranslateY + deltaY);
   });
 
   const terminarPointer = (e) => {

@@ -1006,7 +1006,11 @@ function generarRecorteCircular() {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
+
+    // Fondo opaco para evitar transparencias en el PNG exportado
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, size, size);
 
     ctx.drawImage(
       img,

@@ -1356,6 +1356,7 @@ function activarEdicionBienvenida() {
   }
   input.style.display = 'block';
   input.value = valorActual;
+  input.placeholder = 'Si dejás este campo vacío, el bot responderá directamente sin mensaje de bienvenida previo.';
 
   editandoBienvenida = true;
 

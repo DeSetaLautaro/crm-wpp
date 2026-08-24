@@ -1973,6 +1973,11 @@ body.modo-login #app {
   text-align: left;
 }
 
+.perfil-nombre-input::placeholder {
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
 .crop-botones {
   display: flex;
   gap: 8px;

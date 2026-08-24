@@ -226,7 +226,7 @@ function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indic
               <div class="chat-item-etiquetas">${(contacto.etiquetas || []).map(et => `<span class="chat-chip-etiqueta" data-etiqueta="${et}">${et}</span>`).join('')}</div>
             </div>
             ${botonAccionChat(conv)}
-            <div class="chat-item-indicador ${indicadorClase}" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
+            <div class="chat-item-indicador" style="background-color:${conv.botActivo ? '#10b981' : '#ef4444'}; border:1px solid ${conv.botActivo ? '#10b981' : '#ef4444'};" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
           </div>
         `;
 }

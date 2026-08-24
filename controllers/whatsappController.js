@@ -297,6 +297,62 @@ const recibirMensaje = async (req, res) => {
         tieneToken: !!accessToken
       });
 
+      // ===== Manejo de ubicaciones (maps) =====
+      if (mensaje.type === 'location') {
+        const lat = mensaje.location?.latitude;
+        const lng = mensaje.location?.longitude;
+        const nombreLugar = mensaje.location?.name || '';
+        const addressWpp = mensaje.location?.address || '';
+
+        let direccionFinal = addressWpp;
+
+        // Si WhatsApp no mandó la dirección (solo lat/lng), intentamos con Nominatim
+        if (!direccionFinal && lat && lng) {
+          try {
+            const urlNominatim = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+            const respNominatim = await fetch(urlNominatim, {
+              headers: {
+                'User-Agent': 'CRM-WhatsApp-Bot/1.0 (contacto: admin@example.com)'
+              }
+            });
+            const dataNominatim = await respNominatim.json();
+            if (dataNominatim && dataNominatim.display_name) {
+              direccionFinal = dataNominatim.display_name;
+            } else if (dataNominatim && dataNominatim.address) {
+              // construimos una dirección simple
+              const a = dataNominatim.address;
+              const calle = a.road || a.pedestrian || '';
+              const numero = a.house_number || '';
+              direccionFinal = [calle, numero].filter(Boolean).join(' ');
+              if (!direccionFinal) direccionFinal = dataNominatim.display_name;
+            }
+          } catch (error) {
+            console.error('❌ Error al geocodificar con Nominatim:', error);
+          }
+        }
+
+        // Guardar la dirección en el cliente si no tenía
+        if (direccionFinal && (!contacto.direccion || contacto.direccion.trim() === '')) {
+          await Cliente.findByIdAndUpdate(contacto._id, { $set: { direccion: direccionFinal } });
+          contacto.direccion = direccionFinal;
+          console.log('✅ Dirección guardada automáticamente desde la ubicación');
+        }
+
+        // Construir respuesta
+        if (lat && lng && process.env.GEMINI_API_KEY) {
+          const promptUbicacion = `Sos el asistente virtual de ${empresa.nombre}. El cliente compartió su ubicación: ${nombreLugar} ${direccionFinal} (lat:${lat}, lng:${lng}). Respondé de forma breve y amable. Si el negocio hace envíos, indicá que anotaron la dirección y confirmá el pedido. Si no hacen envíos, disculpate y explicá cómo retirar por el local.`;
+          const respuestaIA = await generarTexto(promptUbicacion);
+          if (respuestaIA) {
+            respuestaAutomatica = respuestaIA;
+            console.log('✅ Ubicación procesada con Gemini');
+          } else {
+            respuestaAutomatica = `Gracias por compartir tu ubicación 📍`;
+          }
+        } else {
+          respuestaAutomatica = `Gracias por compartir tu ubicación 📍`;
+        }
+      }
+
       // Si la empresa activó el procesamiento de audios, intentamos transcribirlo con Gemini
       const mediaIdMultimedia = mensaje.audio?.id || mensaje.document?.id;
       if (mediaIdMultimedia && empresa.procesarAudios === true && accessToken) {

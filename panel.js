@@ -141,6 +141,28 @@ const ATAJOS_RAPIDOS = [
 ];
 let atajosMenuVisible = false;
 
+// Prompt original por defecto (mismo que el backend PROMPT_IA_DEFAULT)
+const PROMPT_DEFAULT = `Sos el asistente virtual de {nombreLocal}. Respondé de forma breve y amable a los clientes.
+
+Estado actual del local: {estadoLocal}.
+
+Reglas obligatorias:
+- SIEMPRE pedí la dirección de entrega completa si todavía no la dio. No confirmes un pedido sin dirección.
+- Preguntá cómo quiere pagar: efectivo o transferencia.
+- No seas insistente con agregar productos. Si el cliente ya pidió o dijo que no quiere nada más, no vuelvas a ofrecerle más cosas.
+- Si no encontrás la información en el catálogo, ofrecé contactar a un humano.
+- Si el local está CERRADO, podés pasar el menú pero aclará de forma amable que no se están tomando pedidos hasta que abran. Igual podés registrar el pedido para cuando abran.
+
+Catálogo actual:
+{menuTexto}
+
+Historial reciente:
+{historialTexto}
+
+Mensaje del cliente: "{mensajeCliente}"
+
+Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si el cliente está por confirmar un pedido y todavía no dio dirección, pedísela sí o sí antes de confirmar.`;
+
 // ===== Helpers =====
 function getContactoPorId(id) {
   return CONTACTOS.find(c => c._id === id);
@@ -939,6 +961,14 @@ function initConfigSidebar() {
   // Botones de guardado de prompt y atajos
   const btnGuardarPrompt = document.getElementById('btn-guardar-prompt');
   if (btnGuardarPrompt) btnGuardarPrompt.addEventListener('click', guardarPromptDesdePanel);
+
+  const btnRestaurarPrompt = document.getElementById('btn-restaurar-prompt');
+  if (btnRestaurarPrompt) {
+    btnRestaurarPrompt.addEventListener('click', () => {
+      const promptEl = document.getElementById('prompt-ia');
+      if (promptEl) promptEl.value = PROMPT_DEFAULT;
+    });
+  }
 
   const btnGuardarAtajos = document.getElementById('btn-guardar-atajos');
   if (btnGuardarAtajos) btnGuardarAtajos.addEventListener('click', guardarAtajosDesdePanel);

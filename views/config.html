@@ -3,11 +3,15 @@
 <div class="config-card">
   <h3>Prompt principal</h3>
   <textarea id="prompt-ia" rows="8" placeholder="Escribí acá las instrucciones para tu bot..."></textarea>
-  <div>
+  <p class="perfil-bienvenida-ayuda" style="margin-top:4px;">
+    Podés usar <code>{menuTexto}</code>, <code>{historialTexto}</code>, <code>{nombreLocal}</code>, <code>{estadoLocal}</code> y <code>{mensajeCliente}</code> para insertar datos automáticos del local y la conversación.
+  </p>
+  <div style="display:flex; align-items:center; gap:12px; justify-content:space-between;">
     <label>
       <input type="checkbox" id="aplicar-prompt-todas">
       Aplicar a todas las líneas
     </label>
+    <button type="button" id="btn-restaurar-prompt" class="btn-guardar-config" style="background:#6b7280;">Restaurar original</button>
   </div>
   <br><br>
   <button class="btn-guardar-config" id="btn-guardar-prompt">Guardar Prompt</button>

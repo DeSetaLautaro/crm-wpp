@@ -387,12 +387,54 @@ body {
 }
 
 .composer {
+  position: relative;
   display: flex;
   gap: 10px;
   padding: 16px;
   background: #FFFFFF;
   border-top: 1px solid #E5E7EB;
   flex-shrink: 0;
+}
+
+.atajos-flotante {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: 6px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.12);
+  z-index: 50;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+}
+.atajos-flotante.visible {
+  display: block;
+}
+.atajo-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #1f2937;
+  border-bottom: 1px solid #f1f5f9;
+}
+.atajo-item:last-child {
+  border-bottom: none;
+}
+.atajo-item:hover {
+  background: #eff6ff;
+}
+.atajo-comando {
+  font-weight: 600;
+  color: #2563eb;
+  margin-right: 6px;
+}
+.atajo-mensaje {
+  color: #6b7280;
+  font-size: 0.8rem;
 }
 
 .composer input {

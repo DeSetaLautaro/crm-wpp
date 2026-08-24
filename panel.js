@@ -1142,6 +1142,72 @@ function setupCropFotoEventos() {
   area.addEventListener('pointercancel', terminarPointer);
 }
 
+function renderAtajosMenu(filtro) {
+  const contenedor = document.getElementById('atajos-flotante');
+  if (!contenedor) return;
+
+  const texto = filtro.toLowerCase();
+  const items = ATAJOS_RAPIDOS.filter(a => a.atajo.toLowerCase().startsWith('/' + texto));
+
+  if (items.length === 0) {
+    contenedor.classList.remove('visible');
+    return;
+  }
+
+  contenedor.innerHTML = items.map((a, idx) => `
+    <div class="atajo-item" data-atajo-index="${idx}">
+      <span class="atajo-comando">${a.atajo}</span>
+      <span class="atajo-mensaje">${a.mensaje}</span>
+    </div>
+  `).join('');
+
+  contenedor.querySelectorAll('.atajo-item').forEach(item => {
+    item.addEventListener('click', function() {
+      const index = Number(this.dataset.atajoIndex);
+      const atajoSeleccionado = items[index];
+      if (atajoSeleccionado) seleccionarAtajo(atajoSeleccionado);
+    });
+  });
+
+  contenedor.classList.add('visible');
+}
+
+function ocultarMenuAtajos() {
+  const contenedor = document.getElementById('atajos-flotante');
+  if (contenedor) {
+    contenedor.classList.remove('visible');
+    contenedor.innerHTML = '';
+  }
+}
+
+function manejarInputMensaje(e) {
+  const input = e.target;
+  const valor = input.value;
+  if (valor.startsWith('/') && valor.length > 1) {
+    const textoBusqueda = valor.substring(1).toLowerCase();
+    renderAtajosMenu(textoBusqueda);
+  } else {
+    ocultarMenuAtajos();
+  }
+}
+
+function seleccionarAtajo(atajo) {
+  const input = document.getElementById('input-mensaje');
+  if (!input) return;
+
+  const valor = input.value;
+  // Reemplazar el último slash seguido de texto sin espacios
+  const regex = /(\/\S*)$/;
+  if (regex.test(valor)) {
+    input.value = valor.replace(regex, atajo.mensaje);
+  } else {
+    input.value = atajo.mensaje;
+  }
+
+  ocultarMenuAtajos();
+  input.focus();
+}
+
 function activarEdicionNombre() {
   if (editandoNombre || guardandoNombre) return;
 
@@ -2512,6 +2578,7 @@ async function init() {
     btnEnviar.addEventListener('click', enviarMensajeDesdePanel);
   }
   if (inputMensaje) {
+    inputMensaje.addEventListener('input', manejarInputMensaje);
     inputMensaje.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();

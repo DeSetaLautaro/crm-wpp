@@ -62,6 +62,15 @@ const EmpresaSchema = new Schema(
       type: String,
       default: ''
     },
+    horariosEstructurados: [{
+      dia: { type: String },
+      apertura: { type: String },
+      cierre: { type: String }
+    }],
+    abierto: {
+      type: Boolean,
+      default: true
+    },
 
     // Contador de conversaciones iniciadas en las últimas 24 horas
     conversacionesUsadas24h: {

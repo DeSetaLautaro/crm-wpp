@@ -1745,6 +1745,29 @@ body.modo-login #app {
   }
 }
 
+/* ===== Horarios en perfil ===== */
+.horario-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.horario-row .horario-dia {
+  min-width: 90px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.horario-row input[type="time"] {
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
 /* ===== Ajustes para pantallas muy chicas (≤480px) ===== */
 @media (max-width: 480px) {
   .panel-header,

@@ -773,6 +773,27 @@ async function cargarConfiguracion() {
 
     renderAtajos(config.atajos || []);
 
+    const horariosWrap = document.getElementById('horarios-container');
+    if (horariosWrap) {
+      horariosWrap.innerHTML = '';
+      const horarios = config.horariosEstructurados || [];
+      const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+      dias.forEach(dia => {
+        const row = horarios.find(h => h.dia === dia);
+        const apertura = row?.apertura || '';
+        const cierre = row?.cierre || '';
+        const div = document.createElement('div');
+        div.className = 'horario-row';
+        div.innerHTML = `
+          <span class="horario-dia">${dia}</span>
+          <input type="time" class="horario-apertura" value="${apertura}" data-dia="${dia}">
+          <span>a</span>
+          <input type="time" class="horario-cierre" value="${cierre}" data-dia="${dia}">
+        `;
+        horariosWrap.appendChild(div);
+      });
+    }
+
     const estadoDisplay = document.getElementById('perfil-estado-display');
     if (estadoDisplay && config.estado) estadoDisplay.textContent = config.estado;
 
@@ -2505,6 +2526,8 @@ async function init() {
   initEditarPerfil();
   initEditarEstado();
   initEditarBienvenida();
+  const btnGuardarHorarios = document.getElementById('btn-guardar-horarios');
+  if (btnGuardarHorarios) btnGuardarHorarios.addEventListener('click', guardarHorariosDesdePanel);
   const btnGuardarConfigDatos = document.getElementById('btn-guardar-config-datos');
   if (btnGuardarConfigDatos) btnGuardarConfigDatos.addEventListener('click', guardarConfigDesdePanel);
   const inputFoto = document.getElementById('config-foto');

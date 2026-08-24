@@ -157,6 +157,7 @@ const recibirMensaje = async (req, res) => {
         return res.sendStatus(200);
     }
     console.log(`🏢 [6] ¡Empresa encontrada!: ${empresa.nombre}`);
+    const localAbierto = empresa.abierto !== false;
     
     // Buscar el Usuario que posee la empresa para obtener sus platos
     const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
@@ -313,13 +314,20 @@ JSON:`;
           return `${autor}: ${m.contenido}`;
         }).join('\n');
 
+        const estadoLocal = localAbierto
+          ? 'ABIERTO'
+          : 'CERRADO en este momento';
+
         const prompt = `Sos el asistente virtual de ${empresa.nombre}. Respondé de forma breve y amable a los clientes.
+
+Estado actual del local: ${estadoLocal}.
 
 Reglas obligatorias:
 - SIEMPRE pedí la dirección de entrega completa si todavía no la dio. No confirmes un pedido sin dirección.
 - Preguntá cómo quiere pagar: efectivo o transferencia.
 - No seas insistente con agregar productos. Si el cliente ya pidió o dijo que no quiere nada más, no vuelvas a ofrecerle más cosas.
 - Si no encontrás la información en el catálogo, ofrecé contactar a un humano.
+- Si el local está CERRADO, podés pasar el menú pero aclará de forma amable que no se están tomando pedidos hasta que abran. Igual podés registrar el pedido para cuando abran.
 
 Catálogo actual:
 ${menuTexto}
@@ -747,6 +755,15 @@ const actualizarConfig = async (req, res) => {
       updates.bienvenida = req.body.bienvenida.trim();
     }
 
+    if (Array.isArray(req.body.horariosEstructurados)) {
+      const horarios = req.body.horariosEstructurados.map(h => ({
+        dia: (h.dia || '').trim(),
+        apertura: (h.apertura || '').trim(),
+        cierre: (h.cierre || '').trim()
+      })).filter(h => h.dia && h.apertura && h.cierre);
+      updates.horariosEstructurados = horarios;
+    }
+
     // Prompt: puede aplicar solo a la línea actual o a todas las líneas del usuario
     if (typeof req.body.promptIA === 'string') {
       const promptIA = req.body.promptIA.trim();
@@ -849,7 +866,9 @@ const obtenerConfig = async (req, res) => {
         estado: empresa.estado || '',
         bienvenida: empresa.bienvenida || '',
         fotoPerfil: empresa.fotoPerfil || '',
-        fotoPosicion: empresa.fotoPosicion || '50% 50%'
+        fotoPosicion: empresa.fotoPosicion || '50% 50%',
+        horariosEstructurados: empresa.horariosEstructurados || [],
+        abierto: empresa.abierto !== false
       }
     });
   } catch (error) {

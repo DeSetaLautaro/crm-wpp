@@ -8,6 +8,7 @@ const Producto = require('../models/Producto');
 const Usuario = require('../models/usuario');
 const Pedido = require('../models/Pedido');
 const { guardarPedidoConfirmado } = require('./pedidosController');
+const fs = require('fs');
 
 async function procesarCarrito(empresa, conversacion, texto, productos) {
   if (!process.env.GEMINI_API_KEY) return null;
@@ -629,6 +630,80 @@ const actualizarBotActivo = async (req, res) => {
   }
 };
 
+async function subirFotoWhatsApp(empresa, fotoPath, fileSize, fileType) {
+  const token = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+  if (!token) {
+    throw new Error('No se encontró token de WhatsApp para la empresa');
+  }
+
+  // Paso A: Crear sesión de subida
+  const urlSesion = `https://graph.facebook.com/v19.0/app/uploads?file_length=${fileSize}&file_type=${encodeURIComponent(fileType)}`;
+  const respSesion = await fetch(urlSesion, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!respSesion.ok) {
+    const body = await respSesion.text();
+    throw new Error(`Error creando sesión de upload: ${respSesion.status} ${body}`);
+  }
+  const dataSesion = await respSesion.json();
+  const sessionId = dataSesion.id;
+  if (!sessionId) {
+    throw new Error('No se obtuvo session id de la respuesta de upload');
+  }
+
+  // Paso B: Subir binario
+  const fileBuffer = fs.readFileSync(fotoPath);
+  const respBinario = await fetch(`https://graph.facebook.com/v19.0/${sessionId}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `OAuth ${token}`,
+      'Content-Type': 'application/octet-stream'
+    },
+    body: fileBuffer
+  });
+  if (!respBinario.ok) {
+    const body = await respBinario.text();
+    throw new Error(`Error subiendo binario a Meta: ${respBinario.status} ${body}`);
+  }
+  const dataBinario = await respBinario.json();
+  const handle = dataBinario.h;
+  if (!handle) {
+    throw new Error('No se obtuvo profile_picture_handle de la respuesta de binario');
+  }
+  return handle;
+}
+
+async function actualizarPerfilWhatsApp(empresa, estado, profilePictureHandle) {
+  const token = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneId = empresa.whatsappPhoneId;
+  if (!token || !phoneId) {
+    throw new Error('Faltan credenciales para actualizar WhatsApp');
+  }
+
+  const url = `https://graph.facebook.com/v19.0/${phoneId}/whatsapp_business_profile`;
+  const payload = {
+    messaging_product: 'whatsapp'
+  };
+  if (estado) {
+    payload.about = estado;
+  }
+  if (profilePictureHandle) {
+    payload.profile_picture_handle = profilePictureHandle;
+  }
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify(payload)
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`Error actualizando perfil de WhatsApp: ${resp.status} ${body}`);
+  }
+  return await resp.json();
+}
+
 const actualizarConfig = async (req, res) => {
   try {
     const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
@@ -705,11 +780,24 @@ const actualizarConfig = async (req, res) => {
       updates.fotoPerfil = `/uploads/${req.file.filename}`;
     }
 
+    const estadoNuevo = (typeof req.body.estado === 'string') ? req.body.estado.trim() : null;
     const empresa = await Empresa.findByIdAndUpdate(empresaId, { $set: updates }, { new: true });
     if (!empresa) {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
-    return res.json({ ok: true, empresa });
+
+    let warning = '';
+    try {
+      let profileHandle = null;
+      if (req.file) {
+        profileHandle = await subirFotoWhatsApp(empresa, req.file.path, req.file.size, req.file.mimetype);
+      }
+      await actualizarPerfilWhatsApp(empresa, estadoNuevo, profileHandle);
+    } catch (error) {
+      console.error('Error al sincronizar con WhatsApp:', error);
+      warning = 'Guardado localmente, pero falló la actualización en WhatsApp';
+    }
+    return res.json({ ok: true, empresa, warning: warning || undefined });
   } catch (error) {
     console.error('Error al actualizar config:', error);
     return res.status(500).json({ error: 'Error interno al actualizar config' });

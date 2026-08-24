@@ -134,11 +134,7 @@ let fotoCropMaxTranslateY = 0;
 let fotoCropMinTranslateY = 0;
 
 // ===== Atajos rápidos para el mensaje =====
-const ATAJOS_RAPIDOS = [
-  { atajo: '/horarios', mensaje: 'Nuestros horarios son de Lunes a Sábados de 10 a 20hs.' },
-  { atajo: '/cbu', mensaje: 'Nuestro CBU es 1234567890, Alias: mi.local' },
-  { atajo: '/envio', mensaje: 'Realizamos envíos a todo el microcentro, consultar tarifa según zona.' }
-];
+let ATAJOS_RAPIDOS = [];
 let atajosMenuVisible = false;
 
 // Prompt original por defecto (mismo que el backend PROMPT_IA_DEFAULT)
@@ -149,7 +145,7 @@ Estado actual del local: {estadoLocal}.
 Horarios de atención:
 {horarios}
 
-Atajos disponibles:
+Información del local:
 {atajos}
 
 Reglas obligatorias:
@@ -852,6 +848,12 @@ async function cargarConfiguracion() {
     if (procesarAudiosCheck) {
       procesarAudiosCheck.checked = (config.procesarAudios === true);
     }
+
+    // Actualizar atajos rápidos para el autocompletado del input
+    ATAJOS_RAPIDOS = (config.atajos || []).map(a => ({
+      atajo: a.comando,
+      mensaje: a.respuesta
+    }));
   } catch (error) {
     console.error('Error al cargar configuración:', error);
   }
@@ -1282,7 +1284,7 @@ function renderAtajosMenu(filtro) {
   if (!contenedor) return;
 
   const texto = filtro.toLowerCase();
-  const items = ATAJOS_RAPIDOS.filter(a => a.atajo.toLowerCase().startsWith('/' + texto));
+  const items = ATAJOS_RAPIDOS.filter(a => a.atajo.toLowerCase().startsWith(texto));
 
   if (items.length === 0) {
     contenedor.classList.remove('visible');
@@ -1291,7 +1293,7 @@ function renderAtajosMenu(filtro) {
 
   contenedor.innerHTML = items.map((a, idx) => `
     <div class="atajo-item" data-atajo-index="${idx}">
-      <span class="atajo-comando">${a.atajo}</span>
+      <span class="atajo-comando">/${a.atajo}</span>
       <span class="atajo-mensaje">${a.mensaje}</span>
     </div>
   `).join('');

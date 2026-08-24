@@ -20,7 +20,7 @@ Estado actual del local: {estadoLocal}.
 Horarios de atención:
 {horarios}
 
-Atajos disponibles:
+Información del local:
 {atajos}
 
 Reglas obligatorias:
@@ -62,7 +62,7 @@ function generarAtajosAutomaticos(usuario) {
   // Dirección del local
   if (usuario.direccion && typeof usuario.direccion === 'string' && usuario.direccion.trim() !== '') {
     atajos.push({
-      comando: '/direccion',
+      comando: 'direccion',
       respuesta: `Nuestro local está en ${usuario.direccion.trim()}`
     });
   }
@@ -93,7 +93,7 @@ function generarAtajosAutomaticos(usuario) {
 
     if (lineas.length > 0) {
       atajos.push({
-        comando: '/pago',
+        comando: 'pago',
         respuesta: lineas.join('\n')
       });
     }

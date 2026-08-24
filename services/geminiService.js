@@ -1,4 +1,3 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // ============================================================
 // Servicio Gemini encapsulado
@@ -12,9 +11,9 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // ============================================================
 
 const MODELOS_POR_DEFECTO = [
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
-  'gemini-2.0-flash'
+  'gemini-3.6-flash',
+  'gemini-3.1-pro-preview',
+  'gemini-3.1-flash-lite'
 ];
 
 function obtenerModelos() {
@@ -39,26 +38,42 @@ async function generarTextoGemini(prompt) {
   }
 
   const modelos = obtenerModelos();
-  const genAI = new GoogleGenerativeAI(apiKey);
-
   let ultimoError = null;
 
   for (const modelo of modelos) {
     try {
       console.log(`🤖 Probando modelo Gemini: ${modelo}`);
-      const model = genAI.getGenerativeModel({ model: modelo });
-      const result = await model.generateContent(prompt);
-      const usage = result.response.usageMetadata;
-      if (usage) {
-        const precioEntrada = 0.30; // USD por millón de tokens (gemini 2.5/2.0 flash)
-        const precioSalida = 2.50;  // USD por millón de tokens
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data?.error?.message || `HTTP ${resp.status}`);
+      }
+
+      const texto = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+
+      if (data.usageMetadata) {
+        const usage = data.usageMetadata;
+        const precioEntrada = 0.30;
+        const precioSalida = 2.50;
         const costoEntrada = ((usage.promptTokenCount || 0) / 1000000) * precioEntrada;
         const costoSalida = ((usage.candidatesTokenCount || 0) / 1000000) * precioSalida;
         const costoTotal = (costoEntrada + costoSalida).toFixed(6);
         console.log(`📊 Tokens -> Entrada: ${usage.promptTokenCount} | Salida: ${usage.candidatesTokenCount} | Total: ${usage.totalTokenCount}`);
         console.log(`💰 Costo estimado: $${costoTotal} USD (${modelo})`);
       }
-      return result.response.text().trim();
+
+      return texto.trim();
     } catch (error) {
       ultimoError = error;
       console.warn(`⚠️ Modelo ${modelo} falló: ${error.message}. Probando siguiente...`);
@@ -81,19 +96,35 @@ async function generarTextoConArchivo(prompt, mimeType, base64, tipo = 'archivo'
   }
 
   const modelos = obtenerModelos();
-  const genAI = new GoogleGenerativeAI(apiKey);
-
   let ultimoError = null;
 
   for (const modelo of modelos) {
     try {
       console.log(`🤖 Probando modelo Gemini con ${tipo}: ${modelo}`);
-      const model = genAI.getGenerativeModel({ model: modelo });
-      const result = await model.generateContent([
-        { text: prompt },
-        { inlineData: { data: base64, mimeType } }
-      ]);
-      return result.response.text().trim();
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType, data: base64 } }
+            ]
+          }]
+        })
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data?.error?.message || `HTTP ${resp.status}`);
+      }
+
+      const texto = data?.candidates?.[0]?.content?.parts?.map(p => p.text || '').join('') || '';
+      return texto.trim();
     } catch (error) {
       ultimoError = error;
       console.warn(`⚠️ Modelo ${modelo} falló con ${tipo}: ${error.message}. Probando siguiente...`);

@@ -757,7 +757,7 @@ const actualizarConfig = async (req, res) => {
 
     if (Array.isArray(req.body.horariosEstructurados)) {
       const horarios = req.body.horariosEstructurados.map(h => ({
-        dia: (h.dia || '').trim(),
+        dia: (h.dia || '').trim().toLowerCase(),
         apertura: (h.apertura || '').trim(),
         cierre: (h.cierre || '').trim()
       })).filter(h => h.dia && h.apertura && h.cierre);
@@ -870,6 +870,12 @@ const obtenerConfig = async (req, res) => {
         horarios = usuario.horariosEstructurados;
       }
     }
+
+    // Normalizar día a minúsculas para que el frontend y el cron funcionen consistente
+    horarios = horarios.map(h => ({
+      ...h,
+      dia: (h.dia || '').toLowerCase()
+    }));
 
     console.log('[obtenerConfig] horarios FINAL que se devuelven:', horarios);
 

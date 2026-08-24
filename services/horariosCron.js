@@ -21,7 +21,7 @@ async function ejecutarActualizacionHorarios() {
     const empresas = await Empresa.find({
       horariosEstructurados: {
         $elemMatch: {
-          dia: diaActual,
+          dia: { $regex: new RegExp('^' + diaActual + '$', 'i') },
           $or: [
             { apertura: horaActual },
             { cierre: horaActual }
@@ -32,7 +32,7 @@ async function ejecutarActualizacionHorarios() {
 
     for (const empresa of empresas) {
       const horario = empresa.horariosEstructurados.find(h =>
-        h.dia === diaActual &&
+        h.dia && h.dia.toLowerCase() === diaActual &&
         (h.apertura === horaActual || h.cierre === horaActual)
       );
 

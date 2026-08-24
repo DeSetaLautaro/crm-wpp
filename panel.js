@@ -788,7 +788,7 @@ async function cargarConfiguracion() {
       const horarios = config.horariosEstructurados || [];
       const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
       dias.forEach(dia => {
-        const row = horarios.find(h => h.dia === dia);
+        const row = horarios.find(h => h.dia && h.dia.toLowerCase() === dia);
         const apertura = row?.apertura || '';
         const cierre = row?.cierre || '';
         const div = document.createElement('div');

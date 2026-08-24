@@ -516,6 +516,9 @@ function renderChatActivo() {
   }
 
   toggle.checked = conv.botActivo === true;
+  const toggleWrapper = toggle.closest('.toggle');
+  if (toggleWrapper) toggleWrapper.classList.toggle('activo', conv.botActivo === true);
+
   estadoBot.textContent = conv.botActivo ? 'Bot Activo' : 'Pausado';
   estadoBot.classList.remove('estado-activo', 'estado-pausado');
   estadoBot.classList.add(conv.botActivo ? 'estado-activo' : 'estado-pausado');
@@ -2498,6 +2501,9 @@ async function init() {
   // Toggle del bot (actualiza botActivo en la empresa)
   document.getElementById('toggle-bot').addEventListener('change', async (e) => {
     const nuevoValor = e.target.checked;
+    const toggleWrapper = e.target.closest('.toggle');
+    if (toggleWrapper) toggleWrapper.classList.toggle('activo', nuevoValor);
+
     const estadoBotEl = document.getElementById('estado-bot');
     estadoBotEl.textContent = nuevoValor ? 'Bot Activo' : 'Pausado';
     estadoBotEl.classList.remove('estado-activo', 'estado-pausado');
@@ -2517,6 +2523,7 @@ async function init() {
       if (!res.ok) {
         // revertir estado si falla
         e.target.checked = !nuevoValor;
+        if (toggleWrapper) toggleWrapper.classList.toggle('activo', !nuevoValor);
         document.getElementById('estado-bot').textContent = !nuevoValor ? 'Bot Activo' : 'Pausado';
         console.error('Error al actualizar botActivo');
       } else {
@@ -2531,6 +2538,7 @@ async function init() {
       }
     } catch (error) {
       e.target.checked = !nuevoValor;
+      if (toggleWrapper) toggleWrapper.classList.toggle('activo', !nuevoValor);
       document.getElementById('estado-bot').textContent = !nuevoValor ? 'Bot Activo' : 'Pausado';
       console.error('Error de red al actualizar botActivo:', error);
     }

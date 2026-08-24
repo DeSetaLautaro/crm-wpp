@@ -331,11 +331,11 @@ body {
   box-shadow: none;
 }
 
-.toggle input:checked + .slider {
+.toggle.activo .slider {
   background: #bbf7d0; /* verde más presente = encendido */
 }
 
-.toggle input:checked + .slider::before {
+.toggle.activo .slider::before {
   transform: translateX(24px);
   background: #22c55e; /* verde brillante profesional = encendido */
 }
@@ -1830,7 +1830,7 @@ body.modo-login #app {
     height: 22px;
   }
 
-  .toggle input:checked + .slider::before {
+  .toggle.activo .slider::before {
     transform: translateX(18px);
   }
 

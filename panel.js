@@ -515,8 +515,10 @@ function renderChatActivo() {
     }).join('');
   }
 
-  toggle.checked = conv.botActivo;
+  toggle.checked = conv.botActivo === true;
   estadoBot.textContent = conv.botActivo ? 'Bot Activo' : 'Pausado';
+  estadoBot.classList.remove('estado-activo', 'estado-pausado');
+  estadoBot.classList.add(conv.botActivo ? 'estado-activo' : 'estado-pausado');
 
   // ===== Candado de cliente bloqueado =====
   let lockInd = document.getElementById('bloqueado-indicador');
@@ -2496,7 +2498,10 @@ async function init() {
   // Toggle del bot (actualiza botActivo en la empresa)
   document.getElementById('toggle-bot').addEventListener('change', async (e) => {
     const nuevoValor = e.target.checked;
-    document.getElementById('estado-bot').textContent = nuevoValor ? 'Bot Activo' : 'Pausado';
+    const estadoBotEl = document.getElementById('estado-bot');
+    estadoBotEl.textContent = nuevoValor ? 'Bot Activo' : 'Pausado';
+    estadoBotEl.classList.remove('estado-activo', 'estado-pausado');
+    estadoBotEl.classList.add(nuevoValor ? 'estado-activo' : 'estado-pausado');
 
     const token = localStorage.getItem('token') || '';
     try {

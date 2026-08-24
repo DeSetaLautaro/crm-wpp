@@ -857,15 +857,12 @@ const obtenerConfig = async (req, res) => {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
 
-    // Si la empresa no tiene horarios cargados, importar los del Usuario (solo la primera vez)
+    // Si la empresa no tiene horarios cargados, usamos los del Usuario como referencia visual
     let horarios = empresa.horariosEstructurados || [];
     if ((!horarios || horarios.length === 0) && empresa.usuarioAppId) {
       const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
       if (usuario && Array.isArray(usuario.horariosEstructurados) && usuario.horariosEstructurados.length > 0) {
         horarios = usuario.horariosEstructurados;
-        await Empresa.findByIdAndUpdate(empresaId, {
-          $set: { horariosEstructurados: horarios }
-        });
       }
     }
 

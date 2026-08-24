@@ -69,20 +69,34 @@ function generarAtajosAutomaticos(usuario) {
 
   // Métodos de pago (efectivo, transferencia con alias/CVU, etc.)
   if (usuario.metodosPago && Array.isArray(usuario.metodosPago) && usuario.metodosPago.length > 0) {
-    const metodos = usuario.metodosPago.map(m => {
-      let texto = m.tipo || '';
-      if (m.tipo === 'transferencia' && m.alias) {
-        texto += ` (alias/CVU: ${m.alias})`;
-      }
-      if (m.titular) {
-        texto += ` - ${m.titular}`;
-      }
-      return texto;
-    }).filter(Boolean).join(', ');
-    atajos.push({
-      comando: '/pago',
-      respuesta: `Aceptamos ${metodos}`
-    });
+    const transferencia = usuario.metodosPago.find(m => m.tipo === 'transferencia');
+    const tieneEfectivo = usuario.metodosPago.some(m => m.tipo === 'efectivo');
+    const tieneTarjeta = usuario.metodosPago.some(m => m.tipo === 'tarjeta');
+
+    const lineas = [];
+
+    const tipos = [];
+    if (tieneEfectivo) tipos.push('efectivo');
+    if (transferencia) tipos.push('transferencia');
+    if (tieneTarjeta) tipos.push('tarjeta');
+    if (tipos.length > 0) {
+      lineas.push(`Aceptamos ${tipos.join(' y ')}.`);
+    }
+
+    if (transferencia?.alias) {
+      lineas.push(`Alias/CVU: ${transferencia.alias}`);
+    }
+
+    if (transferencia?.titular) {
+      lineas.push(`A nombre de ${transferencia.titular}`);
+    }
+
+    if (lineas.length > 0) {
+      atajos.push({
+        comando: '/pago',
+        respuesta: lineas.join('\n')
+      });
+    }
   }
 
   return atajos;

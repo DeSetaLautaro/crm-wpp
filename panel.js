@@ -110,6 +110,11 @@ let guardandoBienvenida = false;
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
+let fotoCropArrastrando = false;
+let fotoCropOffsetX = 0;
+let fotoCropOffsetY = 0;
+let fotoCropMaxLeft = 0;
+let fotoCropMaxTop = 0;
 
 // ===== Helpers =====
 function getContactoPorId(id) {
@@ -899,9 +904,13 @@ function abrirModalFoto(file) {
 
   const reader = new FileReader();
   reader.onload = function(e) {
+    img.onload = () => {
+      inicializarRecorteFoto();
+    };
     img.src = e.target.result;
     img.style.objectPosition = '50% 50%';
     modal.classList.remove('hidden');
+    requestAnimationFrame(() => inicializarRecorteFoto());
   };
   reader.readAsDataURL(file);
   const input = document.getElementById('config-foto');
@@ -921,7 +930,17 @@ function cerrarModalFoto() {
 
 async function aceptarFoto() {
   if (!fotoCropFile) return;
-  await guardarFotoPerfil(fotoCropFile, '50% 50%');
+  try {
+    const blob = await generarRecorteCircular();
+    if (blob) {
+      await guardarFotoPerfil(blob, '50% 50%');
+    } else {
+      await guardarFotoPerfil(fotoCropFile, '50% 50%');
+    }
+  } catch (err) {
+    console.error('Error al generar recorte:', err);
+    await guardarFotoPerfil(fotoCropFile, '50% 50%');
+  }
   cerrarModalFoto();
 }
 
@@ -931,12 +950,150 @@ function previewFoto() {
   abrirModalFoto(input.files[0]);
 }
 
+function inicializarRecorteFoto() {
+  const area = document.getElementById('crop-area');
+  const circle = document.getElementById('crop-circulo');
+  const img = document.getElementById('crop-imagen');
+  if (!area || !circle || !img || !img.naturalWidth || !area.clientWidth) return;
+
+  const imgNatW = img.naturalWidth;
+  const imgNatH = img.naturalHeight;
+  const areaW = area.clientWidth;
+  const areaH = area.clientHeight;
+
+  const scale = Math.min(areaW / imgNatW, areaH / imgNatH);
+  const dispW = imgNatW * scale;
+  const dispH = imgNatH * scale;
+  const imgX = (areaW - dispW) / 2;
+  const imgY = (areaH - dispH) / 2;
+
+  const D = Math.min(dispW, dispH) * 0.8;
+  circle.style.width = D + 'px';
+  circle.style.height = D + 'px';
+  circle.style.left = (imgX + (dispW - D) / 2) + 'px';
+  circle.style.top = (imgY + (dispH - D) / 2) + 'px';
+}
+
+function generarRecorteCircular() {
+  return new Promise((resolve, reject) => {
+    const area = document.getElementById('crop-area');
+    const circle = document.getElementById('crop-circulo');
+    const img = document.getElementById('crop-imagen');
+    if (!area || !circle || !img) return resolve(null);
+
+    const imgNatW = img.naturalWidth;
+    const imgNatH = img.naturalHeight;
+    const areaRect = area.getBoundingClientRect();
+    const circleRect = circle.getBoundingClientRect();
+
+    const areaW = area.clientWidth;
+    const areaH = area.clientHeight;
+    const scale = Math.min(areaW / imgNatW, areaH / imgNatH);
+    const dispW = imgNatW * scale;
+    const dispH = imgNatH * scale;
+    const imgX = (areaW - dispW) / 2;
+    const imgY = (areaH - dispH) / 2;
+
+    const D = circleRect.width;
+    const relLeft = circleRect.left - areaRect.left - imgX;
+    const relTop = circleRect.top - areaRect.top - imgY;
+
+    const centerX = (relLeft + D / 2) / dispW * imgNatW;
+    const centerY = (relTop + D / 2) / dispH * imgNatH;
+    const radius = (D / dispW) * imgNatW;
+
+    const size = Math.max(1, Math.round(radius * 2));
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(
+      img,
+      centerX - radius,
+      centerY - radius,
+      radius * 2,
+      radius * 2,
+      0,
+      0,
+      size,
+      size
+    );
+    ctx.restore();
+
+    canvas.toBlob((blob) => {
+      resolve(blob);
+    }, 'image/png');
+  });
+}
+
 function setupCropFotoEventos() {
   const btnAceptar = document.getElementById('crop-aceptar');
   if (btnAceptar) btnAceptar.addEventListener('click', aceptarFoto);
 
   const btnCancelar = document.getElementById('crop-cancelar');
   if (btnCancelar) btnCancelar.addEventListener('click', cerrarModalFoto);
+
+  const area = document.getElementById('crop-area');
+  const circle = document.getElementById('crop-circulo');
+  if (!area || !circle) return;
+
+  area.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('#crop-circulo')) {
+      e.preventDefault();
+      const rect = area.getBoundingClientRect();
+      const circleRect = circle.getBoundingClientRect();
+      fotoCropOffsetX = e.clientX - circleRect.left;
+      fotoCropOffsetY = e.clientY - circleRect.top;
+      fotoCropArrastrando = true;
+      if (area.setPointerCapture) {
+        try { area.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    }
+  });
+
+  area.addEventListener('pointermove', (e) => {
+    if (!fotoCropArrastrando) return;
+    e.preventDefault();
+    const rect = area.getBoundingClientRect();
+    const D = circle.getBoundingClientRect().width;
+    const img = document.getElementById('crop-imagen');
+    if (!img) return;
+    const imgNatW = img.naturalWidth;
+    const imgNatH = img.naturalHeight;
+    const areaW = area.clientWidth;
+    const areaH = area.clientHeight;
+    const scale = Math.min(areaW / imgNatW, areaH / imgNatH);
+    const dispW = imgNatW * scale;
+    const dispH = imgNatH * scale;
+    const imgX = (areaW - dispW) / 2;
+    const imgY = (areaH - dispH) / 2;
+    const minLeft = imgX;
+    const maxLeft = imgX + dispW - D;
+    const minTop = imgY;
+    const maxTop = imgY + dispH - D;
+
+    const nuevoLeft = e.clientX - rect.left - fotoCropOffsetX;
+    const nuevoTop = e.clientY - rect.top - fotoCropOffsetY;
+
+    circle.style.left = Math.min(maxLeft, Math.max(minLeft, nuevoLeft)) + 'px';
+    circle.style.top = Math.min(maxTop, Math.max(minTop, nuevoTop)) + 'px';
+  });
+
+  const terminarPointer = (e) => {
+    if (!fotoCropArrastrando) return;
+    fotoCropArrastrando = false;
+    if (area.hasPointerCapture && e.pointerId !== undefined) {
+      try { area.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+  };
+
+  area.addEventListener('pointerup', terminarPointer);
+  area.addEventListener('pointercancel', terminarPointer);
 }
 
 function activarEdicionNombre() {

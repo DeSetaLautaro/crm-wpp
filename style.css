@@ -1927,6 +1927,21 @@ body.modo-login #app {
   -webkit-user-drag: none;
 }
 
+.crop-circulo {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);
+  z-index: 2;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: move;
+}
+
 
 .crop-instrucciones {
   font-size: 0.85rem;

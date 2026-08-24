@@ -1,5 +1,5 @@
 const { generarTexto } = require('../services/iaService');
-const { generarTextoConImagen } = require('../services/geminiService');
+const { generarTextoConImagen, generarTextoConAudio } = require('../services/geminiService');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Empresa = require('../models/Empresa');
@@ -284,6 +284,39 @@ const recibirMensaje = async (req, res) => {
             }
           } catch (error) {
             console.error('❌ Error al procesar imagen con Gemini:', error);
+          }
+        }
+      }
+
+      // Si la empresa activó el procesamiento de audios, intentamos transcribirlo con Gemini
+      if (mensaje.type === 'audio' && empresa.procesarAudios === true && accessToken) {
+        const mediaId = mensaje.audio?.id;
+        if (mediaId) {
+          try {
+            // 1. Obtener la URL de descarga
+            const mediaResp = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+              headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const mediaJson = await mediaResp.json();
+            if (mediaJson.url) {
+              // 2. Descargar el archivo binario
+              const audioResp = await fetch(mediaJson.url, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+              });
+              const audioBuffer = Buffer.from(await audioResp.arrayBuffer());
+              const mimeType = mediaJson.mime_type || 'audio/ogg';
+              const base64 = audioBuffer.toString('base64');
+
+              // 3. Enviarlo a Gemini para transcribir y responder
+              const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. El cliente envió un mensaje de voz. Transcribí el audio y respondé de forma breve y amable, continuando la conversación. Si el mensaje contiene un pedido o una consulta, respondé en consecuencia.`;
+              const respuestaIA = await generarTextoConAudio(promptAudio, mimeType, base64);
+              if (respuestaIA) {
+                respuestaAutomatica = respuestaIA;
+                console.log('✅ Audio transcrito y procesado con Gemini');
+              }
+            }
+          } catch (error) {
+            console.error('❌ Error al procesar audio con Gemini:', error);
           }
         }
       }
@@ -934,6 +967,9 @@ const actualizarConfig = async (req, res) => {
     if (typeof req.body.procesarImagenes === 'boolean') {
       updates.procesarImagenes = req.body.procesarImagenes;
     }
+    if (typeof req.body.procesarAudios === 'boolean') {
+      updates.procesarAudios = req.body.procesarAudios;
+    }
 
     if (req.body.fotoPosicion && typeof req.body.fotoPosicion === 'string') {
       updates.fotoPosicion = req.body.fotoPosicion.trim();
@@ -1013,7 +1049,8 @@ const obtenerConfig = async (req, res) => {
         fotoPosicion: empresa.fotoPosicion || '50% 50%',
         horariosEstructurados: horarios,
         abierto: empresa.abierto !== false,
-        procesarImagenes: empresa.procesarImagenes === true
+        procesarImagenes: empresa.procesarImagenes === true,
+        procesarAudios: empresa.procesarAudios === true
       }
     });
   } catch (error) {

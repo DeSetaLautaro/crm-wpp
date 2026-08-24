@@ -819,6 +819,11 @@ async function cargarConfiguracion() {
       bienvenidaActual = config.bienvenida || '';
       bienvenidaDisplay.textContent = bienvenidaActual;
     }
+
+    const procesarAudiosCheck = document.getElementById('procesar-audios');
+    if (procesarAudiosCheck) {
+      procesarAudiosCheck.checked = (config.procesarAudios === true);
+    }
   } catch (error) {
     console.error('Error al cargar configuración:', error);
   }
@@ -946,6 +951,26 @@ function initConfigSidebar() {
       e.target.closest('tr')?.remove();
     }
   });
+
+  // Guardar preferencia de audios
+  const btnGuardarAudios = document.getElementById('btn-guardar-audios');
+  if (btnGuardarAudios) {
+    btnGuardarAudios.addEventListener('click', async () => {
+      const token = localStorage.getItem('token') || '';
+      const procesarAudios = document.getElementById('procesar-audios')?.checked || false;
+      try {
+        const res = await fetch('/api/whatsapp/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ procesarAudios })
+        });
+        if (!res.ok) throw new Error('Error al guardar preferencia de audios');
+        alert('Preferencia de audios guardada correctamente');
+      } catch (error) {
+        console.error('Error al guardar preferencia de audios:', error);
+      }
+    });
+  }
 
   // Cargar configuración guardada al abrir la pantalla
   cargarConfiguracion();

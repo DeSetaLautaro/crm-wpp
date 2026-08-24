@@ -70,10 +70,10 @@ async function generarTextoGemini(prompt) {
 }
 
 /**
- * Genera texto multimodal (con imagen) usando Gemini.
+ * Genera texto multimodal (con imagen, audio, etc.) usando Gemini.
  * El parámetro base64 debe ser el contenido del archivo codificado en base64.
  */
-async function generarTextoConImagen(prompt, mimeType, base64) {
+async function generarTextoConArchivo(prompt, mimeType, base64, tipo = 'archivo') {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn('⚠️ No hay GEMINI_API_KEY configurada');
@@ -87,7 +87,7 @@ async function generarTextoConImagen(prompt, mimeType, base64) {
 
   for (const modelo of modelos) {
     try {
-      console.log(`🖼️ Probando modelo Gemini con visión: ${modelo}`);
+      console.log(`🤖 Probando modelo Gemini con ${tipo}: ${modelo}`);
       const model = genAI.getGenerativeModel({ model: modelo });
       const result = await model.generateContent([
         { text: prompt },
@@ -96,12 +96,20 @@ async function generarTextoConImagen(prompt, mimeType, base64) {
       return result.response.text().trim();
     } catch (error) {
       ultimoError = error;
-      console.warn(`⚠️ Modelo ${modelo} falló con imagen: ${error.message}. Probando siguiente...`);
+      console.warn(`⚠️ Modelo ${modelo} falló con ${tipo}: ${error.message}. Probando siguiente...`);
     }
   }
 
-  console.error('❌ Todos los modelos de Gemini fallaron con imagen:', ultimoError?.message || ultimoError);
+  console.error(`❌ Todos los modelos de Gemini fallaron con ${tipo}:`, ultimoError?.message || ultimoError);
   return null;
 }
 
-module.exports = { generarTextoGemini, generarTextoConImagen };
+async function generarTextoConImagen(prompt, mimeType, base64) {
+  return generarTextoConArchivo(prompt, mimeType, base64, 'imagen');
+}
+
+async function generarTextoConAudio(prompt, mimeType, base64) {
+  return generarTextoConArchivo(prompt, mimeType, base64, 'audio');
+}
+
+module.exports = { generarTextoGemini, generarTextoConImagen, generarTextoConAudio };

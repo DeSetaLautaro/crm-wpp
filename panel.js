@@ -133,6 +133,14 @@ let fotoCropMinTranslateX = 0;
 let fotoCropMaxTranslateY = 0;
 let fotoCropMinTranslateY = 0;
 
+// ===== Atajos rápidos para el mensaje =====
+const ATAJOS_RAPIDOS = [
+  { atajo: '/horarios', mensaje: 'Nuestros horarios son de Lunes a Sábados de 10 a 20hs.' },
+  { atajo: '/cbu', mensaje: 'Nuestro CBU es 1234567890, Alias: mi.local' },
+  { atajo: '/envio', mensaje: 'Realizamos envíos a todo el microcentro, consultar tarifa según zona.' }
+];
+let atajosMenuVisible = false;
+
 // ===== Helpers =====
 function getContactoPorId(id) {
   return CONTACTOS.find(c => c._id === id);

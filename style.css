@@ -312,10 +312,10 @@ body {
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background: #EF4444; /* ROJO = apagado */
-  transition: background 0.3s;
+  background: #e5e7eb; /* gris muy suave = apagado */
+  transition: all 0.3s ease;
   border-radius: 9999px;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+  box-shadow: none;
 }
 
 .slider::before {
@@ -325,19 +325,19 @@ body {
   width: 22px;
   left: 3px;
   bottom: 3px;
-  background: #B91C1C; /* círculo rojo oscuro */
-  transition: transform 0.3s, background 0.3s;
+  background: #ef4444; /* rojo suave y mate = apagado */
+  transition: all 0.3s ease;
   border-radius: 50%;
+  box-shadow: none;
 }
 
 .toggle input:checked + .slider {
-  background: #10B981; /* VERDE = activo */
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+  background: #d1fae5; /* verde extra-pálido = encendido */
 }
 
 .toggle input:checked + .slider::before {
   transform: translateX(24px);
-  background: #065F46; /* círculo verde oscuro */
+  background: #16a34a; /* verde clásico profesional = encendido */
 }
 
 #estado-bot {
@@ -347,11 +347,11 @@ body {
 }
 
 #estado-bot.estado-activo {
-  color: #10B981;
+  color: #16a34a;
 }
 
 #estado-bot.estado-pausado {
-  color: #EF4444;
+  color: #ef4444;
 }
 
 .area-mensajes {

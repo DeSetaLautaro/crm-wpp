@@ -12,6 +12,28 @@ const Pedido = require('../models/Pedido');
 const { guardarPedidoConfirmado } = require('./pedidosController');
 const fs = require('fs');
 
+// Prompt por defecto (mismo que estaba hardcodeado, pero con placeholders)
+const PROMPT_IA_DEFAULT = `Sos el asistente virtual de {nombreLocal}. Respondé de forma breve y amable a los clientes.
+
+Estado actual del local: {estadoLocal}.
+
+Reglas obligatorias:
+- SIEMPRE pedí la dirección de entrega completa si todavía no la dio. No confirmes un pedido sin dirección.
+- Preguntá cómo quiere pagar: efectivo o transferencia.
+- No seas insistente con agregar productos. Si el cliente ya pidió o dijo que no quiere nada más, no vuelvas a ofrecerle más cosas.
+- Si no encontrás la información en el catálogo, ofrecé contactar a un humano.
+- Si el local está CERRADO, podés pasar el menú pero aclará de forma amable que no se están tomando pedidos hasta que abran. Igual podés registrar el pedido para cuando abran.
+
+Catálogo actual:
+{menuTexto}
+
+Historial reciente:
+{historialTexto}
+
+Mensaje del cliente: "{mensajeCliente}"
+
+Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si el cliente está por confirmar un pedido y todavía no dio dirección, pedísela sí o sí antes de confirmar.`;
+
 async function procesarCarrito(empresa, conversacion, texto, productos) {
   if (!process.env.GEMINI_API_KEY) return null;
   try {
@@ -550,26 +572,16 @@ JSON:`;
           ? 'ABIERTO'
           : 'CERRADO en este momento';
 
-        const prompt = `Sos el asistente virtual de ${empresa.nombre}. Respondé de forma breve y amable a los clientes.
+        const promptIA = (empresa.promptIA && empresa.promptIA.trim() !== '')
+          ? empresa.promptIA.trim()
+          : PROMPT_IA_DEFAULT;
 
-Estado actual del local: ${estadoLocal}.
-
-Reglas obligatorias:
-- SIEMPRE pedí la dirección de entrega completa si todavía no la dio. No confirmes un pedido sin dirección.
-- Preguntá cómo quiere pagar: efectivo o transferencia.
-- No seas insistente con agregar productos. Si el cliente ya pidió o dijo que no quiere nada más, no vuelvas a ofrecerle más cosas.
-- Si no encontrás la información en el catálogo, ofrecé contactar a un humano.
-- Si el local está CERRADO, podés pasar el menú pero aclará de forma amable que no se están tomando pedidos hasta que abran. Igual podés registrar el pedido para cuando abran.
-
-Catálogo actual:
-${menuTexto}
-
-Historial reciente:
-${historialTexto}
-
-Mensaje del cliente: "${textoMensaje}"
-
-Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si el cliente está por confirmar un pedido y todavía no dio dirección, pedísela sí o sí antes de confirmar.`;
+        const prompt = promptIA
+          .replaceAll('{nombreLocal}', empresa.nombre)
+          .replaceAll('{estadoLocal}', estadoLocal)
+          .replaceAll('{menuTexto}', menuTexto)
+          .replaceAll('{historialTexto}', historialTexto)
+          .replaceAll('{mensajeCliente}', textoMensaje);
 
         respuestaIA = await generarTexto(prompt);
       } catch (err) {
@@ -1126,7 +1138,9 @@ const obtenerConfig = async (req, res) => {
       ok: true,
       config: {
         nombre: empresa.nombre || '',
-        promptIA: empresa.promptIA || '',
+        promptIA: empresa.promptIA && empresa.promptIA.trim() !== ''
+          ? empresa.promptIA
+          : PROMPT_IA_DEFAULT,
         atajos: empresa.atajos || [],
         estado: empresa.estado || '',
         bienvenida: empresa.bienvenida || '',

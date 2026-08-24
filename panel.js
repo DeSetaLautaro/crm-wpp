@@ -933,6 +933,13 @@ async function aceptarFoto() {
   try {
     const blob = await generarRecorteCircular();
     if (blob) {
+      // Vista previa inmediata con el blob recortado (sin esperar al servidor)
+      const previewUrl = URL.createObjectURL(blob);
+      const fotoGrande = document.getElementById('perfil-foto-grande');
+      if (fotoGrande) {
+        fotoGrande.src = previewUrl;
+        fotoGrande.style.objectPosition = '50% 50%';
+      }
       await guardarFotoPerfil(blob, '50% 50%');
     } else {
       await guardarFotoPerfil(fotoCropFile, '50% 50%');
@@ -975,11 +982,18 @@ function inicializarRecorteFoto() {
 }
 
 function generarRecorteCircular() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const area = document.getElementById('crop-area');
     const circle = document.getElementById('crop-circulo');
     const img = document.getElementById('crop-imagen');
     if (!area || !circle || !img) return resolve(null);
+    if (!img.complete || img.naturalWidth === 0) return resolve(null);
+
+    // Si el círculo quedó en su posición inicial por defecto (0,0),
+    // centrarlo automáticamente para que el recorte no quede descuadrado.
+    if (circle.style.left === '' && circle.style.top === '') {
+      inicializarRecorteFoto();
+    }
 
     const imgNatW = img.naturalWidth;
     const imgNatH = img.naturalHeight;
@@ -1006,11 +1020,7 @@ function generarRecorteCircular() {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
-    const ctx = canvas.getContext('2d', { alpha: false });
-
-    // Fondo opaco para evitar transparencias en el PNG exportado
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, size, size);
+    const ctx = canvas.getContext('2d');
 
     ctx.drawImage(
       img,
@@ -1024,9 +1034,10 @@ function generarRecorteCircular() {
       size
     );
 
+    // Exportar como JPEG opaco para evitar cualquier transparencia residual
     canvas.toBlob((blob) => {
       resolve(blob);
-    }, 'image/png');
+    }, 'image/jpeg', 0.92);
   });
 }
 

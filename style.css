@@ -1428,7 +1428,7 @@ body.modo-login #app {
   height: 120px;
   border-radius: 50%;
   overflow: hidden;
-  background: #E5E7EB;
+  background: #fff;
   flex-shrink: 0;
 }
 
@@ -1439,9 +1439,7 @@ body.modo-login #app {
   object-fit: cover;
   object-position: center;
   display: block;
-  background: #E5E7EB;
-  border-radius: 50%;
-  overflow: hidden;
+  background: #fff;
 }
 
 .perfil-foto-cambiar {

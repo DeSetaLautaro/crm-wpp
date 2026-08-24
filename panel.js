@@ -1008,10 +1008,6 @@ function generarRecorteCircular() {
     canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-    ctx.clip();
     ctx.drawImage(
       img,
       centerX - radius,
@@ -1023,7 +1019,6 @@ function generarRecorteCircular() {
       size,
       size
     );
-    ctx.restore();
 
     canvas.toBlob((blob) => {
       resolve(blob);

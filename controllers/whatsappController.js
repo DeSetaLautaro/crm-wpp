@@ -288,36 +288,46 @@ const recibirMensaje = async (req, res) => {
         }
       }
 
+      // Debug temporal para audios
+      console.log('🎵 DEBUG AUDIO:', {
+        type: mensaje.type,
+        tieneAudioId: !!mensaje.audio?.id,
+        tieneDocumentId: !!mensaje.document?.id,
+        procesarAudios: empresa.procesarAudios,
+        tieneToken: !!accessToken
+      });
+
       // Si la empresa activó el procesamiento de audios, intentamos transcribirlo con Gemini
-      if (mensaje.type === 'audio' && empresa.procesarAudios === true && accessToken) {
-        const mediaId = mensaje.audio?.id;
-        if (mediaId) {
-          try {
-            // 1. Obtener la URL de descarga
-            const mediaResp = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+      const mediaIdMultimedia = mensaje.audio?.id || mensaje.document?.id;
+      if (mediaIdMultimedia && empresa.procesarAudios === true && accessToken) {
+        try {
+          // 1. Obtener la URL de descarga
+          const mediaResp = await fetch(`https://graph.facebook.com/v19.0/${mediaIdMultimedia}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+          });
+          const mediaJson = await mediaResp.json();
+          const mimeTypeDetectado = mediaJson.mime_type || (mensaje.type === 'audio' ? 'audio/ogg' : 'application/octet-stream');
+          const esArchivoAudio = mimeTypeDetectado.startsWith('audio/') || mensaje.type === 'audio';
+
+          if (esArchivoAudio && mediaJson.url) {
+            // 2. Descargar el archivo binario
+            const audioResp = await fetch(mediaJson.url, {
               headers: { 'Authorization': `Bearer ${accessToken}` }
             });
-            const mediaJson = await mediaResp.json();
-            if (mediaJson.url) {
-              // 2. Descargar el archivo binario
-              const audioResp = await fetch(mediaJson.url, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-              });
-              const audioBuffer = Buffer.from(await audioResp.arrayBuffer());
-              const mimeType = mediaJson.mime_type || 'audio/ogg';
-              const base64 = audioBuffer.toString('base64');
+            const audioBuffer = Buffer.from(await audioResp.arrayBuffer());
+            const mimeType = mimeTypeDetectado;
+            const base64 = audioBuffer.toString('base64');
 
-              // 3. Enviarlo a Gemini para transcribir y responder
-              const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. El cliente envió un mensaje de voz. Transcribí el audio y respondé de forma breve y amable, continuando la conversación. Si el mensaje contiene un pedido o una consulta, respondé en consecuencia.`;
-              const respuestaIA = await generarTextoConAudio(promptAudio, mimeType, base64);
-              if (respuestaIA) {
-                respuestaAutomatica = respuestaIA;
-                console.log('✅ Audio transcrito y procesado con Gemini');
-              }
+            // 3. Enviarlo a Gemini para transcribir y responder
+            const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. El cliente envió un mensaje de voz. Transcribí el audio y respondé de forma breve y amable, continuando la conversación. Si el mensaje contiene un pedido o una consulta, respondé en consecuencia.`;
+            const respuestaIA = await generarTextoConAudio(promptAudio, mimeType, base64);
+            if (respuestaIA) {
+              respuestaAutomatica = respuestaIA;
+              console.log('✅ Audio transcrito y procesado con Gemini');
             }
-          } catch (error) {
-            console.error('❌ Error al procesar audio con Gemini:', error);
           }
+        } catch (error) {
+          console.error('❌ Error al procesar audio con Gemini:', error);
         }
       }
 

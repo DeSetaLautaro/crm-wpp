@@ -71,6 +71,10 @@ const EmpresaSchema = new Schema(
       type: Boolean,
       default: true
     },
+    procesarImagenes: {
+      type: Boolean,
+      default: false
+    },
 
     // Contador de conversaciones iniciadas en las últimas 24 horas
     conversacionesUsadas24h: {

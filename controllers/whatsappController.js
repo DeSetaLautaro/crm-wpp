@@ -1,4 +1,5 @@
 const { generarTexto } = require('../services/iaService');
+const { generarTextoConImagen } = require('../services/geminiService');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const Empresa = require('../models/Empresa');
@@ -249,11 +250,45 @@ const recibirMensaje = async (req, res) => {
 
     // ===== Manejo de mensajes multimedia (imagen, audio, video, etc.) =====
     if (!esTexto) {
-      const respuestaAutomatica = "Disculpá, por el momento mi sistema automático solo puede leer mensajes de texto. Por favor, escribime tu consulta.";
+      let respuestaAutomatica = "Disculpá, por el momento mi sistema automático solo puede leer mensajes de texto. Por favor, escribime tu consulta.";
 
-      // Enviar respuesta al cliente por WhatsApp (si tenemos token)
       const phoneNumberId = metadata?.phone_number_id || whatsappPhoneId;
       const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+
+      // Si la empresa activó el procesamiento de imágenes, intentamos analizarla con Gemini
+      if (mensaje.type === 'image' && empresa.procesarImagenes === true && accessToken) {
+        const mediaId = mensaje.image?.id;
+        if (mediaId) {
+          try {
+            // 1. Obtener la URL de descarga
+            const mediaResp = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+              headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            const mediaJson = await mediaResp.json();
+            if (mediaJson.url) {
+              // 2. Descargar el archivo binario
+              const imgResp = await fetch(mediaJson.url, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+              });
+              const imgBuffer = Buffer.from(await imgResp.arrayBuffer());
+              const mimeType = mediaJson.mime_type || 'image/jpeg';
+              const base64 = imgBuffer.toString('base64');
+
+              // 3. Enviarlo a Gemini con visión
+              const promptVision = "El cliente de un local de ropa te envió esta imagen. Analizá la imagen y respondé de forma breve y amable. Si es una prenda, preguntá por talle, color o cantidad. Si aparece texto, incluílo.";
+              const respuestaIA = await generarTextoConImagen(promptVision, mimeType, base64);
+              if (respuestaIA) {
+                respuestaAutomatica = respuestaIA;
+                console.log('✅ Imagen procesada con Gemini');
+              }
+            }
+          } catch (error) {
+            console.error('❌ Error al procesar imagen con Gemini:', error);
+          }
+        }
+      }
+
+      // Enviar respuesta al cliente por WhatsApp (si tenemos token)
       if (accessToken) {
         try {
           const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
@@ -896,6 +931,10 @@ const actualizarConfig = async (req, res) => {
       updates.atajos = atajos;
     }
 
+    if (typeof req.body.procesarImagenes === 'boolean') {
+      updates.procesarImagenes = req.body.procesarImagenes;
+    }
+
     if (req.body.fotoPosicion && typeof req.body.fotoPosicion === 'string') {
       updates.fotoPosicion = req.body.fotoPosicion.trim();
     }
@@ -973,7 +1012,8 @@ const obtenerConfig = async (req, res) => {
         fotoPerfil: empresa.fotoPerfil || '',
         fotoPosicion: empresa.fotoPosicion || '50% 50%',
         horariosEstructurados: horarios,
-        abierto: empresa.abierto !== false
+        abierto: empresa.abierto !== false,
+        procesarImagenes: empresa.procesarImagenes === true
       }
     });
   } catch (error) {

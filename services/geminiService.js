@@ -12,9 +12,9 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 // ============================================================
 
 const MODELOS_POR_DEFECTO = [
-  'gemini-3.1-pro-preview',
-  'gemini-3.5-flash',
-  'gemini-3.1-flash-lite'
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-2.0-flash'
 ];
 
 function obtenerModelos() {
@@ -69,4 +69,39 @@ async function generarTextoGemini(prompt) {
   return null;
 }
 
-module.exports = { generarTextoGemini };
+/**
+ * Genera texto multimodal (con imagen) usando Gemini.
+ * El parámetro base64 debe ser el contenido del archivo codificado en base64.
+ */
+async function generarTextoConImagen(prompt, mimeType, base64) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn('⚠️ No hay GEMINI_API_KEY configurada');
+    return null;
+  }
+
+  const modelos = obtenerModelos();
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  let ultimoError = null;
+
+  for (const modelo of modelos) {
+    try {
+      console.log(`🖼️ Probando modelo Gemini con visión: ${modelo}`);
+      const model = genAI.getGenerativeModel({ model: modelo });
+      const result = await model.generateContent([
+        { text: prompt },
+        { inlineData: { data: base64, mimeType } }
+      ]);
+      return result.response.text().trim();
+    } catch (error) {
+      ultimoError = error;
+      console.warn(`⚠️ Modelo ${modelo} falló con imagen: ${error.message}. Probando siguiente...`);
+    }
+  }
+
+  console.error('❌ Todos los modelos de Gemini fallaron con imagen:', ultimoError?.message || ultimoError);
+  return null;
+}
+
+module.exports = { generarTextoGemini, generarTextoConImagen };

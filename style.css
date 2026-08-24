@@ -1965,6 +1965,14 @@ body.modo-login #app {
   margin-bottom: 12px;
 }
 
+.perfil-bienvenida-ayuda {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  margin-top: 4px;
+  width: 100%;
+  text-align: left;
+}
+
 .crop-botones {
   display: flex;
   gap: 8px;

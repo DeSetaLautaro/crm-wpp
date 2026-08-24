@@ -771,7 +771,7 @@ async function cargarConfiguracion() {
     const bienvenidaDisplay = document.getElementById('perfil-bienvenida-display');
     if (bienvenidaDisplay) {
       bienvenidaActual = config.bienvenida || '';
-      bienvenidaDisplay.textContent = bienvenidaActual || 'Sin mensaje de bienvenida';
+      bienvenidaDisplay.textContent = bienvenidaActual;
     }
   } catch (error) {
     console.error('Error al cargar configuración:', error);
@@ -1397,7 +1397,7 @@ async function guardarBienvenidaDesdePerfil() {
 
       // Actualizar estado global y texto en la interfaz
       bienvenidaActual = valorNuevo;
-      if (display) display.textContent = valorNuevo || 'Sin mensaje de bienvenida';
+      if (display) display.textContent = valorNuevo;
     } catch (error) {
       console.error('Error al guardar bienvenida:', error);
       // Si falla, revertimos el input al valor anterior

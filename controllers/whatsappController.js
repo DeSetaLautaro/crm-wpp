@@ -318,12 +318,17 @@ const recibirMensaje = async (req, res) => {
             const mimeType = mimeTypeDetectado;
             const base64 = audioBuffer.toString('base64');
 
-            // 3. Enviarlo a Gemini para transcribir y responder
-            const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. El cliente envió un mensaje de voz. Transcribí el audio y respondé de forma breve y amable, continuando la conversación. Si el mensaje contiene un pedido o una consulta, respondé en consecuencia.`;
+            // 3. Enviarlo a Gemini para procesar el audio y responder
+            const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. Un cliente te envió un mensaje de voz. Escuchá el audio y respondé DIRECTAMENTE al cliente, de forma breve y amable, continuando la conversación.
+
+Reglas:
+- NO incluyas la transcripción del audio en tu respuesta.
+- NO uses títulos ni etiquetas como "Transcripción:", "Respuesta:", "Bot:", etc.
+- Respondé SOLO con el mensaje final que se le enviará al cliente por WhatsApp.`;
             const respuestaIA = await generarTextoConAudio(promptAudio, mimeType, base64);
             if (respuestaIA) {
               respuestaAutomatica = respuestaIA;
-              console.log('✅ Audio transcrito y procesado con Gemini');
+              console.log('✅ Audio procesado con Gemini');
             }
           }
         } catch (error) {

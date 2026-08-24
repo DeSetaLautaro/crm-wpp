@@ -205,7 +205,7 @@ const recibirMensaje = async (req, res) => {
     
     // Buscar el Usuario que posee la empresa para obtener sus platos
     const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
-    const productos = usuario?.platos || [];
+    const productos = (usuario?.platos || []).filter(p => p.disponible !== false);
 
     let contacto = await Cliente.findOne({ empresaId: empresa._id, telefono: telefonoCliente });
     if (!contacto) {

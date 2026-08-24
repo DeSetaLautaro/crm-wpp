@@ -694,7 +694,10 @@ async function actualizarPerfilWhatsApp(empresa, estado, profilePictureHandle) {
 
   const resp = await fetch(url, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify(payload)
   });
   if (!resp.ok) {

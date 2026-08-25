@@ -92,7 +92,8 @@ const usuarioSchema = new mongoose.Schema({
     costoCicloActualUsd: { type: Number, default: 0 },
     fechaCicloFacturacion: { type: Date, default: Date.now },
     costoPorConversacion: { type: Number, default: 0.035 },
-    monederoBloqueado: { type: Boolean, default: false }
+    monederoBloqueado: { type: Boolean, default: false },
+    avisoEnviado: { type: Boolean, default: false }
 });
 
 // Hashear el PIN antes de guardar

@@ -225,7 +225,7 @@ async function incrementarContadorConversaciones(empresaId, conversacionId) {
   }
 }
 
-async function descontarSaldoPorCosto(usuario, costo, empresaId) {
+async function descontarSaldoPorCosto(usuario, costo, empresaId, io) {
   if (!usuario) return { ok: false, error: 'Usuario no encontrado' };
   if (usuario.monederoBloqueado) return { ok: false, error: 'Monedero bloqueado' };
 
@@ -240,7 +240,9 @@ async function descontarSaldoPorCosto(usuario, costo, empresaId) {
   }
 
   const tolerancia = usuario.deudaToleradaUsd || 5;
+  const ratioDeuda = tolerancia > 0 ? deuda / tolerancia : 0;
   let bloqueado = false;
+
   if (deuda > tolerancia) {
     bloqueado = true;
     await Empresa.updateMany(
@@ -248,6 +250,29 @@ async function descontarSaldoPorCosto(usuario, costo, empresaId) {
       { $set: { botActivo: false } }
     );
     console.log(`🚫 Monedero bloqueado para usuario ${usuario._id} por deuda de ${deuda.toFixed(2)} USD`);
+
+    if (io) {
+      io.to(empresaId.toString()).emit('monedero-bloqueado', {
+        usuarioId: usuario._id,
+        deuda,
+        tolerancia
+      });
+    }
+  } else if (ratioDeuda >= 0.7 && !usuario.avisoEnviado) {
+    if (io) {
+      io.to(empresaId.toString()).emit('monedero-aviso', {
+        deuda,
+        tolerancia,
+        porcentaje: Math.round(ratioDeuda * 100)
+      });
+    }
+    await Usuario.findByIdAndUpdate(usuario._id, {
+      $set: { avisoEnviado: true }
+    });
+  } else if (ratioDeuda < 0.7 && usuario.avisoEnviado) {
+    await Usuario.findByIdAndUpdate(usuario._id, {
+      $set: { avisoEnviado: false }
+    });
   }
 
   await Usuario.findByIdAndUpdate(usuario._id, {
@@ -1163,7 +1188,8 @@ const enviarMensaje = async (req, res) => {
         const usuarioMonedero = await Usuario.findById(empresa.usuarioAppId);
         if (usuarioMonedero) {
           const costoConv = usuarioMonedero.costoPorConversacion || 0.035;
-          const resultado = await descontarSaldoPorCosto(usuarioMonedero, costoConv, conversacion.empresaId);
+          const ioMonedero = req.app.get('io');
+          const resultado = await descontarSaldoPorCosto(usuarioMonedero, costoConv, conversacion.empresaId, ioMonedero);
           if (resultado.bloqueado) {
             const ioBloqueo = req.app.get('io');
             if (ioBloqueo) {
@@ -1878,7 +1904,8 @@ const cargarSaldoMonedero = async (req, res) => {
         saldoUsd: saldoNuevo,
         deudaPendienteUsd: deudaNueva,
         monederoBloqueado: false,
-        fechaCicloFacturacion: new Date()
+        fechaCicloFacturacion: new Date(),
+        avisoEnviado: false
       }
     });
 

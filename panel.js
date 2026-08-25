@@ -1013,6 +1013,21 @@ async function cargarMonedero() {
       bloqueadoMsg.style.display = mono.monederoBloqueado ? 'block' : 'none';
     }
 
+    const banner = document.getElementById('monedero-aviso-banner');
+    if (banner) {
+      if (mono.monederoBloqueado) {
+        banner.style.display = 'none';
+      } else {
+        const ratio = mono.deudaToleradaUsd > 0 ? (mono.deudaPendienteUsd / mono.deudaToleradaUsd) : 0;
+        if (ratio >= 0.7) {
+          banner.textContent = `⚠️ Cargá saldo: ya usaste el ${Math.round(ratio * 100)}% de tu fiado.`;
+          banner.style.display = 'block';
+        } else {
+          banner.style.display = 'none';
+        }
+      }
+    }
+
     const btnCargar = document.getElementById('monedero-cargar-btn');
     if (btnCargar && !btnCargar.dataset.listener) {
       btnCargar.dataset.listener = 'true';
@@ -2250,6 +2265,11 @@ function setupSocketListeners() {
     const maxEl = document.getElementById('uso-conversaciones-max');
     if (maxEl) maxEl.textContent = payload.maximo;
     const mensaje = `⚠️ Llegaste al límite diario de conversaciones iniciadas (${payload.maximo}).\n\nEstás usando ${payload.usados}. A partir de aquí, cada conversación nueva tendrá costo adicional de Meta.`;
+    alert(mensaje);
+  });
+
+  socket.on('monedero-aviso', (payload) => {
+    const mensaje = `⚠️ Estás usando ${payload.porcentaje}% de tu límite de fiado ($${payload.deuda.toFixed(2)} de $${payload.tolerancia.toFixed(2)}).\n\nCargá saldo para evitar que el bot se pause automáticamente.`;
     alert(mensaje);
   });
 }

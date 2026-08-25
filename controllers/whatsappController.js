@@ -225,6 +225,42 @@ async function incrementarContadorConversaciones(empresaId, conversacionId) {
   }
 }
 
+async function descontarSaldoPorCosto(usuario, costo, empresaId) {
+  if (!usuario) return { ok: false, error: 'Usuario no encontrado' };
+  if (usuario.monederoBloqueado) return { ok: false, error: 'Monedero bloqueado' };
+
+  let saldo = usuario.saldoUsd || 0;
+  let deuda = usuario.deudaPendienteUsd || 0;
+
+  if (saldo >= costo) {
+    saldo -= costo;
+  } else {
+    deuda += (costo - saldo);
+    saldo = 0;
+  }
+
+  const tolerancia = usuario.deudaToleradaUsd || 5;
+  let bloqueado = false;
+  if (deuda > tolerancia) {
+    bloqueado = true;
+    await Empresa.updateMany(
+      { usuarioAppId: usuario._id.toString() },
+      { $set: { botActivo: false } }
+    );
+    console.log(`🚫 Monedero bloqueado para usuario ${usuario._id} por deuda de ${deuda.toFixed(2)} USD`);
+  }
+
+  await Usuario.findByIdAndUpdate(usuario._id, {
+    $set: {
+      saldoUsd: saldo,
+      deudaPendienteUsd: deuda,
+      monederoBloqueado: bloqueado
+    }
+  });
+
+  return { ok: true, saldo, deuda, bloqueado };
+}
+
 const obtenerUsoConversaciones = async (req, res) => {
   try {
     const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
@@ -1121,6 +1157,28 @@ const enviarMensaje = async (req, res) => {
           });
         }
       }
+
+      // ===== MONEDERO: descuento por conversación iniciada por el negocio =====
+      try {
+        const usuarioMonedero = await Usuario.findById(empresa.usuarioAppId);
+        if (usuarioMonedero) {
+          const costoConv = usuarioMonedero.costoPorConversacion || 0.035;
+          const resultado = await descontarSaldoPorCosto(usuarioMonedero, costoConv, conversacion.empresaId);
+          if (resultado.bloqueado) {
+            const ioBloqueo = req.app.get('io');
+            if (ioBloqueo) {
+              ioBloqueo.to(empresaIdStr).emit('monedero-bloqueado', {
+                usuarioId: usuarioMonedero._id,
+                deuda: resultado.deuda,
+                tolerancia: usuarioMonedero.deudaToleradaUsd || 5
+              });
+            }
+          }
+        }
+      } catch (errorWal) {
+        console.error('Error al descontar saldo del monedero:', errorWal);
+      }
+      // ===============================================================
     }
 
     const nuevoMensaje = await Mensaje.create({
@@ -1763,6 +1821,88 @@ const desbloquearCliente = async (req, res) => {
   }
 };
 
+const obtenerMonedero = async (req, res) => {
+  try {
+    const usuario = await Usuario.findById(req.usuario.id).lean();
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    const empresas = await Empresa.find({ usuarioAppId: usuario._id.toString() }).lean();
+    const costoTotal = usuario.costoCicloActualUsd || 0;
+    const saldo = usuario.saldoUsd || 0;
+    const deuda = usuario.deudaPendienteUsd || 0;
+    const tolerancia = usuario.deudaToleradaUsd || 5;
+
+    return res.json({
+      ok: true,
+      monedero: {
+        saldoUsd: saldo,
+        costoUsdCiclo: costoTotal,
+        deudaPendienteUsd: deuda,
+        deudaToleradaUsd: tolerancia,
+        saldoRestanteUsd: (saldo + Math.max(0, tolerancia - deuda)).toFixed(4),
+        monederoBloqueado: usuario.monederoBloqueado || false,
+        fechaCicloFacturacion: usuario.fechaCicloFacturacion,
+        empresas: empresas.map(e => ({ nombre: e.nombre, costo: e.metaCostoTotal || 0 }))
+      }
+    });
+  } catch (error) {
+    console.error('Error al obtener monedero:', error);
+    return res.status(500).json({ error: 'Error interno al obtener monedero' });
+  }
+};
+
+const cargarSaldoMonedero = async (req, res) => {
+  try {
+    const { montoUsd, usuariodId } = req.body || {};
+    const usuarioId = usuariodId || req.usuario.id;
+    const monto = parseFloat(montoUsd);
+    if (!monto || isNaN(monto) || monto <= 0) {
+      return res.status(400).json({ error: 'Monto inválido' });
+    }
+
+    const usuario = await Usuario.findById(usuarioId);
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    let deudaNueva = usuario.deudaPendienteUsd || 0;
+    let saldoNuevo = usuario.saldoUsd || 0;
+    let restante = monto;
+    if (deudaNueva > 0) {
+      const pagoDeuda = Math.min(deudaNueva, restante);
+      deudaNueva -= pagoDeuda;
+      restante -= pagoDeuda;
+    }
+    saldoNuevo += restante;
+
+    await Usuario.findByIdAndUpdate(usuarioId, {
+      $set: {
+        saldoUsd: saldoNuevo,
+        deudaPendienteUsd: deudaNueva,
+        monederoBloqueado: false,
+        fechaCicloFacturacion: new Date()
+      }
+    });
+
+    await Empresa.updateMany(
+      { usuarioAppId: usuarioId.toString() },
+      { $set: { botActivo: true } }
+    );
+
+    return res.json({
+      ok: true,
+      monedero: {
+        saldoUsd: saldoNuevo,
+        deudaPendienteUsd: deudaNueva,
+        deudaToleradaUsd: usuario.deudaToleradaUsd || 5,
+        monederoBloqueado: false
+      },
+      message: 'Saldo cargado correctamente'
+    });
+  } catch (error) {
+    console.error('Error al cargar saldo:', error);
+    return res.status(500).json({ error: 'Error interno al cargar saldo' });
+  }
+};
+
 module.exports = {
   verificarFirmaMeta,
   verificarWebhook,
@@ -1779,6 +1919,8 @@ module.exports = {
   eliminarNota,
   bloquearCliente,
   desbloquearCliente,
+  obtenerMonedero,
+  cargarSaldoMonedero,
   actualizarCostosManual,
   actualizarConfig,
   obtenerUsoConversaciones,

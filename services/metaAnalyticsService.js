@@ -1,4 +1,5 @@
 const Empresa = require('../models/Empresa');
+const Usuario = require('../models/usuario');
 
 async function obtenerWabaId(empresa) {
   // Si ya lo tenemos guardado, lo usamos
@@ -47,13 +48,22 @@ async function actualizarCostosEmpresa(empresa) {
   if (!wabaId) return null;
 
   const token = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
-  // Últimos 30 días para tener un panorama
-  const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  const end = new Date().toISOString().split('T')[0];
 
-  const url = `https://graph.facebook.com/v19.0/${wabaId}/analytics?start=${start}&end=${end}&granularity=DAY&metric_types=CONVERSATION&conversation_types=BUSINESS_INITIATED,USER_INITIATED`;
+  // Tomar la fecha de inicio del ciclo de facturación del usuario dueño
+  const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
+  if (!usuario) {
+    console.warn(`⚠️ Usuario no encontrado para empresa ${empresa.nombre}`);
+    return null;
+  }
+
+  const fechaInicio = usuario.fechaCicloFacturacion || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const start = Math.floor(new Date(fechaInicio).getTime() / 1000);
+  const end = Math.floor(Date.now() / 1000);
+
+  const url = `https://graph.facebook.com/v19.0/${wabaId}?fields=conversation_analytics.start(${start}).end(${end}).granularity(DAY).metric_types(COST).conversation_types(BUSINESS_INITIATED,USER_INITIATED)`;
 
   console.log(`🌐 Llamando a Meta analytics con URL: ${url}`);
+
   const resp = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
@@ -67,14 +77,19 @@ async function actualizarCostosEmpresa(empresa) {
   const data = await resp.json();
   console.log('📥 Respuesta cruda de Meta analytics:', JSON.stringify(data).slice(0, 1000));
 
-  if (!data || !Array.isArray(data.data)) {
-    console.warn('⚠️ Analytics de Meta sin el formato esperado. Respuesta cruda:', JSON.stringify(data));
-    return null;
-  }
+  const analytics = data?.conversation_analytics?.data || data?.data || [];
 
-  const costoTotal = data.data.reduce((acc, d) => {
-    return acc + (d.conversation_costs?.reduce((s, c) => s + (parseFloat(c.cost) || 0), 0) || 0);
-  }, 0) || 0;
+  let costoTotal = 0;
+  for (const item of analytics) {
+    if (typeof item.cost === 'number' || typeof item.cost === 'string') {
+      costoTotal += parseFloat(item.cost) || 0;
+    } else if (item.cost && typeof item.cost === 'object' && item.cost.total !== undefined) {
+      costoTotal += parseFloat(item.cost.total) || 0;
+    }
+    if (Array.isArray(item.conversation_costs)) {
+      costoTotal += item.conversation_costs.reduce((s, c) => s + (parseFloat(c.cost) || 0), 0);
+    }
+  }
 
   await Empresa.findByIdAndUpdate(empresa._id, {
     $set: {
@@ -83,20 +98,44 @@ async function actualizarCostosEmpresa(empresa) {
     }
   });
 
-  console.log(`✅ Analytics Meta actualizadas para empresa ${empresa.nombre}: costoTotal=${costoTotal} usd`);
+  console.log(`✅ Analytics Meta actualizadas para empresa ${empresa.nombre}: costoTotal=${costoTotal.toFixed(4)} usd`);
 
   return costoTotal;
 }
 
+// Actualiza el costo total del ciclo para un usuario (suma todas sus líneas)
+async function actualizarCostosUsuario(usuarioId) {
+  const empresas = await Empresa.find({ usuarioAppId: usuarioId.toString() }).lean();
+  let total = 0;
+  for (const empresa of empresas) {
+    const costo = await actualizarCostosEmpresa(empresa);
+    total += costo || 0;
+  }
+  await Usuario.findByIdAndUpdate(usuarioId, {
+    $set: { costoCicloActualUsd: total }
+  });
+  return total;
+}
+
 async function actualizarCostosDeTodasLasEmpresas() {
   const empresas = await Empresa.find({});
+  const usuariosSet = new Set();
   for (const empresa of empresas) {
     try {
       await actualizarCostosEmpresa(empresa);
+      if (empresa.usuarioAppId) usuariosSet.add(empresa.usuarioAppId.toString());
     } catch (e) {
       console.error(`Error con empresa ${empresa.nombre}:`, e.message);
     }
   }
+
+  for (const userId of usuariosSet) {
+    try {
+      await actualizarCostosUsuario(userId);
+    } catch (e) {
+      console.error(`Error actualizando usuario ${userId}:`, e.message);
+    }
+  }
 }
 
-module.exports = { actualizarCostosEmpresa, actualizarCostosDeTodasLasEmpresas };
+module.exports = { actualizarCostosEmpresa, actualizarCostosUsuario, actualizarCostosDeTodasLasEmpresas };

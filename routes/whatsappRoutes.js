@@ -38,6 +38,8 @@ const {
   eliminarNota,
   bloquearCliente,
   desbloquearCliente,
+  obtenerMonedero,
+  cargarSaldoMonedero,
   actualizarCostosManual,
   actualizarConfig,
   obtenerUsoConversaciones,
@@ -98,6 +100,10 @@ router.get('/config', auth, obtenerConfig);
 
 // Actualizar configuración general (foto, estado, prompt y atajos)
 router.put('/config', auth, upload.single('foto'), actualizarConfig);
+
+// ===== Monedero =====
+router.get('/monedero', auth, obtenerMonedero);
+router.post('/admin/monedero/cargar', auth, cargarSaldoMonedero);
 
 module.exports = router;
 

@@ -83,7 +83,16 @@ const usuarioSchema = new mongoose.Schema({
     platos: [platoSchema],
     
     // 👇 ¡LO NUEVO! La lista de grupos de toppings
-    gruposToppings: [grupoToppingSchema]
+    gruposToppings: [grupoToppingSchema],
+
+    // ===== Monedero / Sistema de pagos =====
+    saldoUsd: { type: Number, default: 0 },
+    deudaToleradaUsd: { type: Number, default: 5 },
+    deudaPendienteUsd: { type: Number, default: 0 },
+    costoCicloActualUsd: { type: Number, default: 0 },
+    fechaCicloFacturacion: { type: Date, default: Date.now },
+    costoPorConversacion: { type: Number, default: 0.035 },
+    monederoBloqueado: { type: Boolean, default: false }
 });
 
 // Hashear el PIN antes de guardar

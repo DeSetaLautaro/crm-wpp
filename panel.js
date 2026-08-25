@@ -951,6 +951,9 @@ async function cargarPagos() {
   } catch (error) {
     console.error('Error al cargar pagos:', error);
   }
+
+  // Cargar datos del monedero
+  await cargarMonedero();
 }
 
 async function actualizarCostosManual() {
@@ -980,6 +983,68 @@ async function actualizarCostosManual() {
     if (estadoEl) estadoEl.textContent = 'Error al actualizar costos';
   } finally {
     if (btn) btn.disabled = false;
+  }
+}
+
+async function cargarMonedero() {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/monedero', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const mono = data.monedero || {};
+
+    const saldoEl = document.getElementById('monedero-saldo');
+    if (saldoEl) saldoEl.textContent = (mono.saldoUsd ?? 0).toFixed(2);
+
+    const costoEl = document.getElementById('monedero-costo-ciclo');
+    if (costoEl) costoEl.textContent = (mono.costoUsdCiclo ?? 0).toFixed(2);
+
+    const deudaEl = document.getElementById('monedero-deuda');
+    if (deudaEl) deudaEl.textContent = (mono.deudaPendienteUsd ?? 0).toFixed(2);
+
+    const toleranciaEl = document.getElementById('monedero-tolerancia');
+    if (toleranciaEl) toleranciaEl.textContent = (mono.deudaToleradaUsd ?? 5).toFixed(2);
+
+    const bloqueadoMsg = document.getElementById('monedero-bloqueado-msg');
+    if (bloqueadoMsg) {
+      bloqueadoMsg.style.display = mono.monederoBloqueado ? 'block' : 'none';
+    }
+
+    const btnCargar = document.getElementById('monedero-cargar-btn');
+    if (btnCargar && !btnCargar.dataset.listener) {
+      btnCargar.dataset.listener = 'true';
+      btnCargar.addEventListener('click', cargarSaldoMonedero);
+    }
+  } catch (error) {
+    console.error('Error al cargar monedero:', error);
+  }
+}
+
+async function cargarSaldoMonedero() {
+  const token = localStorage.getItem('token') || '';
+  const input = document.getElementById('monedero-cargar-monto');
+  const monto = parseFloat(input?.value || '');
+  if (!monto || isNaN(monto) || monto <= 0) {
+    alert('Ingresá un monto válido');
+    return;
+  }
+  try {
+    const res = await fetch('/api/whatsapp/admin/monedero/cargar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ montoUsd: monto })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al cargar saldo');
+    if (input) input.value = '';
+    alert(data.message || 'Saldo cargado');
+    cargarMonedero();
+  } catch (error) {
+    console.error('Error al cargar saldo:', error);
+    alert('Error al cargar saldo');
   }
 }
 

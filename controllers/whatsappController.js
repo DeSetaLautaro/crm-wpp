@@ -59,45 +59,59 @@ function generarAtajosAutomaticos(usuario) {
   const atajos = [];
   if (!usuario) return atajos;
 
-  // Dirección del local
-  if (usuario.direccion && typeof usuario.direccion === 'string' && usuario.direccion.trim() !== '') {
+  // 1. Dirección del local
+  const direccion = (usuario.direccion || '').trim();
+  if (direccion !== '') {
     atajos.push({
       comando: 'direccion',
-      respuesta: `Nuestro local está en ${usuario.direccion.trim()}`
+      respuesta: `Nuestro local está en ${direccion}`
+    });
+  } else {
+    atajos.push({
+      comando: 'direccion',
+      respuesta: 'Nuestra dirección aún no está cargada'
     });
   }
 
-  // Métodos de pago (efectivo, transferencia con alias/CVU, etc.)
-  if (usuario.metodosPago && Array.isArray(usuario.metodosPago) && usuario.metodosPago.length > 0) {
-    const transferencia = usuario.metodosPago.find(m => m.tipo === 'transferencia');
-    const tieneEfectivo = usuario.metodosPago.some(m => m.tipo === 'efectivo');
-    const tieneTarjeta = usuario.metodosPago.some(m => m.tipo === 'tarjeta');
-
-    const lineas = [];
-
-    const tipos = [];
-    if (tieneEfectivo) tipos.push('efectivo');
-    if (transferencia) tipos.push('transferencia');
-    if (tieneTarjeta) tipos.push('tarjeta');
-    if (tipos.length > 0) {
-      lineas.push(`Aceptamos ${tipos.join(' y ')}.`);
-    }
-
-    if (transferencia?.alias) {
-      lineas.push(`Alias/CVU: ${transferencia.alias}`);
-    }
-
-    if (transferencia?.titular) {
-      lineas.push(`A nombre de ${transferencia.titular}`);
-    }
-
-    if (lineas.length > 0) {
-      atajos.push({
-        comando: 'pago',
-        respuesta: lineas.join('\n')
-      });
-    }
+  // 2. Horarios de atención
+  const horariosTexto = formatearHorarios(usuario.horariosEstructurados || []);
+  if (horariosTexto && horariosTexto !== 'No configurados') {
+    atajos.push({
+      comando: 'horarios',
+      respuesta: `Nuestros horarios son: ${horariosTexto}`
+    });
+  } else {
+    atajos.push({
+      comando: 'horarios',
+      respuesta: 'Horarios no configurados aún'
+    });
   }
+
+  // 3. Métodos de pago y datos de transferencia
+  const metodosPago = usuario.metodosPago || [];
+  const transferencia = metodosPago.find(m => m.tipo === 'transferencia');
+  const tieneEfectivo = metodosPago.some(m => m.tipo === 'efectivo');
+  const tieneTarjeta = metodosPago.some(m => m.tipo === 'tarjeta');
+
+  const tipos = [];
+  if (tieneEfectivo) tipos.push('efectivo');
+  if (transferencia) tipos.push('transferencia');
+  if (tieneTarjeta) tipos.push('tarjeta');
+  const pagoBase = tipos.length > 0
+    ? `Aceptamos ${tipos.join(' y ')}.`
+    : 'Aceptamos efectivo y transferencia.';
+
+  let pagoRespuesta = pagoBase;
+  if (transferencia?.alias) {
+    pagoRespuesta += ` Alias/CVU: ${transferencia.alias}`;
+  }
+  if (transferencia?.titular) {
+    pagoRespuesta += ` a nombre de: ${transferencia.titular}`;
+  }
+  atajos.push({
+    comando: 'pago',
+    respuesta: pagoRespuesta.trim()
+  });
 
   return atajos;
 }

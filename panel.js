@@ -776,7 +776,7 @@ function renderAtajos(atajos) {
     const respuestaNormalizada = String(atajo.respuesta || '').replace(/<br\s*\/?>/gi, '\n');
     tr.innerHTML = `
       <td><input type="text" class="atajo-comando" value="${escaparHTML(atajo.comando)}"></td>
-      <td><textarea class="atajo-respuesta" rows="2">${escaparHTML(respuestaNormalizada)}</textarea></td>
+      <td><input type="text" class="atajo-respuesta" value="${escaparHTML(respuestaNormalizada)}"></td>
       <td><button class="atajo-eliminar" type="button">×</button></td>
     `;
     tbody.appendChild(tr);
@@ -945,7 +945,7 @@ function agregarAtajo() {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td><input type="text" class="atajo-comando" value="${escaparHTML(comando)}"></td>
-    <td><textarea class="atajo-respuesta" rows="2">${escaparHTML(respuesta)}</textarea></td>
+    <td><input type="text" class="atajo-respuesta" value="${escaparHTML(respuesta)}"></td>
     <td><button class="atajo-eliminar" type="button">×</button></td>
   `;
   tbody.appendChild(tr);
@@ -1327,8 +1327,25 @@ function ocultarMenuAtajos() {
 function manejarInputMensaje(e) {
   const input = e.target;
   const valor = input.value;
-  if (valor.startsWith('/') && valor.length > 1) {
-    const textoBusqueda = valor.substring(1).toLowerCase();
+  if (!valor.includes('/')) {
+    ocultarMenuAtajos();
+    return;
+  }
+  // Detectar la barra más reciente y el texto que la sigue
+  const regexSlash = /\/(\S*)$/;
+  const match = valor.match(regexSlash);
+  if (match) {
+    const textoBusqueda = match[1].toLowerCase();
+    // Si el texto coincide exactamente con un atajo, reemplazarlo automáticamente
+    const atajoExacto = ATAJOS_RAPIDOS.find(a => a.atajo.toLowerCase() === textoBusqueda);
+    if (atajoExacto) {
+      const inicio = match.index;
+      input.value = valor.substring(0, inicio) + atajoExacto.mensaje;
+      ocultarMenuAtajos();
+      input.focus();
+      return;
+    }
+    // Si no coincide exacto, mostramos el menú con las coincidencias parciales
     renderAtajosMenu(textoBusqueda);
   } else {
     ocultarMenuAtajos();

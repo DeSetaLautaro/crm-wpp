@@ -796,7 +796,7 @@ JSON:`;
               total: totalCarrito,
               metodoPago,
               estado: 'confirmado',
-              direccion: contacto.direccion || '',
+              direccionEntrega: contacto.direccion || '',
               notas: '',
               fechaTurno: '',
               fecha: new Date(),

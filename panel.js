@@ -2292,7 +2292,7 @@ function renderPedido(contenedor, pedido) {
     html = '<div style="color:#9CA3AF;">Pedido sin ítems</div>';
   }
   const total = (pedido.total || 0).toFixed(2);
-  const direccion = pedido.direccion || pedido.direccionEntrega || 'No especificada';
+  const direccion = pedido.direccionEntrega || pedido.direccion || 'No especificada';
   const estado = pedido.estado || 'Pendiente';
   html += `<div class="pedido-total">Total: $${total}</div>`;
   html += `<div class="pedido-direccion">Entrega: ${direccion}</div>`;

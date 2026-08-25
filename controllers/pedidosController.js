@@ -2,8 +2,11 @@ const Pedido = require('../models/Pedido');
 
 // Crear pedido confirmado (usada internamente cuando el bot confirma)
 async function guardarPedidoConfirmado(datos) {
+  const direccionEntrega = datos.direccionEntrega || datos.direccion || '';
+  const { direccion, ...resto } = datos;
   const pedido = new Pedido({
-    ...datos,
+    ...resto,
+    direccionEntrega,
     estado: datos.estado || 'confirmado'
   });
   await pedido.save();
@@ -24,6 +27,7 @@ async function confirmarPedido(req, res) {
       total = 0,
       metodoPago = '',
       direccion = '',
+      direccionEntrega = '',
       notas = '',
       fechaTurno = '',
       fecha = new Date(),
@@ -44,7 +48,7 @@ async function confirmarPedido(req, res) {
       total,
       metodoPago,
       estado: 'confirmado',
-      direccion,
+      direccionEntrega: direccionEntrega || direccion,
       notas,
       fechaTurno,
       fecha

@@ -319,10 +319,13 @@ const recibirMensaje = async (req, res) => {
     const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
     const productos = (usuario?.platos || []).filter(p => p.disponible !== false);
 
+    // 🆕 Cliente nuevo?
+    let esClienteNuevo = false;
     let contacto = await Cliente.findOne({ empresaId: empresa._id, telefono: telefonoCliente });
     if (!contacto) {
       console.log("👤 [7] Creando nuevo cliente...");
       contacto = await Cliente.create({ localId: usuario._id, empresaId: empresa._id, telefono: telefonoCliente, nombre: nombre });
+      esClienteNuevo = true;
     }
 
     // 🚫 Si el cliente está bloqueado, descartamos el mensaje por completo
@@ -347,6 +350,47 @@ const recibirMensaje = async (req, res) => {
     } else if (conversacion.estado !== 'Abierto') {
       conversacion.estado = 'Abierto';
       await conversacion.save();
+    }
+
+    // 🎉 Mensaje de bienvenida para clientes nuevos
+    if (esClienteNuevo && empresa.bienvenida && empresa.bienvenida.trim() !== '') {
+      const phoneNumberIdBienvenida = metadata?.phone_number_id || whatsappPhoneId;
+      const accessTokenBienvenida = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+      if (phoneNumberIdBienvenida && accessTokenBienvenida) {
+        try {
+          const url = `https://graph.facebook.com/v19.0/${phoneNumberIdBienvenida}/messages`;
+          const payload = {
+            messaging_product: 'whatsapp',
+            to: telefonoCliente,
+            type: 'text',
+            text: { body: empresa.bienvenida.trim() }
+          };
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessTokenBienvenida}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          if (resp.ok) {
+            console.log('✅ Mensaje de bienvenida enviado al nuevo cliente', telefonoCliente);
+            await Mensaje.create({
+              conversacionId: conversacion._id,
+              remitente: 'ia',
+              contenido: empresa.bienvenida.trim()
+            });
+            await Conversacion.findByIdAndUpdate(conversacion._id, {
+              $set: { ultimoMensaje: empresa.bienvenida.trim() }
+            });
+          } else {
+            const respBody = await resp.json().catch(() => ({}));
+            console.error('❌ Error al enviar bienvenida:', resp.status, respBody);
+          }
+        } catch (error) {
+          console.error('❌ Error de red al enviar bienvenida:', error);
+        }
+      }
     }
 
     console.log("📝 [9] Guardando mensaje...");

@@ -2,18 +2,30 @@ const Empresa = require('../models/Empresa');
 
 async function obtenerWabaId(empresa) {
   // Si ya lo tenemos guardado, lo usamos
-  if (empresa.wabaId) return empresa.wabaId;
+  if (empresa.wabaId) {
+    console.log(`✅ WABA ID ya estaba guardado: ${empresa.wabaId}`);
+    return empresa.wabaId;
+  }
 
   // Sino, lo obtenemos del phone_number_id
   const token = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneId = empresa.whatsappPhoneId;
-  if (!token || !phoneId) return null;
+  console.log('🔍 Buscando WABA ID con:', { token: token ? 'OK' : 'FALTA', phoneId });
+  if (!token || !phoneId) {
+    console.error('❌ No hay token o phoneId para obtener WABA ID');
+    return null;
+  }
 
   const resp = await fetch(`https://graph.facebook.com/v19.0/${phoneId}?fields=whatsapp_business_account`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   const data = await resp.json();
+  console.log('📥 Respuesta al obtener WABA:', JSON.stringify(data));
   const wabaId = data.whatsapp_business_account?.id;
+
+  if (!wabaId) {
+    console.error('❌ WhatsApp Business Account no vino en la respuesta');
+  }
 
   if (wabaId) {
     await Empresa.findByIdAndUpdate(empresa._id, { $set: { wabaId } });
@@ -32,6 +44,7 @@ async function actualizarCostosEmpresa(empresa) {
 
   const url = `https://graph.facebook.com/v19.0/${wabaId}/analytics?start=${start}&end=${end}&granularity=DAY&metric_types=CONVERSATION&conversation_types=BUSINESS_INITIATED,USER_INITIATED`;
 
+  console.log(`🌐 Llamando a Meta analytics con URL: ${url}`);
   const resp = await fetch(url, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
@@ -43,6 +56,7 @@ async function actualizarCostosEmpresa(empresa) {
   }
 
   const data = await resp.json();
+  console.log('📥 Respuesta cruda de Meta analytics:', JSON.stringify(data).slice(0, 1000));
 
   if (!data || !Array.isArray(data.data)) {
     console.warn('⚠️ Analytics de Meta sin el formato esperado. Respuesta cruda:', JSON.stringify(data));
@@ -59,6 +73,8 @@ async function actualizarCostosEmpresa(empresa) {
       metaUltimaActualizacion: new Date()
     }
   });
+
+  console.log(`✅ Analytics Meta actualizadas para empresa ${empresa.nombre}: costoTotal=${costoTotal} usd`);
 
   return costoTotal;
 }

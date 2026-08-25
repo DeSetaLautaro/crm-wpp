@@ -832,6 +832,9 @@ JSON:`;
                 carrito: [],
                 total: 0
               });
+              ioCarrito2.to(empresa._id.toString()).emit('pedido-actualizado', {
+                conversacionId: conversacion._id
+              });
             }
             console.log(`✅ [PEDIDO] Pedido guardado para el cliente ${contacto.telefono}`);
           } else {

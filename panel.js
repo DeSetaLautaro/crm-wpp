@@ -2027,7 +2027,12 @@ function setupSocketListeners() {
   socket.on('pedido-actualizado', (payload) => {
     if (!payload || !payload.conversacionId) return;
     if (payload.conversacionId === chatActivoId) {
-      cargarPedidoActivo(payload.conversacionId);
+      setTimeout(() => {
+        const conv = getConversacionPorId(payload.conversacionId);
+        if (!conv) return;
+        const contacto = getContactoPorId(conv.contactoId);
+        cargarPedidoActivo(payload.conversacionId, contacto?.telefono, contacto?._id);
+      }, 2000);
     }
   });
 
@@ -2281,8 +2286,7 @@ function renderPanelPedido(conv, contacto) {
 
   if (conv.carrito && conv.carrito.length > 0) {
     let html = renderCarrito(conv.carrito, conv.carritoTotal);
-    const direccion = (contacto && (contacto.direccionFrecuente || contacto.direccion)) ? (contacto.direccionFrecuente || contacto.direccion) : 'No especificada';
-    html += `<div class="pedido-direccion">Entrega: ${direccion}</div>`;
+    html += `<div class="pedido-direccion">Dirección pendiente de confirmar</div>`;
     contenedor.innerHTML = html;
     return;
   }

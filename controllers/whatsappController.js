@@ -1062,7 +1062,7 @@ const enviarMensaje = async (req, res) => {
 
     const telefonoCliente = contacto?.telefono;
     const whatsappPhoneId = empresa?.whatsappPhoneId;
-    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    const accessToken = empresa?.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
 
     if (!whatsappPhoneId || !telefonoCliente) {
       return res.status(500).json({ error: 'Faltan datos de empresa o contacto para enviar el mensaje' });

@@ -1944,7 +1944,7 @@ function setupSocketListeners() {
 async function enviarMensajeDesdePanel() {
   const input = document.getElementById('input-mensaje');
   if (!input) return;
-  const mensaje = input.value.trim();
+  const mensaje = input.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
   if (!mensaje || !chatActivoId) return;
 
   const token = localStorage.getItem('token') || '';

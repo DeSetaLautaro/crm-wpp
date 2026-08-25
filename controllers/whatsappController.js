@@ -702,11 +702,12 @@ JSON:`;
       if (accessToken) {
         try {
           const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+          const respuestaNormalizada = respuestaIA.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
           const payload = {
             messaging_product: 'whatsapp',
             to: telefonoCliente,
             type: 'text',
-            text: { body: respuestaIA }
+            text: { body: respuestaNormalizada }
           };
 
           console.log(`📤 Enviando respuesta IA al teléfono ${telefonoCliente} usando phoneNumberId ${phoneNumberId}`);
@@ -840,7 +841,8 @@ JSON:`;
 // ===== Enviar mensaje desde el dashboard =====
 const enviarMensaje = async (req, res) => {
   try {
-    const { conversacionId, mensaje } = req.body || {};
+    const { conversacionId, mensaje: mensajeBruto } = req.body || {};
+    const mensaje = (mensajeBruto || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
     if (!conversacionId || !mensaje || typeof mensaje !== 'string' || mensaje.length === 0) {
       return res.status(400).json({ error: 'Faltan datos: conversacionId y mensaje son requeridos' });
     }

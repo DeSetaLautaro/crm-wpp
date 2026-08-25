@@ -626,12 +626,15 @@ JSON:`;
           const data = JSON.parse(jsonStr);
           if (data && data.direccion && typeof data.direccion === 'string') {
             await Cliente.findByIdAndUpdate(contacto._id, { $set: { direccion: data.direccion } });
+            contacto.direccion = data.direccion;
           }
           if (data && data.pisoDepto && typeof data.pisoDepto === 'string') {
             await Cliente.findByIdAndUpdate(contacto._id, { $set: { pisoDepto: data.pisoDepto } });
+            contacto.pisoDepto = data.pisoDepto;
           }
           if (data && data.codigoPostal && typeof data.codigoPostal === 'string') {
             await Cliente.findByIdAndUpdate(contacto._id, { $set: { codigoPostal: data.codigoPostal } });
+            contacto.codigoPostal = data.codigoPostal;
           }
         }
       } else {

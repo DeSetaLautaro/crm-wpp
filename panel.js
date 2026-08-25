@@ -777,7 +777,10 @@ function renderAtajos(atajos) {
     tr.innerHTML = `
       <td><input type="text" class="atajo-comando" value="${escaparHTML(atajo.comando)}"></td>
       <td><input type="text" class="atajo-respuesta" value="${escaparHTML(respuestaNormalizada)}"></td>
-      <td><button class="atajo-eliminar" type="button">×</button></td>
+      <td>
+        <button class="atajo-guardar" type="button" style="display:none;" title="Confirmar cambios">✓</button>
+        <button class="atajo-eliminar" type="button">×</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -903,6 +906,17 @@ async function guardarAtajosDesdePanel({ mostrarCartel = true } = {}) {
     });
     if (!res.ok) throw new Error('Error al guardar atajos');
     if (mostrarCartel) alert('Atajos guardados correctamente');
+
+    // Actualizar la lista de atajos para el autocompletado en el chat
+    ATAJOS_RAPIDOS = atajos.map(a => ({
+      atajo: a.comando,
+      mensaje: String(a.respuesta || '').replace(/<br\s*\/?>/gi, '\n')
+    }));
+
+    // Ocultar todos los tildes de confirmación
+    tbody.querySelectorAll('.atajo-guardar').forEach(btn => {
+      btn.style.display = 'none';
+    });
   } catch (error) {
     console.error('Error al guardar atajos:', error);
   }
@@ -946,7 +960,10 @@ function agregarAtajo() {
   tr.innerHTML = `
     <td><input type="text" class="atajo-comando" value="${escaparHTML(comando)}"></td>
     <td><input type="text" class="atajo-respuesta" value="${escaparHTML(respuesta)}"></td>
-    <td><button class="atajo-eliminar" type="button">×</button></td>
+    <td>
+      <button class="atajo-guardar" type="button" style="display:none;" title="Confirmar cambios">✓</button>
+      <button class="atajo-eliminar" type="button">×</button>
+    </td>
   `;
   tbody.appendChild(tr);
   document.getElementById('atajo-comando-input').value = '';
@@ -1000,14 +1017,25 @@ function initConfigSidebar() {
     }
   });
 
-  // Auto-guardar al editar cualquier campo de atajo
+  // Mostrar tilde de confirmación al editar cualquier campo de atajo
   const atajosBody = document.getElementById('atajos-body');
   if (atajosBody) {
-    atajosBody.addEventListener('change', (e) => {
+    atajosBody.addEventListener('input', (e) => {
       const target = e.target;
       if (target.classList.contains('atajo-comando') || target.classList.contains('atajo-respuesta')) {
-        guardarAtajosDesdePanel({ mostrarCartel: false });
+        const tr = target.closest('tr');
+        const btnGuardar = tr?.querySelector('.atajo-guardar');
+        if (btnGuardar) btnGuardar.style.display = 'inline-flex';
       }
+    });
+
+    // Guardar al hacer clic en el tilde de confirmación
+    atajosBody.addEventListener('click', (e) => {
+      const btnGuardar = e.target.closest('.atajo-guardar');
+      if (!btnGuardar) return;
+      e.preventDefault();
+      e.stopPropagation();
+      guardarAtajosDesdePanel({ mostrarCartel: false });
     });
   }
 

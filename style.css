@@ -985,6 +985,23 @@ body {
   background: #fee2e2;
 }
 
+.atajo-guardar {
+  background: transparent;
+  border: none;
+  color: #10b981;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 4px 6px;
+  line-height: 1;
+  display: none;
+  margin-right: 4px;
+}
+
+.atajo-guardar:hover {
+  background: #d1fae5;
+}
+
 .checkbox-linea {
   display: inline-flex;
   align-items: center;

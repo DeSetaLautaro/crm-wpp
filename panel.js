@@ -187,6 +187,33 @@ function autoAjustarTextarea(textarea) {
   textarea.style.overflowY = textarea.scrollHeight > maxAltura ? 'auto' : 'hidden';
 }
 
+function reproducirSonidoNotificacion() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+
+    gain.gain.setValueAtTime(0.001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.55);
+    osc.onended = () => ctx.close();
+  } catch (e) {
+    console.warn('No se pudo reproducir sonido:', e);
+  }
+}
+
 function getContactoPorId(id) {
   return CONTACTOS.find(c => c._id === id);
 }

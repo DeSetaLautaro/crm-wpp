@@ -2030,6 +2030,23 @@ function setupSocketListeners() {
       cargarPedidoActivo(payload.conversacionId);
     }
   });
+
+  socket.on('contacto-actualizado', (payload) => {
+    const contactoIdStr = String(payload.contactoId || '');
+    const contacto = CONTACTOS.find(c => String(c._id) === contactoIdStr);
+    if (!contacto || !payload.datos) return;
+    const datos = payload.datos;
+    if (datos.direccion) contacto.direccion = datos.direccion;
+    if (datos.pisoDepto) contacto.pisoDepto = datos.pisoDepto;
+    if (datos.codigoPostal) contacto.codigoPostal = datos.codigoPostal;
+
+    if (chatActivoId) {
+      const conv = getConversacionPorId(chatActivoId);
+      if (conv && String(conv.contactoId) === contactoIdStr) {
+        renderChatActivo();
+      }
+    }
+  });
 }
 
 // ===== Envío manual de mensaje desde el dashboard =====

@@ -624,17 +624,30 @@ JSON:`;
         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
           const jsonStr = rawText.substring(startIdx, endIdx + 1);
           const data = JSON.parse(jsonStr);
+          const cambiosContacto = {};
           if (data && data.direccion && typeof data.direccion === 'string') {
             await Cliente.findByIdAndUpdate(contacto._id, { $set: { direccion: data.direccion } });
             contacto.direccion = data.direccion;
+            cambiosContacto.direccion = data.direccion;
           }
           if (data && data.pisoDepto && typeof data.pisoDepto === 'string') {
             await Cliente.findByIdAndUpdate(contacto._id, { $set: { pisoDepto: data.pisoDepto } });
             contacto.pisoDepto = data.pisoDepto;
+            cambiosContacto.pisoDepto = data.pisoDepto;
           }
           if (data && data.codigoPostal && typeof data.codigoPostal === 'string') {
             await Cliente.findByIdAndUpdate(contacto._id, { $set: { codigoPostal: data.codigoPostal } });
             contacto.codigoPostal = data.codigoPostal;
+            cambiosContacto.codigoPostal = data.codigoPostal;
+          }
+          if (Object.keys(cambiosContacto).length > 0) {
+            const ioContacto = req.app.get('io');
+            if (ioContacto) {
+              ioContacto.to(empresa._id.toString()).emit('contacto-actualizado', {
+                contactoId: contacto._id,
+                datos: cambiosContacto
+              });
+            }
           }
         }
       } else {

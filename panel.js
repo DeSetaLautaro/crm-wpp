@@ -884,7 +884,7 @@ async function guardarPromptDesdePanel() {
   }
 }
 
-async function guardarAtajosDesdePanel() {
+async function guardarAtajosDesdePanel({ mostrarCartel = true } = {}) {
   const tbody = document.getElementById('atajos-body');
   if (!tbody) return;
   const atajos = Array.from(tbody.querySelectorAll('tr')).map(tr => ({
@@ -902,7 +902,7 @@ async function guardarAtajosDesdePanel() {
       body: JSON.stringify({ atajos, aplicarATodasAtajos })
     });
     if (!res.ok) throw new Error('Error al guardar atajos');
-    alert('Atajos guardados correctamente');
+    if (mostrarCartel) alert('Atajos guardados correctamente');
   } catch (error) {
     console.error('Error al guardar atajos:', error);
   }
@@ -996,8 +996,35 @@ function initConfigSidebar() {
   document.addEventListener('click', (e) => {
     if (e.target.classList.contains('atajo-eliminar')) {
       e.target.closest('tr')?.remove();
+      guardarAtajosDesdePanel({ mostrarCartel: false });
     }
   });
+
+  // Auto-guardar al editar cualquier campo de atajo
+  const atajosBody = document.getElementById('atajos-body');
+  if (atajosBody) {
+    atajosBody.addEventListener('change', (e) => {
+      const target = e.target;
+      if (target.classList.contains('atajo-comando') || target.classList.contains('atajo-respuesta')) {
+        guardarAtajosDesdePanel({ mostrarCartel: false });
+      }
+    });
+  }
+
+  // Confirmación al aplicar atajos a todas las líneas
+  const aplicarAtajosCheck = document.getElementById('aplicar-atajos-todas');
+  if (aplicarAtajosCheck) {
+    aplicarAtajosCheck.addEventListener('change', function(e) {
+      if (e.target.checked) {
+        const ok = confirm('¿Aplicar los atajos actuales a todas las líneas?\nSe guardarán automáticamente.');
+        if (!ok) {
+          e.target.checked = false;
+          return;
+        }
+        guardarAtajosDesdePanel();
+      }
+    });
+  }
 
   // Guardar preferencia de audios
   const btnGuardarAudios = document.getElementById('btn-guardar-audios');

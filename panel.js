@@ -941,8 +941,45 @@ async function cargarPagos() {
     } else if (fechaEl) {
       fechaEl.textContent = 'Sin datos';
     }
+
+    // Escuchar click en "Actualizar ahora"
+    const btnActualizar = document.getElementById('btn-actualizar-costos');
+    if (btnActualizar && !btnActualizar.dataset.listener) {
+      btnActualizar.dataset.listener = 'true';
+      btnActualizar.addEventListener('click', actualizarCostosManual);
+    }
   } catch (error) {
     console.error('Error al cargar pagos:', error);
+  }
+}
+
+async function actualizarCostosManual() {
+  const token = localStorage.getItem('token') || '';
+  const btn = document.getElementById('btn-actualizar-costos');
+  const estadoEl = document.getElementById('meta-actualizacion-estado');
+  if (btn) btn.disabled = true;
+  if (estadoEl) estadoEl.textContent = 'Actualizando...';
+  try {
+    const res = await fetch('/api/whatsapp/meta/actualizar-costos', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al actualizar costos');
+    const meta = data.meta || {};
+    const costoEl = document.getElementById('meta-costo-total');
+    if (costoEl) costoEl.textContent = meta.costoTotal || '0';
+    const fechaEl = document.getElementById('meta-ultima-actualizacion');
+    if (fechaEl && meta.ultimaActualizacion) {
+      fechaEl.textContent = new Date(meta.ultimaActualizacion).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+    } else if (fechaEl) {
+      fechaEl.textContent = 'Sin datos';
+    }
+    if (estadoEl) estadoEl.textContent = 'Actualizado correctamente';
+  } catch (error) {
+    console.error('Error al actualizar costos manualmente:', error);
+    if (estadoEl) estadoEl.textContent = 'Error al actualizar costos';
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 

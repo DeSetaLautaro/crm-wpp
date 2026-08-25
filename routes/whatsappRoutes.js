@@ -38,6 +38,7 @@ const {
   eliminarNota,
   bloquearCliente,
   desbloquearCliente,
+  actualizarCostosManual,
   actualizarConfig,
   obtenerUsoConversaciones,
   obtenerConfig
@@ -54,6 +55,7 @@ router.post('/login-pin', loginConPin);
 
 // Obtener uso de conversaciones en las últimas 24 h
 router.get('/uso-conversaciones', auth, obtenerUsoConversaciones);
+router.get('/meta/actualizar-costos', auth, actualizarCostosManual);
 
 // Envío de mensaje desde el dashboard (POST)
 router.post('/enviar', auth, enviarMensaje);

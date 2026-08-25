@@ -36,10 +36,20 @@ async function actualizarCostosEmpresa(empresa) {
     headers: { 'Authorization': `Bearer ${token}` }
   });
 
-  if (!resp.ok) return null;
+  if (!resp.ok) {
+    const cuerpo = await resp.text();
+    console.error(`⚠️ Error obteniendo analytics de Meta: ${resp.status} ${cuerpo}`);
+    return null;
+  }
 
   const data = await resp.json();
-  const costoTotal = data?.data?.reduce((acc, d) => {
+
+  if (!data || !Array.isArray(data.data)) {
+    console.warn('⚠️ Analytics de Meta sin el formato esperado. Respuesta cruda:', JSON.stringify(data));
+    return null;
+  }
+
+  const costoTotal = data.data.reduce((acc, d) => {
     return acc + (d.conversation_costs?.reduce((s, c) => s + (parseFloat(c.cost) || 0), 0) || 0);
   }, 0) || 0;
 

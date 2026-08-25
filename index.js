@@ -53,6 +53,8 @@ mongoose.connect(MONGODB_URI)
     server.listen(PORT, () => {
       console.log(`Servidor escuchando en el puerto ${PORT}`);
     });
+    // Actualizar costos de Meta al iniciar
+    actualizarCostosDeTodasLasEmpresas().catch(err => console.error('Error al actualizar costos al inicio:', err));
     iniciarCronHorarios();
     cron.schedule('0 */6 * * *', () => {
       actualizarCostosDeTodasLasEmpresas().catch(err => console.error('Error en cron de costos Meta:', err));

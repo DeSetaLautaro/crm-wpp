@@ -11,6 +11,7 @@ const Usuario = require('../models/usuario');
 const Pedido = require('../models/Pedido');
 const { guardarPedidoConfirmado } = require('./pedidosController');
 const fs = require('fs');
+const { actualizarCostosEmpresa } = require('../services/metaAnalyticsService');
 
 // Prompt por defecto (mismo que estaba hardcodeado, pero con placeholders)
 const PROMPT_IA_DEFAULT = `Sos el asistente virtual de {nombreLocal}. Respondé de forma breve y amable a los clientes.
@@ -1412,6 +1413,27 @@ const actualizarConfig = async (req, res) => {
   }
 };
 
+async function actualizarCostosManual(req, res) {
+  try {
+    const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
+    if (!empresaId) return res.status(400).json({ error: 'No se pudo identificar la empresa' });
+    const empresa = await Empresa.findById(empresaId);
+    if (!empresa) return res.status(404).json({ error: 'Empresa no encontrada' });
+    const costo = await actualizarCostosEmpresa(empresa);
+    const updated = await Empresa.findById(empresaId).lean();
+    return res.json({
+      ok: true,
+      meta: {
+        costoTotal: updated.metaCostoTotal || (costo || 0),
+        ultimaActualizacion: updated.metaUltimaActualizacion || null
+      }
+    });
+  } catch (error) {
+    console.error('Error al actualizar costos manualmente:', error);
+    return res.status(500).json({ error: 'Error interno al actualizar costos' });
+  }
+}
+
 const obtenerConfig = async (req, res) => {
   try {
     const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
@@ -1757,6 +1779,7 @@ module.exports = {
   eliminarNota,
   bloquearCliente,
   desbloquearCliente,
+  actualizarCostosManual,
   actualizarConfig,
   obtenerUsoConversaciones,
   obtenerConfig

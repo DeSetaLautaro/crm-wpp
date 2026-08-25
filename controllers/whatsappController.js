@@ -842,7 +842,12 @@ JSON:`;
 const enviarMensaje = async (req, res) => {
   try {
     const { conversacionId, mensaje: mensajeBruto } = req.body || {};
-    const mensaje = (mensajeBruto || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+    const mensajeLimpio = (mensajeBruto || '')
+      .replace(/<br\s*[\/]?>/gi, '\n')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim();
+    const mensaje = mensajeLimpio;
     if (!conversacionId || !mensaje || typeof mensaje !== 'string' || mensaje.length === 0) {
       return res.status(400).json({ error: 'Faltan datos: conversacionId y mensaje son requeridos' });
     }

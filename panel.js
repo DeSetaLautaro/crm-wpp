@@ -1944,7 +1944,16 @@ function setupSocketListeners() {
 async function enviarMensajeDesdePanel() {
   const input = document.getElementById('input-mensaje');
   if (!input) return;
-  const mensaje = input.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const mensajeOriginal = input.value;
+  // Sanitización: reemplazamos etiquetas <br> por saltos de línea nativos
+  const mensajeLimpio = mensajeOriginal
+    .replace(/<br\s*[\/]?>/gi, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim();
+  // Si el envío fuese por URL (ej: wa.me), usar:
+  // const mensajeURL = encodeURIComponent(mensajeLimpio);
+  const mensaje = mensajeLimpio;
   if (!mensaje || !chatActivoId) return;
 
   const token = localStorage.getItem('token') || '';

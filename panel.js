@@ -951,6 +951,8 @@ function agregarAtajo() {
   tbody.appendChild(tr);
   document.getElementById('atajo-comando-input').value = '';
   document.getElementById('atajo-respuesta-input').value = '';
+  // Guardar automáticamente al agregar un nuevo atajo
+  guardarAtajosDesdePanel();
 }
 
 function initConfigSidebar() {

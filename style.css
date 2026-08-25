@@ -849,7 +849,8 @@ body {
   overflow: hidden;
 }
 
-#config-view {
+#config-view,
+#pagos-view {
   display: flex;
   position: absolute;
   inset: 0;

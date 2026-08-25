@@ -775,16 +775,20 @@ function showView(vista) {
   const inboxView = document.getElementById('inbox-view');
   const configView = document.getElementById('config-view');
   const perfilView = document.getElementById('perfil-view');
+  const pagosView = document.getElementById('pagos-view');
   const btnInbox = document.getElementById('btn-inbox');
   const btnConfig = document.getElementById('btn-config');
   const btnPerfil = document.getElementById('btn-perfil');
+  const btnPagos = document.getElementById('btn-pagos');
 
   if (inboxView) inboxView.classList.add('hidden');
   if (configView) configView.classList.add('hidden');
   if (perfilView) perfilView.classList.add('hidden');
+  if (pagosView) pagosView.classList.add('hidden');
   if (btnInbox) btnInbox.classList.remove('activo');
   if (btnConfig) btnConfig.classList.remove('activo');
   if (btnPerfil) btnPerfil.classList.remove('activo');
+  if (btnPagos) btnPagos.classList.remove('activo');
 
   if (vista === 'inbox') {
     inboxView?.classList.remove('hidden');
@@ -797,6 +801,10 @@ function showView(vista) {
     perfilView?.classList.remove('hidden');
     btnPerfil?.classList.add('activo');
     cargarConfiguracion();
+  } else if (vista === 'pagos') {
+    pagosView?.classList.remove('hidden');
+    btnPagos?.classList.add('activo');
+    cargarPagos();
   }
 }
 
@@ -901,16 +909,6 @@ async function cargarConfiguracion() {
       procesarAudiosCheck.checked = (config.procesarAudios === true);
     }
 
-    const metaInfo = config.meta || {};
-    const metaCostoEl = document.getElementById('meta-costo-total');
-    if (metaCostoEl && metaInfo.costoTotal !== undefined) {
-      metaCostoEl.textContent = metaInfo.costoTotal;
-    }
-    const metaFechaEl = document.getElementById('meta-ultima-actualizacion');
-    if (metaFechaEl && metaInfo.ultimaActualizacion) {
-      metaFechaEl.textContent = new Date(metaInfo.ultimaActualizacion).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
-    }
-
     // Actualizar atajos rápidos para el autocompletado del input
     ATAJOS_RAPIDOS = (config.atajos || []).map(a => ({
       atajo: a.comando,
@@ -918,6 +916,33 @@ async function cargarConfiguracion() {
     }));
   } catch (error) {
     console.error('Error al cargar configuración:', error);
+  }
+}
+
+async function cargarPagos() {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/config', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const meta = data.config?.meta || {};
+
+    const costoEl = document.getElementById('meta-costo-total');
+    if (costoEl) costoEl.textContent = meta.costoTotal || '0';
+
+    const fechaEl = document.getElementById('meta-ultima-actualizacion');
+    if (fechaEl && meta.ultimaActualizacion) {
+      fechaEl.textContent = new Date(meta.ultimaActualizacion).toLocaleString('es-AR', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+      });
+    } else if (fechaEl) {
+      fechaEl.textContent = 'Sin datos';
+    }
+  } catch (error) {
+    console.error('Error al cargar pagos:', error);
   }
 }
 
@@ -2725,7 +2750,7 @@ async function manejarLogin() {
 
 // ===== Eventos =====
 function precargarVistas() {
-  const archivos = ['chats', 'config', 'perfil'];
+  const archivos = ['chats', 'config', 'perfil', 'pagos'];
   return Promise.all(archivos.map(async (nombre) => {
     if (vistasCache[nombre]) return;
     try {
@@ -2743,6 +2768,8 @@ function precargarVistas() {
     if (configView && vistasCache['config']) configView.innerHTML = vistasCache['config'];
     const perfilView = document.getElementById('perfil-view');
     if (perfilView && vistasCache['perfil']) perfilView.innerHTML = vistasCache['perfil'];
+    const pagosView = document.getElementById('pagos-view');
+    if (pagosView && vistasCache['pagos']) pagosView.innerHTML = vistasCache['pagos'];
   });
 }
 
@@ -2812,6 +2839,11 @@ async function init() {
     btnPerfil.addEventListener('click', () => {
       showView('perfil');
     });
+  }
+
+  const btnPagos = document.getElementById('btn-pagos');
+  if (btnPagos) {
+    btnPagos.addEventListener('click', () => showView('pagos'));
   }
 
   // Cerrar sesión

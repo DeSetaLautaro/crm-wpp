@@ -166,6 +166,12 @@ Mensaje del cliente: "{mensajeCliente}"
 Redactá una respuesta que sea útil para el cliente, indicando precios y opciones disponibles. Si el cliente está por confirmar un pedido y todavía no dio dirección, pedísela sí o sí antes de confirmar.`;
 
 // ===== Helpers =====
+function escaparHTML(texto) {
+  const div = document.createElement('div');
+  div.textContent = texto ?? '';
+  return div.innerHTML;
+}
+
 function getContactoPorId(id) {
   return CONTACTOS.find(c => c._id === id);
 }

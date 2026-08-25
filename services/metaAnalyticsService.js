@@ -60,7 +60,7 @@ async function actualizarCostosEmpresa(empresa) {
   const start = Math.floor(new Date(fechaInicio).getTime() / 1000);
   const end = Math.floor(Date.now() / 1000);
 
-  const url = `https://graph.facebook.com/v19.0/${wabaId}?fields=conversation_analytics.start(${start}).end(${end}).granularity(DAILY).metric_types(COST).conversation_types(BUSINESS_INITIATED,USER_INITIATED)`;
+  const url = `https://graph.facebook.com/v19.0/${wabaId}?fields=conversation_analytics.start(${start}).end(${end}).granularity(DAILY).metric_types(COST).conversation_types(REGULAR,UNKNOWN,FREE_ENTRY_POINT,FREE_TIER)`;
 
   console.log(`🌐 Llamando a Meta analytics con URL: ${url}`);
 

@@ -2085,6 +2085,27 @@ function setupSocketListeners() {
       }
     }
   });
+
+  socket.on('bot-actualizado', (payload) => {
+    if (!payload || !payload.conversacionId) return;
+    const conv = CONVERSACIONES.find(c => c._id === payload.conversacionId);
+    if (!conv) return;
+    conv.botActivo = payload.botActivo === true;
+    if (chatActivoId === payload.conversacionId) {
+      const toggle = document.getElementById('toggle-bot');
+      if (toggle) toggle.checked = conv.botActivo;
+      const estadoBot = document.getElementById('estado-bot');
+      if (estadoBot) {
+        estadoBot.textContent = conv.botActivo ? 'Bot Activo' : 'Pausado';
+        estadoBot.classList.remove('estado-activo', 'estado-pausado');
+        estadoBot.classList.add(conv.botActivo ? 'estado-activo' : 'estado-pausado');
+      }
+    }
+    if (!conv.botActivo) {
+      reproducirSonidoNotificacion();
+    }
+    renderListaChats();
+  });
 }
 
 // ===== Envío manual de mensaje desde el dashboard =====

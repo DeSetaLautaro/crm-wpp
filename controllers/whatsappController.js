@@ -188,6 +188,28 @@ function detectarMetodoPago(texto) {
   return null;
 }
 
+function detectarIntencionHumano(texto) {
+  const lower = (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const frases = [
+    'quiero hablar con una persona',
+    'quiero hablar con un humano',
+    'hablar con una persona',
+    'hablar con un humano',
+    'quiero un asesor',
+    'quiero hablar con alguien',
+    'atendeme una persona',
+    'que me atienda una persona',
+    'que me atienda un humano',
+    'operador',
+    'asesor',
+    'persona real',
+    'humano',
+    'agente',
+    'representante'
+  ];
+  return frases.some(f => lower.includes(f));
+}
+
 async function incrementarContadorConversaciones(empresaId, conversacionId) {
   const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const existeMensajeSaliente = await Mensaje.findOne({
@@ -709,10 +731,91 @@ JSON:`;
 
     console.log(`⏱️ Tiempo extracción IA: ${(performance.now() - t0).toFixed(0)} ms`);
 
+    // Habilitación del bot para esta conversación
+    const botHabilitado = (empresa.botActivo !== false);
+
+    // ===== Detectar intención de hablar con un humano =====
+    if (botHabilitado && detectarIntencionHumano(textoMensaje)) {
+      console.log(`🙋 Cliente pidió ser atendido por un humano: ${telefonoCliente}`);
+
+      // Desactivar bot para esta conversación (Human Handoff)
+      conversacion.botActivo = false;
+      await conversacion.save();
+      await Conversacion.findByIdAndUpdate(conversacion._id, {
+        $set: { botActivo: false }
+      });
+
+      // Avisar al cliente
+      const textoDerivacion = 'Te paso con un operador humano. Un momento por favor 🙌';
+      const phoneNumberId = metadata?.phone_number_id || whatsappPhoneId;
+      const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+
+      if (accessToken && phoneNumberId) {
+        try {
+          const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: 'whatsapp',
+            to: telefonoCliente,
+            type: 'text',
+            text: { body: textoDerivacion }
+          };
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          const bodyResp = await resp.json().catch(() => ({}));
+          if (resp.ok) {
+            console.log('✅ Mensaje de derivación enviado a WhatsApp');
+          } else {
+            console.error('❌ Error al enviar derivación:', resp.status, bodyResp);
+          }
+        } catch (error) {
+          console.error('❌ Error de red al enviar derivación:', error);
+        }
+      }
+
+      // Guardar mensaje del sistema en BD
+      await Mensaje.create({
+        conversacionId: conversacion._id,
+        remitente: 'ia',
+        contenido: textoDerivacion
+      });
+      await Conversacion.findByIdAndUpdate(conversacion._id, {
+        $set: { ultimoMensaje: textoDerivacion }
+      });
+
+      // Emitir eventos para actualizar el panel en tiempo real
+      const ioHandoff = req.app.get('io');
+      if (ioHandoff) {
+        ioHandoff.to(empresa._id.toString()).emit('mensaje-nuevo', {
+          conversacionId: conversacion._id,
+          mensaje: {
+            remitente: 'ia',
+            contenido: textoDerivacion,
+            fecha: new Date()
+          },
+          conversacion: {
+            _id: conversacion._id,
+            ultimoMensaje: textoDerivacion,
+            updatedAt: new Date()
+          }
+        });
+        ioHandoff.to(empresa._id.toString()).emit('bot-actualizado', {
+          conversacionId: conversacion._id,
+          botActivo: false
+        });
+      }
+
+      console.log(`✅ [HANDOFF] Conversación ${conversacion._id} derivada a humano.`);
+      return;
+    }
+
     // ===== Generar respuesta con Gemini (solo si el bot está activo) =====
     let respuestaIA = null;
-
-    const botHabilitado = (empresa.botActivo !== false);
 
     if (botHabilitado && process.env.GEMINI_API_KEY) {
       try {

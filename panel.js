@@ -172,6 +172,15 @@ function escaparHTML(texto) {
   return div.innerHTML;
 }
 
+function autoAjustarTextarea(textarea) {
+  if (!textarea) return;
+  textarea.style.height = 'auto';
+  const maxAltura = 200;
+  const nuevaAltura = Math.min(textarea.scrollHeight, maxAltura);
+  textarea.style.height = nuevaAltura + 'px';
+  textarea.style.overflowY = textarea.scrollHeight > maxAltura ? 'auto' : 'hidden';
+}
+
 function getContactoPorId(id) {
   return CONTACTOS.find(c => c._id === id);
 }
@@ -1383,6 +1392,7 @@ function ocultarMenuAtajos() {
 
 function manejarInputMensaje(e) {
   const input = e.target;
+  autoAjustarTextarea(input);
   const valor = input.value;
   if (!valor.includes('/')) {
     ocultarMenuAtajos();
@@ -1398,6 +1408,7 @@ function manejarInputMensaje(e) {
     if (atajoExacto) {
       const inicio = match.index;
       input.value = valor.substring(0, inicio) + atajoExacto.mensaje;
+      autoAjustarTextarea(input);
       ocultarMenuAtajos();
       input.focus();
       return;
@@ -1422,6 +1433,7 @@ function seleccionarAtajo(atajo) {
     input.value = atajo.mensaje;
   }
 
+  autoAjustarTextarea(input);
   ocultarMenuAtajos();
   input.focus();
 }
@@ -2052,6 +2064,7 @@ async function enviarMensajeDesdePanel() {
       return;
     }
     input.value = '';
+    autoAjustarTextarea(input);
     const conv = getConversacionPorId(chatActivoId);
     if (conv && conv.estado !== 'Abierto') {
       conv.estado = 'Abierto';

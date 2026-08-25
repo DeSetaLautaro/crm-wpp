@@ -882,9 +882,6 @@ JSON:`;
     }
 
     if (respuestaIA) {
-      // Incrementar contador de conversaciones si es primera en 24 h
-      await incrementarContadorConversaciones(empresa._id, conversacion._id);
-
       // Enviar la respuesta al cliente por WhatsApp
       const phoneNumberId = metadata?.phone_number_id || whatsappPhoneId;
       const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
@@ -1108,8 +1105,22 @@ const enviarMensaje = async (req, res) => {
       return res.status(502).json({ error: 'El envío a WhatsApp falló', detalle: respuestaWhatsApp });
     }
 
-    // Incrementar contador de conversaciones si es la primera en 24 h
-    await incrementarContadorConversaciones(conversacion.empresaId, conversacion._id);
+    // Si Meta confirma que esta conversación fue iniciada por el negocio, sumar al contador
+    if (enviado && respuestaWhatsApp?.billing?.conversation_type === 'business_initiated') {
+      await incrementarContadorConversaciones(conversacion.empresaId, conversacion._id);
+      const empresaActual = await Empresa.findById(conversacion.empresaId).lean();
+      const usados = empresaActual?.conversacionesUsadas24h || 0;
+      const maximo = empresaActual?.limiteConversaciones24h || 250;
+      if (usados >= maximo) {
+        const alertaIo = req.app.get('io');
+        if (alertaIo) {
+          alertaIo.to(empresaIdStr).emit('limite-conversaciones-alcanzado', {
+            usados,
+            maximo
+          });
+        }
+      }
+    }
 
     const nuevoMensaje = await Mensaje.create({
       conversacionId: conversacion._id,
@@ -1453,7 +1464,11 @@ const obtenerConfig = async (req, res) => {
         horariosEstructurados: horarios,
         abierto: empresa.abierto !== false,
         procesarImagenes: empresa.procesarImagenes === true,
-        procesarAudios: empresa.procesarAudios === true
+        procesarAudios: empresa.procesarAudios === true,
+        meta: {
+          costoTotal: empresa.metaCostoTotal || 0,
+          ultimaActualizacion: empresa.metaUltimaActualizacion || null
+        }
       }
     });
   } catch (error) {

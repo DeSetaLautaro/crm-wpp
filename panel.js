@@ -901,6 +901,16 @@ async function cargarConfiguracion() {
       procesarAudiosCheck.checked = (config.procesarAudios === true);
     }
 
+    const metaInfo = config.meta || {};
+    const metaCostoEl = document.getElementById('meta-costo-total');
+    if (metaCostoEl && metaInfo.costoTotal !== undefined) {
+      metaCostoEl.textContent = metaInfo.costoTotal;
+    }
+    const metaFechaEl = document.getElementById('meta-ultima-actualizacion');
+    if (metaFechaEl && metaInfo.ultimaActualizacion) {
+      metaFechaEl.textContent = new Date(metaInfo.ultimaActualizacion).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
     // Actualizar atajos rápidos para el autocompletado del input
     ATAJOS_RAPIDOS = (config.atajos || []).map(a => ({
       atajo: a.comando,
@@ -2105,6 +2115,15 @@ function setupSocketListeners() {
       reproducirSonidoNotificacion();
     }
     renderListaChats();
+  });
+
+  socket.on('limite-conversaciones-alcanzado', (payload) => {
+    const numEl = document.getElementById('uso-conversaciones-num');
+    if (numEl) numEl.textContent = payload.usados;
+    const maxEl = document.getElementById('uso-conversaciones-max');
+    if (maxEl) maxEl.textContent = payload.maximo;
+    const mensaje = `⚠️ Llegaste al límite diario de conversaciones iniciadas (${payload.maximo}).\n\nEstás usando ${payload.usados}. A partir de aquí, cada conversación nueva tendrá costo adicional de Meta.`;
+    alert(mensaje);
   });
 }
 

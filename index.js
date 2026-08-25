@@ -9,7 +9,9 @@ const { Server } = require('socket.io');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const pedidosRoutes = require('./routes/pedidosRoutes');
 const auth = require('./middlewares/auth');
+const cron = require('node-cron');
 const { iniciarCronHorarios } = require('./services/horariosCron');
+const { actualizarCostosDeTodasLasEmpresas } = require('./services/metaAnalyticsService');
 const { obtenerConversaciones } = require('./controllers/conversacionesController');
 
 const app = express();
@@ -52,6 +54,9 @@ mongoose.connect(MONGODB_URI)
       console.log(`Servidor escuchando en el puerto ${PORT}`);
     });
     iniciarCronHorarios();
+    cron.schedule('0 */6 * * *', () => {
+      actualizarCostosDeTodasLasEmpresas().catch(err => console.error('Error en cron de costos Meta:', err));
+    });
   })
   .catch((err) => {
     console.error('Error al conectar a MongoDB:', err.message);

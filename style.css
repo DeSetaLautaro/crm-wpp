@@ -86,6 +86,16 @@ body {
   white-space: nowrap;
 }
 
+.mensajes-costos {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #6B7280;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
 .whatsapp-selector label {
   font-size: 0.85rem;
   color: #6B7280;

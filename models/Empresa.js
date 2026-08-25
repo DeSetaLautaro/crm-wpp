@@ -88,6 +88,18 @@ const EmpresaSchema = new Schema(
     limiteConversaciones24h: {
       type: Number,
       default: 250
+    },
+    wabaId: {
+      type: String,
+      default: ''
+    },
+    metaCostoTotal: {
+      type: Number,
+      default: 0
+    },
+    metaUltimaActualizacion: {
+      type: Date,
+      default: null
     }
  
   },

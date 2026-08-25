@@ -7,7 +7,16 @@ async function obtenerWabaId(empresa) {
     return empresa.wabaId;
   }
 
-  // Sino, lo obtenemos del phone_number_id
+  // Si hay un WABA global en .env, lo usamos y lo guardamos en la empresa
+  if (process.env.WHATSAPP_WABA_ID) {
+    console.log(`🌐 Usando WABA ID desde .env: ${process.env.WHATSAPP_WABA_ID}`);
+    await Empresa.findByIdAndUpdate(empresa._id, {
+      $set: { wabaId: process.env.WHATSAPP_WABA_ID }
+    });
+    return process.env.WHATSAPP_WABA_ID;
+  }
+
+  // Sino, intentamos obtenerlo del phone_number_id
   const token = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneId = empresa.whatsappPhoneId;
   console.log('🔍 Buscando WABA ID con:', { token: token ? 'OK' : 'FALTA', phoneId });

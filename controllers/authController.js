@@ -19,15 +19,18 @@ const loginConPin = async (req, res) => {
     if (!usuario) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
-
+    console.log("nombre usuario", usuario.nombre);
+    console.log("pin usuario", usuario.pinCrm);
+    
     // 2. Verificar el PIN hasheado del usuario
     const pinValido = await bcrypt.compare(pin.trim(), usuario.pinCrm);
+    console.log("hash", pinValido);
     if (!pinValido) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     // 3. Buscar TODAS las empresas (líneas de WhatsApp) del usuario
-    const empresas = await Empresa.find({ usuarioAppId: usuario._id }).lean();
+    const empresas = await Empresa.find({ usuarioAppId: usuario._id.toString() }).lean();
     const empresasIds = empresas.map(e => e._id.toString());
     if (empresasIds.length === 0) {
       return res.status(404).json({ error: 'El usuario no tiene líneas de WhatsApp asociadas' });

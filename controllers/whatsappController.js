@@ -1133,7 +1133,7 @@ const actualizarConfig = async (req, res) => {
       atajos = req.body.atajos
         .map(a => ({
           comando: (a.comando || '').trim(),
-          respuesta: (a.respuesta || '').trim()
+          respuesta: String(a.respuesta || '').replace(/<br\s*\/?>/gi, '\n').trim()
         }))
         .filter(a => a.comando && a.respuesta);
     } else if (typeof req.body.atajos === 'string' && req.body.atajos.trim() !== '') {
@@ -1143,7 +1143,7 @@ const actualizarConfig = async (req, res) => {
           atajos = parsed
             .map(a => ({
               comando: (a.comando || '').trim(),
-              respuesta: (a.respuesta || '').trim()
+              respuesta: String(a.respuesta || '').replace(/<br\s*\/?>/gi, '\n').trim()
             }))
             .filter(a => a.comando && a.respuesta);
         }

@@ -767,9 +767,10 @@ function renderAtajos(atajos) {
   tbody.innerHTML = '';
   (atajos || []).forEach(atajo => {
     const tr = document.createElement('tr');
+    const respuestaNormalizada = String(atajo.respuesta || '').replace(/<br\s*\/?>/gi, '\n');
     tr.innerHTML = `
-      <td><input type="text" class="atajo-comando" value="${atajo.comando}"></td>
-      <td><input type="text" class="atajo-respuesta" value="${atajo.respuesta}"></td>
+      <td><input type="text" class="atajo-comando" value="${escaparHTML(atajo.comando)}"></td>
+      <td><textarea class="atajo-respuesta" rows="2">${escaparHTML(respuestaNormalizada)}</textarea></td>
       <td><button class="atajo-eliminar" type="button">×</button></td>
     `;
     tbody.appendChild(tr);
@@ -852,7 +853,7 @@ async function cargarConfiguracion() {
     // Actualizar atajos rápidos para el autocompletado del input
     ATAJOS_RAPIDOS = (config.atajos || []).map(a => ({
       atajo: a.comando,
-      mensaje: a.respuesta
+      mensaje: String(a.respuesta || '').replace(/<br\s*\/?>/gi, '\n')
     }));
   } catch (error) {
     console.error('Error al cargar configuración:', error);
@@ -882,7 +883,7 @@ async function guardarAtajosDesdePanel() {
   if (!tbody) return;
   const atajos = Array.from(tbody.querySelectorAll('tr')).map(tr => ({
     comando: tr.querySelector('.atajo-comando')?.value?.trim() || '',
-    respuesta: tr.querySelector('.atajo-respuesta')?.value?.trim() || ''
+    respuesta: tr.querySelector('.atajo-respuesta')?.value?.replace(/<br\s*\/?>/gi, '\n').trim() || ''
   })).filter(a => a.comando && a.respuesta);
 
   const aplicarATodasAtajos = document.getElementById('aplicar-atajos-todas')?.checked || false;
@@ -931,14 +932,14 @@ function guardarHorariosDesdePanel() {
 
 function agregarAtajo() {
   const comando = document.getElementById('atajo-comando-input')?.value?.trim() || '';
-  const respuesta = document.getElementById('atajo-respuesta-input')?.value?.trim() || '';
+  const respuesta = document.getElementById('atajo-respuesta-input')?.value?.replace(/<br\s*\/?>/gi, '\n').trim() || '';
   if (!comando || !respuesta) return;
   const tbody = document.getElementById('atajos-body');
   if (!tbody) return;
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="text" class="atajo-comando" value="${comando}"></td>
-    <td><input type="text" class="atajo-respuesta" value="${respuesta}"></td>
+    <td><input type="text" class="atajo-comando" value="${escaparHTML(comando)}"></td>
+    <td><textarea class="atajo-respuesta" rows="2">${escaparHTML(respuesta)}</textarea></td>
     <td><button class="atajo-eliminar" type="button">×</button></td>
   `;
   tbody.appendChild(tr);

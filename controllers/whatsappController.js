@@ -29,9 +29,15 @@ Reglas obligatorias:
 - No seas insistente con agregar productos. Si el cliente ya pidió o dijo que no quiere nada más, no vuelvas a ofrecerle más cosas.
 - Si no encontrás la información en el catálogo, ofrecé contactar a un humano.
 - Si el local está CERRADO, podés pasar el menú pero aclará de forma amable que no se están tomando pedidos hasta que abran. Igual podés registrar el pedido para cuando abran.
+- IMPORTANTE: Si el carrito actual tiene items y ya tenés la dirección de entrega del cliente, confirmá el pedido automáticamente, informá el total, preguntá cómo quiere pagar (si no lo dijo) y despedite amablemente. No esperes a que el cliente diga "confirmo".
 
 Catálogo actual:
 {menuTexto}
+
+Pedido actual del cliente:
+{carritoActual}
+
+Total del pedido: {carritoTotal}
 
 Historial reciente:
 {historialTexto}
@@ -690,6 +696,11 @@ JSON:`;
           return `${autor}: ${m.contenido}`;
         }).join('\n');
 
+        const carritoActual = (conversacion.carrito || []).map(item =>
+          `- ${item.nombre} (cantidad: ${item.cantidad || 1}, precio unitario: $${item.precioUnitario || 0})`
+        ).join('\n') || 'Vacío';
+        const carritoTotal = conversacion.carritoTotal || 0;
+
         const estadoLocal = localAbierto
           ? 'ABIERTO'
           : 'CERRADO en este momento';
@@ -710,6 +721,8 @@ JSON:`;
           .replaceAll('{nombreLocal}', empresa.nombre)
           .replaceAll('{estadoLocal}', estadoLocal)
           .replaceAll('{menuTexto}', menuTexto)
+          .replaceAll('{carritoActual}', carritoActual)
+          .replaceAll('{carritoTotal}', String(carritoTotal))
           .replaceAll('{historialTexto}', historialTexto)
           .replaceAll('{mensajeCliente}', textoMensaje)
           .replaceAll('{horarios}', horariosTexto)
@@ -773,73 +786,72 @@ JSON:`;
 
       await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: respuestaIA });
 
-      // ===== Guardar pedido si el cliente confirmó la orden =====
+      // ===== Guardar pedido automáticamente si ya están todos los datos =====
       try {
-        if (detectarConfirmacionPedido(textoMensaje) && contacto.direccion && contacto.direccion.trim() !== '') {
-          const carritoActual = conversacion.carrito || [];
-          if (carritoActual.length > 0) {
-            const totalCarrito = (conversacion.carritoTotal || 0) ||
-              carritoActual.reduce((sum, it) => sum + (it.cantidad * it.precioUnitario), 0);
+        const carritoActual = conversacion.carrito || [];
+        const tieneDireccionCompleta = contacto.direccion && contacto.direccion.trim() !== '';
+        if (carritoActual.length > 0 && tieneDireccionCompleta) {
+          const totalCarrito = (conversacion.carritoTotal || 0) ||
+            carritoActual.reduce((sum, it) => sum + (it.cantidad * it.precioUnitario), 0);
 
-            // Detectar método de pago mencionado en los últimos mensajes
-            let metodoPago = 'Pendiente';
-            try {
-              const ultimosMsgs = await Mensaje.find({ conversacionId: conversacion._id })
-                .sort({ createdAt: -1 })
-                .limit(10)
-                .lean();
-              for (const msg of ultimosMsgs) {
-                const det = detectarMetodoPago(msg.contenido);
-                if (det) {
-                  metodoPago = det;
-                  break;
-                }
+          // Detectar método de pago mencionado en los últimos mensajes
+          let metodoPago = 'Pendiente';
+          try {
+            const ultimosMsgs = await Mensaje.find({ conversacionId: conversacion._id })
+              .sort({ createdAt: -1 })
+              .limit(10)
+              .lean();
+            for (const msg of ultimosMsgs) {
+              const det = detectarMetodoPago(msg.contenido);
+              if (det) {
+                metodoPago = det;
+                break;
               }
-            } catch (e) {
-              console.warn('⚠️ No se pudo detectar método de pago:', e);
             }
-
-            await guardarPedidoConfirmado({
-              localId: usuario._id,
-              empresaId: empresa._id,
-              contactoId: contacto._id,
-              cliente: contacto.nombre || nombre,
-              telefonoCliente: contacto.telefono,
-              items: carritoActual,
-              total: totalCarrito,
-              metodoPago,
-              estado: 'confirmado',
-              direccionEntrega: contacto.direccion || '',
-              notas: '',
-              fechaTurno: '',
-              fecha: new Date(),
-              latitud: conversacion.latitud || null,
-              longitud: conversacion.longitud || null
-            });
-
-            // Limpiar carrito y coordenadas después de confirmar
-            await Conversacion.findByIdAndUpdate(conversacion._id, {
-              $set: { carrito: [], carritoTotal: 0, latitud: null, longitud: null }
-            });
-            conversacion.carrito = [];
-            conversacion.carritoTotal = 0;
-            conversacion.latitud = null;
-            conversacion.longitud = null;
-            const ioCarrito2 = req.app.get('io');
-            if (ioCarrito2) {
-              ioCarrito2.to(empresa._id.toString()).emit('carrito-actualizado', {
-                conversacionId: conversacion._id,
-                carrito: [],
-                total: 0
-              });
-              ioCarrito2.to(empresa._id.toString()).emit('pedido-actualizado', {
-                conversacionId: conversacion._id
-              });
-            }
-            console.log(`✅ [PEDIDO] Pedido guardado para el cliente ${contacto.telefono}`);
-          } else {
-            console.log(`ℹ️ [PEDIDO] El cliente confirmó pero no hay items en el carrito`);
+          } catch (e) {
+            console.warn('⚠️ No se pudo detectar método de pago:', e);
           }
+
+          await guardarPedidoConfirmado({
+            localId: usuario._id,
+            empresaId: empresa._id,
+            contactoId: contacto._id,
+            cliente: contacto.nombre || nombre,
+            telefonoCliente: contacto.telefono,
+            items: carritoActual,
+            total: totalCarrito,
+            metodoPago,
+            estado: 'confirmado',
+            direccionEntrega: contacto.direccion || '',
+            notas: '',
+            fechaTurno: '',
+            fecha: new Date(),
+            latitud: conversacion.latitud || null,
+            longitud: conversacion.longitud || null
+          });
+
+          // Limpiar carrito y coordenadas después de confirmar
+          await Conversacion.findByIdAndUpdate(conversacion._id, {
+            $set: { carrito: [], carritoTotal: 0, latitud: null, longitud: null }
+          });
+          conversacion.carrito = [];
+          conversacion.carritoTotal = 0;
+          conversacion.latitud = null;
+          conversacion.longitud = null;
+          const ioCarrito2 = req.app.get('io');
+          if (ioCarrito2) {
+            ioCarrito2.to(empresa._id.toString()).emit('carrito-actualizado', {
+              conversacionId: conversacion._id,
+              carrito: [],
+              total: 0
+            });
+            ioCarrito2.to(empresa._id.toString()).emit('pedido-actualizado', {
+              conversacionId: conversacion._id
+            });
+          }
+          console.log(`✅ [PEDIDO] Pedido guardado automáticamente para el cliente ${contacto.telefono}`);
+        } else if (carritoActual.length > 0) {
+          console.log('ℹ️ [PEDIDO] Hay items pero falta dirección del cliente');
         }
       } catch (error) {
         console.error('❌ Error al guardar pedido en BD:', error);

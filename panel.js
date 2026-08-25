@@ -776,7 +776,7 @@ function renderAtajos(atajos) {
     const respuestaNormalizada = String(atajo.respuesta || '').replace(/<br\s*\/?>/gi, '\n');
     tr.innerHTML = `
       <td><input type="text" class="atajo-comando" value="${escaparHTML(atajo.comando)}"></td>
-      <td><input type="text" class="atajo-respuesta" value="${escaparHTML(respuestaNormalizada)}"></td>
+      <td><textarea class="atajo-respuesta" rows="2">${escaparHTML(respuestaNormalizada)}</textarea></td>
       <td>
         <button class="atajo-guardar" type="button" style="display:none;" title="Confirmar cambios">✓</button>
         <button class="atajo-eliminar" type="button">×</button>
@@ -959,7 +959,7 @@ function agregarAtajo() {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td><input type="text" class="atajo-comando" value="${escaparHTML(comando)}"></td>
-    <td><input type="text" class="atajo-respuesta" value="${escaparHTML(respuesta)}"></td>
+    <td><textarea class="atajo-respuesta" rows="2">${escaparHTML(respuesta)}</textarea></td>
     <td>
       <button class="atajo-guardar" type="button" style="display:none;" title="Confirmar cambios">✓</button>
       <button class="atajo-eliminar" type="button">×</button>
@@ -2807,8 +2807,8 @@ async function init() {
   }
   if (inputMensaje) {
     inputMensaje.addEventListener('input', manejarInputMensaje);
-    inputMensaje.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
+    inputMensaje.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         enviarMensajeDesdePanel();
       }

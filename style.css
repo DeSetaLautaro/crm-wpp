@@ -449,16 +449,26 @@ body {
   font-size: 0.8rem;
 }
 
-.composer input {
+.composer input,
+.composer textarea {
   flex: 1;
   padding: 10px 14px;
   border: 1px solid #D1D5DB;
   border-radius: 24px;
   font-size: 0.9rem;
   outline: none;
+  font-family: inherit;
+  resize: none;
+  min-height: 40px;
+  max-height: 160px;
 }
 
-.composer input:focus {
+.composer textarea {
+  line-height: 1.4;
+}
+
+.composer input:focus,
+.composer textarea:focus {
   border-color: #2563EB;
 }
 
@@ -889,7 +899,8 @@ body {
   min-width: 150px;
 }
 
-.atajo-input-group input {
+.atajo-input-group input,
+.atajo-input-group textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
@@ -897,9 +908,17 @@ body {
   font-size: 14px;
   background: #f9fafb;
   transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+  resize: none; /* para el textarea del campo de RESP */
 }
 
-.atajo-input-group input:focus {
+.atajo-input-group textarea {
+  min-height: 38px;
+  line-height: 1.4;
+}
+
+.atajo-input-group input:focus,
+.atajo-input-group textarea:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
@@ -954,7 +973,8 @@ body {
   border-bottom-right-radius: 8px;
 }
 
-.atajos-tabla input {
+.atajos-tabla input,
+.atajos-tabla textarea {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid #e5e7eb;
@@ -962,9 +982,17 @@ body {
   font-size: 14px;
   background: #fff;
   transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+  resize: none; /* para que el textarea se vea como input */
 }
 
-.atajos-tabla input:focus {
+.atajos-tabla textarea {
+  line-height: 1.4;
+  min-height: 32px;
+}
+
+.atajos-tabla input:focus,
+.atajos-tabla textarea:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);

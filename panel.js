@@ -2432,6 +2432,7 @@ async function guardarDetallesDesdeModal() {
   const contacto = getContactoPorId(conv.contactoId);
   if (!contacto) return;
 
+  const nombre = (document.getElementById('modal-nombre') || {}).value?.trim() || '';
   const direccion = (document.getElementById('modal-direccion') || {}).value?.trim() || '';
   const pisoDepto = (document.getElementById('modal-pisodpto') || {}).value?.trim() || '';
   const codigoPostal = (document.getElementById('modal-codigopostal') || {}).value?.trim() || '';
@@ -2444,7 +2445,7 @@ async function guardarDetallesDesdeModal() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ direccion, pisoDepto, codigoPostal })
+      body: JSON.stringify({ direccion, pisoDepto, codigoPostal, nombre })
     });
 
     if (!res.ok) {
@@ -2453,6 +2454,7 @@ async function guardarDetallesDesdeModal() {
       return;
     }
 
+    contacto.nombre = nombre;
     contacto.direccion = direccion;
     contacto.pisoDepto = pisoDepto;
     contacto.codigoPostal = codigoPostal;
@@ -2465,6 +2467,8 @@ async function guardarDetallesDesdeModal() {
     if (inputPiso) inputPiso.value = pisoDepto;
     if (inputCP) inputCP.value = codigoPostal;
 
+    // Actualizar la lista de chats y el encabezado del chat con el nuevo nombre
+    renderTodo();
     cerrarDetallesModal();
   } catch (error) {
     console.error('Error de red al guardar detalles:', error);

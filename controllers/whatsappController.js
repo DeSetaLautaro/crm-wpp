@@ -1730,15 +1730,16 @@ const obtenerConfig = async (req, res) => {
 const actualizarContacto = async (req, res) => {
   try {
     const { contactoId } = req.params;
-    const { direccion, pisoDepto, codigoPostal } = req.body || {};
+    const { direccion, pisoDepto, codigoPostal, nombre } = req.body || {};
 
     const updates = {};
     if (typeof direccion === 'string') updates.direccion = direccion;
     if (typeof pisoDepto === 'string') updates.pisoDepto = pisoDepto;
     if (typeof codigoPostal === 'string') updates.codigoPostal = codigoPostal;
+    if (typeof nombre === 'string' && nombre.trim() !== '') updates.nombre = nombre.trim();
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'Debes enviar al menos direccion, pisoDepto o codigoPostal' });
+      return res.status(400).json({ error: 'Debes enviar al menos direccion, pisoDepto, codigoPostal o nombre' });
     }
 
     const contacto = await Cliente.findByIdAndUpdate(

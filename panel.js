@@ -4,6 +4,12 @@
 
 const USAR_MOCK_DATA = false;
 
+const MOCK_PLANTILLAS = [
+  { id: 'plantilla_bienvenida', nombre: 'Bienvenida', texto: 'Hola {{1}}, gracias por contactarnos' },
+  { id: 'plantilla_promocion', nombre: 'Promoción del día', texto: 'Aprovechá nuestra promo {{1}}' },
+  { id: 'plantilla_recordatorio', nombre: 'Recordatorio', texto: 'Te recordamos tu pedido para hoy {{1}}' }
+];
+
 // ===== Mock Data =====
 // Basado en la estructura de los modelos definidos en proyecto.md
 
@@ -1109,6 +1115,50 @@ function validarFechaProgramacionDifusion() {
   return true;
 }
 
+function poblarSelectPlantillas() {
+  const select = document.getElementById('difusion-plantilla-select');
+  if (!select) return;
+  select.innerHTML = '';
+  MOCK_PLANTILLAS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.nombre;
+    select.appendChild(opt);
+  });
+  mostrarVistaPreviaPlantilla();
+}
+
+function cambiarTipoMensaje() {
+  const tipo = document.querySelector('input[name="difusion-tipo-mensaje"]:checked')?.value || 'libre';
+  const divLibre = document.getElementById('difusion-mensaje-libre');
+  const divPlantilla = document.getElementById('difusion-plantilla-wrapper');
+  const preview = document.getElementById('difusion-plantilla-preview');
+  if (tipo === 'plantilla') {
+    if (divLibre) divLibre.style.display = 'none';
+    if (divPlantilla) divPlantilla.style.display = 'block';
+    if (preview) preview.style.display = 'block';
+    mostrarVistaPreviaPlantilla();
+  } else {
+    if (divLibre) divLibre.style.display = 'block';
+    if (divPlantilla) divPlantilla.style.display = 'none';
+    if (preview) preview.style.display = 'none';
+  }
+}
+
+function mostrarVistaPreviaPlantilla() {
+  const select = document.getElementById('difusion-plantilla-select');
+  const preview = document.getElementById('difusion-plantilla-preview');
+  const textoEl = document.getElementById('difusion-plantilla-preview-texto');
+  if (!select || !preview || !textoEl) return;
+  const id = select.value;
+  const plantilla = MOCK_PLANTILLAS.find(p => p.id === id);
+  if (plantilla) {
+    textoEl.textContent = plantilla.texto;
+  } else {
+    textoEl.textContent = '';
+  }
+}
+
 async function cargarDifusiones() {
   const token = localStorage.getItem('token') || '';
   try {
@@ -1178,10 +1228,23 @@ function renderDifusiones(difusiones) {
 }
 
 async function crearDifusionDesdePanel() {
-  const mensaje = document.getElementById('difusion-mensaje')?.value?.trim() || '';
-  if (!mensaje) {
-    alert('Escribí un mensaje para la difusión');
-    return;
+  const tipoMensaje = document.querySelector('input[name="difusion-tipo-mensaje"]:checked')?.value || 'libre';
+  let mensaje = '';
+  let plantillaId = '';
+  if (tipoMensaje === 'plantilla') {
+    plantillaId = document.getElementById('difusion-plantilla-select')?.value || '';
+    const plantilla = MOCK_PLANTILLAS.find(p => p.id === plantillaId);
+    if (!plantilla) {
+      alert('Seleccioná una plantilla');
+      return;
+    }
+    mensaje = plantilla.texto;
+  } else {
+    mensaje = document.getElementById('difusion-mensaje')?.value?.trim() || '';
+    if (!mensaje) {
+      alert('Escribí un mensaje para la difusión');
+      return;
+    }
   }
   const modos = [];
   if (document.getElementById('difusion-dest-todos')?.checked) modos.push('todos');
@@ -1205,7 +1268,7 @@ async function crearDifusionDesdePanel() {
     fechaProgramacion = document.getElementById('difusion-fecha-programacion')?.value || '';
   }
 
-  const payload = { mensaje, tipoDestinatario: modos };
+  const payload = { mensaje, plantillaId, tipoMensaje, tipoDestinatario: modos };
   if (modos.includes('etiqueta')) payload.etiqueta = etiqueta;
   if (modos.includes('manual')) payload.contactosIds = contactosIds;
   if (fechaProgramacion) payload.fechaProgramacion = new Date(fechaProgramacion).toISOString();
@@ -3385,6 +3448,17 @@ async function init() {
       cargarDifusiones();
     });
   }
+
+  // Inicializar selector de tipo de mensaje
+  poblarSelectPlantillas();
+  document.querySelectorAll('input[name="difusion-tipo-mensaje"]').forEach(r => {
+    r.addEventListener('change', cambiarTipoMensaje);
+  });
+  const selectPlantilla = document.getElementById('difusion-plantilla-select');
+  if (selectPlantilla) {
+    selectPlantilla.addEventListener('change', mostrarVistaPreviaPlantilla);
+  }
+  cambiarTipoMensaje();
 
   document.addEventListener('click', (e) => {
     const btnEnviar = e.target.closest('[data-enviar-difusion]');

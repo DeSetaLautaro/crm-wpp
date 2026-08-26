@@ -2,8 +2,32 @@
 
 <div class="difusion-card">
   <div class="difusion-field-group">
+    <label class="difusion-label">Tipo de mensaje</label>
+    <div class="difusion-radio-group">
+      <label class="difusion-radio">
+        <input type="radio" name="difusion-tipo-mensaje" value="libre" checked>
+        <span>Mensaje libre</span>
+      </label>
+      <label class="difusion-radio">
+        <input type="radio" name="difusion-tipo-mensaje" value="plantilla">
+        <span>Usar plantilla</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="difusion-field-group" id="difusion-mensaje-libre">
     <label class="difusion-label" for="difusion-mensaje">Mensaje</label>
     <textarea id="difusion-mensaje" rows="4" placeholder="Escribí el mensaje a difundir"></textarea>
+  </div>
+
+  <div class="difusion-field-group" id="difusion-plantilla-wrapper" style="display:none;">
+    <label class="difusion-label" for="difusion-plantilla-select">Seleccioná una plantilla</label>
+    <select id="difusion-plantilla-select" class="difusion-input"></select>
+  </div>
+
+  <div id="difusion-plantilla-preview" class="difusion-plantilla-preview" style="display:none;">
+    <span class="difusion-preview-label">Vista previa de la plantilla</span>
+    <div id="difusion-plantilla-preview-texto" class="difusion-preview-texto"></div>
   </div>
 
   <div class="difusion-field-group">

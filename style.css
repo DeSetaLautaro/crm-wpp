@@ -2436,6 +2436,29 @@ body.modo-login #app {
 .difusion-btn-enviar:hover {
   text-decoration: underline;
 }
+.difusion-plantilla-preview {
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+.difusion-preview-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.difusion-preview-texto {
+  background: #f9fafb;
+  color: #4b5563;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
 #slim-sidebar #btn-difusion.activo {
   background: #25D366;

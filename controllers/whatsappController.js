@@ -1129,6 +1129,26 @@ const enviarMensaje = async (req, res) => {
       return res.status(500).json({ error: 'Faltan datos de empresa o contacto para enviar el mensaje' });
     }
 
+    // ===== Control de monedero: si está bloqueado, no se pueden iniciar conversaciones nuevas =====
+    try {
+      const usuarioMonederoEnvio = await Usuario.findById(empresa.usuarioAppId).lean();
+      if (usuarioMonederoEnvio?.monederoBloqueado) {
+        const ultimoMensajeConv = await Mensaje.findOne({ conversacionId: conversacion._id })
+          .sort({ createdAt: -1 })
+          .lean();
+        const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const esRespuestaGratuita = ultimoMensajeConv &&
+          ultimoMensajeConv.remitente === 'cliente' &&
+          new Date(ultimoMensajeConv.createdAt) > hace24h;
+        if (!esRespuestaGratuita) {
+          return res.status(403).json({ error: 'Monedero bloqueado: no podés iniciar conversaciones nuevas. Cargá saldo para desbloquear.' });
+        }
+      }
+    } catch (errorMon) {
+      console.error('Error al verificar monedero en envío:', errorMon);
+    }
+    // ====================================================================
+
     let enviado = false;
     let respuestaWhatsApp = null;
     if (accessToken) {
@@ -1183,28 +1203,6 @@ const enviarMensaje = async (req, res) => {
         }
       }
 
-      // ===== MONEDERO: descuento por conversación iniciada por el negocio =====
-      try {
-        const usuarioMonedero = await Usuario.findById(empresa.usuarioAppId);
-        if (usuarioMonedero) {
-          const costoConv = usuarioMonedero.costoPorConversacion || 0.035;
-          const ioMonedero = req.app.get('io');
-          const resultado = await descontarSaldoPorCosto(usuarioMonedero, costoConv, conversacion.empresaId, ioMonedero);
-          if (resultado.bloqueado) {
-            const ioBloqueo = req.app.get('io');
-            if (ioBloqueo) {
-              ioBloqueo.to(empresaIdStr).emit('monedero-bloqueado', {
-                usuarioId: usuarioMonedero._id,
-                deuda: resultado.deuda,
-                tolerancia: usuarioMonedero.deudaToleradaUsd || 5
-              });
-            }
-          }
-        }
-      } catch (errorWal) {
-        console.error('Error al descontar saldo del monedero:', errorWal);
-      }
-      // ===============================================================
     }
 
     const nuevoMensaje = await Mensaje.create({
@@ -1891,6 +1889,19 @@ const cargarSaldoMonedero = async (req, res) => {
 
     let deudaNueva = usuario.deudaPendienteUsd || 0;
     let saldoNuevo = usuario.saldoUsd || 0;
+    const costoCiclo = usuario.costoCicloActualUsd || 0;
+
+    // Aplicar el costo acumulado del ciclo antes de cargar el nuevo saldo
+    if (costoCiclo > 0) {
+      if (saldoNuevo >= costoCiclo) {
+        saldoNuevo -= costoCiclo;
+      } else {
+        deudaNueva += (costoCiclo - saldoNuevo);
+        saldoNuevo = 0;
+      }
+    }
+
+    // Ahora cargar el nuevo monto, primero paga la deuda pendiente
     let restante = monto;
     if (deudaNueva > 0) {
       const pagoDeuda = Math.min(deudaNueva, restante);
@@ -1903,6 +1914,7 @@ const cargarSaldoMonedero = async (req, res) => {
       $set: {
         saldoUsd: saldoNuevo,
         deudaPendienteUsd: deudaNueva,
+        costoCicloActualUsd: 0,
         monederoBloqueado: false,
         fechaCicloFacturacion: new Date(),
         avisoEnviado: false

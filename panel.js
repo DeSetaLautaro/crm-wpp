@@ -2269,7 +2269,12 @@ function setupSocketListeners() {
   });
 
   socket.on('monedero-aviso', (payload) => {
-    const mensaje = `⚠️ Estás usando ${payload.porcentaje}% de tu límite de fiado ($${payload.deuda.toFixed(2)} de $${payload.tolerancia.toFixed(2)}).\n\nCargá saldo para evitar que el bot se pause automáticamente.`;
+    const mensaje = `⚠️ Estás usando ${payload.porcentaje}% de tu límite de fiado ($${payload.deuda.toFixed(2)} de $${payload.tolerancia.toFixed(2)}).\n\nCargá saldo para evitar que se bloqueen las conversaciones nuevas.`;
+    alert(mensaje);
+  });
+
+  socket.on('monedero-bloqueado', (payload) => {
+    const mensaje = `⛔ No podés iniciar conversaciones nuevas.\n\nTu monedero está bloqueado por superar el límite de fiado ($${payload.deuda.toFixed(2)} de $${payload.tolerancia.toFixed(2)}).\n\nCargá saldo para desbloquear.`;
     alert(mensaje);
   });
 }

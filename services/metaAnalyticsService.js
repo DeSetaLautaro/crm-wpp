@@ -104,20 +104,65 @@ async function actualizarCostosEmpresa(empresa) {
 }
 
 // Actualiza el costo total del ciclo para un usuario (suma todas sus líneas)
-async function actualizarCostosUsuario(usuarioId) {
+async function actualizarCostosUsuario(usuarioId, io) {
   const empresas = await Empresa.find({ usuarioAppId: usuarioId.toString() }).lean();
   let total = 0;
   for (const empresa of empresas) {
     const costo = await actualizarCostosEmpresa(empresa);
     total += costo || 0;
   }
+
   await Usuario.findByIdAndUpdate(usuarioId, {
     $set: { costoCicloActualUsd: total }
   });
+
+  // Re-evaluar bloqueo del monedero
+  const usuario = await Usuario.findById(usuarioId).lean();
+  if (!usuario) return total;
+
+  const saldo = usuario.saldoUsd || 0;
+  const tolerancia = usuario.deudaToleradaUsd || 5;
+  const deudaPrevia = usuario.deudaPendienteUsd || 0;
+  const presupuestoTotal = saldo + tolerancia;
+  const gastoTotal = total + deudaPrevia;
+
+  const deudaReal = Math.max(0, gastoTotal - saldo);
+  const ratioDeuda = tolerancia > 0 ? deudaReal / tolerancia : 0;
+
+  // Aviso al 70% de la tolerancia usada
+  if (ratioDeuda >= 0.7 && !usuario.avisoEnviado) {
+    if (io) {
+      const empresasUsuario = await Empresa.find({ usuarioAppId: usuarioId.toString() }).lean();
+      empresasUsuario.forEach(e => io.to(e._id.toString()).emit('monedero-aviso', {
+        deuda: deudaReal,
+        tolerancia,
+        porcentaje: Math.round(ratioDeuda * 100)
+      }));
+    }
+    await Usuario.findByIdAndUpdate(usuarioId, { $set: { avisoEnviado: true } });
+  } else if (ratioDeuda < 0.7 && usuario.avisoEnviado) {
+    await Usuario.findByIdAndUpdate(usuarioId, { $set: { avisoEnviado: false } });
+  }
+
+  const bloqueado = gastoTotal > presupuestoTotal;
+  if (bloqueado !== usuario.monederoBloqueado) {
+    await Usuario.findByIdAndUpdate(usuarioId, { $set: { monederoBloqueado: bloqueado } });
+
+    if (bloqueado && io) {
+      const empresasUsuario = await Empresa.find({ usuarioAppId: usuarioId.toString() }).lean();
+      empresasUsuario.forEach(e => io.to(e._id.toString()).emit('monedero-bloqueado', {
+        usuarioId,
+        deuda: deudaReal,
+        tolerancia
+      }));
+    }
+    console.log(`${bloqueado ? '🚫' : '✅'} Monedero ${bloqueado ? 'bloqueado' : 'desbloqueado'} para usuario ${usuarioId}`);
+  }
+
   return total;
 }
 
-async function actualizarCostosDeTodasLasEmpresas() {
+async function actualizarCostosDeTodasLasEmpresas(io) {
   const empresas = await Empresa.find({});
   const usuariosSet = new Set();
   for (const empresa of empresas) {
@@ -131,7 +176,7 @@ async function actualizarCostosDeTodasLasEmpresas() {
 
   for (const userId of usuariosSet) {
     try {
-      await actualizarCostosUsuario(userId);
+      await actualizarCostosUsuario(userId, io);
     } catch (e) {
       console.error(`Error actualizando usuario ${userId}:`, e.message);
     }

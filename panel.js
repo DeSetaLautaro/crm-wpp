@@ -110,6 +110,7 @@ let guardandoEstado = false;
 let editandoBienvenida = false;
 let guardandoBienvenida = false;
 let bienvenidaActual = '';
+let mostrarTodasDifusiones = false;
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
@@ -1129,12 +1130,19 @@ async function cargarDifusiones() {
 
 function renderDifusiones(difusiones) {
   const cont = document.getElementById('difusiones-lista');
+  const btnHistorial = document.getElementById('btn-ver-historial');
   if (!cont) return;
-  if (difusiones.length === 0) {
+
+  const LIMITE = 5;
+  const visibles = mostrarTodasDifusiones ? difusiones : difusiones.slice(0, LIMITE);
+
+  if (visibles.length === 0) {
     cont.innerHTML = '<span style="color:#9CA3AF;">Sin difusiones todavía</span>';
+    if (btnHistorial) btnHistorial.style.display = 'none';
     return;
   }
-  cont.innerHTML = difusiones.map(d => {
+
+  cont.innerHTML = visibles.map(d => {
     const fechaTexto = d.fechaEnvio
       ? `Enviada: ${new Date(d.fechaEnvio).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
       : d.fechaProgramacion
@@ -1167,6 +1175,17 @@ function renderDifusiones(difusiones) {
       ${puedeEnviar ? `<button class="btn-guardar-config" data-enviar-difusion="${d._id}">Enviar ahora</button>` : ''}
     </div>`;
   }).join('');
+
+  // Actualizar visibilidad del botón "Ver historial"
+  if (btnHistorial) {
+    const total = difusiones.length;
+    if (total <= LIMITE) {
+      btnHistorial.style.display = 'none';
+    } else {
+      btnHistorial.style.display = 'block';
+      btnHistorial.textContent = mostrarTodasDifusiones ? `Ocultar historial (${total})` : `Ver historial (${total})`;
+    }
+  }
 }
 
 async function crearDifusionDesdePanel() {
@@ -3368,6 +3387,14 @@ async function init() {
   const btnCrearDifusion = document.getElementById('btn-crear-difusion');
   if (btnCrearDifusion) {
     btnCrearDifusion.addEventListener('click', crearDifusionDesdePanel);
+  }
+
+  const btnVerHistorial = document.getElementById('btn-ver-historial');
+  if (btnVerHistorial) {
+    btnVerHistorial.addEventListener('click', () => {
+      mostrarTodasDifusiones = !mostrarTodasDifusiones;
+      cargarDifusiones();
+    });
   }
 
   document.addEventListener('click', (e) => {

@@ -1193,6 +1193,7 @@ async function crearDifusionDesdePanel() {
   }
 
   const token = localStorage.getItem('token') || '';
+  let difusionId = null;
   try {
     const res = await fetch('/api/difusiones', {
       method: 'POST',
@@ -1204,19 +1205,28 @@ async function crearDifusionDesdePanel() {
       alert(data.error || 'Error al crear difusión');
       return;
     }
-    document.getElementById('difusion-mensaje').value = '';
-    const fechaInput = document.getElementById('difusion-fecha-programacion');
-    if (fechaInput) fechaInput.value = '';
-    limpiarSeleccionManual();
-    cargarDifusiones();
-    alert('Difusión creada correctamente');
+    difusionId = data.difusion._id;
   } catch (error) {
     console.error('Error de red al crear difusión:', error);
     alert('Error al crear difusión');
+    return;
+  }
+
+  // Limpiar formulario
+  document.getElementById('difusion-mensaje').value = '';
+  const fechaInput = document.getElementById('difusion-fecha-programacion');
+  if (fechaInput) fechaInput.value = '';
+  limpiarSeleccionManual();
+
+  if (modoEnvio === 'ahora' && difusionId) {
+    await enviarDifusionDesdePanel(difusionId, true);
+  } else {
+    await cargarDifusiones();
+    mostrarToast('Difusión programada correctamente', 'info');
   }
 }
 
-async function enviarDifusionDesdePanel(difusionId) {
+async function enviarDifusionDesdePanel(difusionId, mostrarExito = false) {
   const token = localStorage.getItem('token') || '';
   try {
     const res = await fetch(`/api/difusiones/${difusionId}/enviar`, {
@@ -1226,12 +1236,15 @@ async function enviarDifusionDesdePanel(difusionId) {
     const data = await res.json();
     if (!res.ok) {
       alert(data.error || 'Error al enviar difusión');
-      return;
+      return false;
     }
-    cargarDifusiones();
+    await cargarDifusiones();
+    if (mostrarExito) mostrarToast('Difusión enviada correctamente', 'info');
+    return true;
   } catch (error) {
     console.error('Error enviando difusión:', error);
     alert('Error enviando difusión');
+    return false;
   }
 }
 

@@ -1,5 +1,7 @@
 const Empresa = require('../models/Empresa');
 const Cliente = require('../models/Cliente');
+const Conversacion = require('../models/Conversacion');
+const Mensaje = require('../models/Mensaje');
 const Difusion = require('../models/Difusion');
 const { Types } = require('mongoose');
 
@@ -25,6 +27,40 @@ function normalizarTelefono(telefono) {
   }
   t = t.replace(/^0/, '');
   return '549' + t;
+}
+
+async function guardarMensajeDifusion(empresa, contactoId, mensaje) {
+  let conversacion = await Conversacion.findOne({
+    empresaId: empresa._id,
+    contactoId
+  }).sort({ updatedAt: -1 });
+
+  if (!conversacion) {
+    conversacion = await Conversacion.create({
+      empresaId: empresa._id,
+      contactoId,
+      lineaReceptora: empresa.whatsappPhoneId,
+      numeroReceptor: '',
+      botActivo: empresa.botActivo !== false,
+      estado: 'Abierto',
+      ultimoMensaje: mensaje
+    });
+  } else {
+    await Conversacion.findByIdAndUpdate(conversacion._id, {
+      $set: {
+        ultimoMensaje: mensaje,
+        estado: 'Abierto'
+      }
+    });
+  }
+
+  const nuevoMensaje = await Mensaje.create({
+    conversacionId: conversacion._id,
+    remitente: 'empresa',
+    contenido: mensaje
+  });
+
+  return { conversacion, mensaje: nuevoMensaje };
 }
 
 async function enviarTextoWhatsApp(empresa, telefono, mensaje) {
@@ -186,7 +222,7 @@ async function crearDifusion(req, res) {
   }
 }
 
-async function procesarEnvioDifusion(difusion) {
+async function procesarEnvioDifusion(difusion, io = null) {
   if (difusion.estado === 'enviando') {
     throw new Error('La difusión ya está en proceso');
   }
@@ -219,6 +255,30 @@ async function procesarEnvioDifusion(difusion) {
       if (r.status === 'fulfilled' && r.value && r.value.ok) {
         dest.estado = 'enviado';
         enviados++;
+        // Guardar en la conversación del CRM como mensaje enviado por la empresa
+        if (dest.contactoId) {
+          guardarMensajeDifusion(empresa, dest.contactoId, difusion.mensaje)
+            .then(({ conversacion, mensaje: msg }) => {
+              if (io) {
+                io.to(empresa._id.toString()).emit('mensaje-nuevo', {
+                  conversacionId: conversacion._id,
+                  mensaje: {
+                    remitente: 'empresa',
+                    contenido: msg.contenido,
+                    fecha: msg.createdAt
+                  },
+                  conversacion: {
+                    _id: conversacion._id,
+                    ultimoMensaje: msg.contenido,
+                    updatedAt: conversacion.updatedAt
+                  }
+                });
+              }
+            })
+            .catch(err => {
+              console.error('❌ [DIFUSIÓN] Error al guardar mensaje en conversación:', err);
+            });
+        }
       } else {
         dest.estado = 'error';
         const errMsg = r.status === 'rejected' ? (r.reason?.message || 'Error') : (r.value?.error || 'Error');
@@ -250,8 +310,8 @@ async function enviarDifusion(req, res) {
     if (!idsEmpresas.some(e => String(e) === String(difusion.empresaId))) {
       return res.status(403).json({ error: 'No tienes acceso a esta difusión' });
     }
-    const difusionProcesada = await procesarEnvioDifusion(difusion);
     const io = req.app.get('io');
+    const difusionProcesada = await procesarEnvioDifusion(difusion, io);
     if (io) {
       io.to(String(difusion.empresaId)).emit('difusion-completada', { difusionId: difusion._id });
     }
@@ -279,7 +339,7 @@ async function enviarDifusionesProgramadas() {
     }).limit(20);
     for (const difusion of difusiones) {
       try {
-        await procesarEnvioDifusion(difusion);
+        await procesarEnvioDifusion(difusion, null);
       } catch (e) {
         console.error(`Error enviando difusión programada ${difusion._id}:`, e);
       }

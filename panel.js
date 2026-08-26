@@ -801,19 +801,23 @@ function showView(vista) {
   const configView = document.getElementById('config-view');
   const perfilView = document.getElementById('perfil-view');
   const pagosView = document.getElementById('pagos-view');
+  const difusionView = document.getElementById('difusion-view');
   const btnInbox = document.getElementById('btn-inbox');
   const btnConfig = document.getElementById('btn-config');
   const btnPerfil = document.getElementById('btn-perfil');
   const btnPagos = document.getElementById('btn-pagos');
+  const btnDifusion = document.getElementById('btn-difusion');
 
   if (inboxView) inboxView.classList.add('hidden');
   if (configView) configView.classList.add('hidden');
   if (perfilView) perfilView.classList.add('hidden');
   if (pagosView) pagosView.classList.add('hidden');
+  if (difusionView) difusionView.classList.add('hidden');
   if (btnInbox) btnInbox.classList.remove('activo');
   if (btnConfig) btnConfig.classList.remove('activo');
   if (btnPerfil) btnPerfil.classList.remove('activo');
   if (btnPagos) btnPagos.classList.remove('activo');
+  if (btnDifusion) btnDifusion.classList.remove('activo');
 
   if (vista === 'inbox') {
     inboxView?.classList.remove('hidden');
@@ -830,6 +834,10 @@ function showView(vista) {
     pagosView?.classList.remove('hidden');
     btnPagos?.classList.add('activo');
     cargarPagos();
+  } else if (vista === 'difusion') {
+    difusionView?.classList.remove('hidden');
+    btnDifusion?.classList.add('activo');
+    cargarDifusiones();
   }
 }
 
@@ -979,6 +987,91 @@ async function cargarPagos() {
 
   // Cargar datos del monedero
   await cargarMonedero();
+}
+
+async function cargarDifusiones() {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/difusiones', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      console.log('[cargarDifusiones] HTTP error:', res.status);
+      return;
+    }
+    const data = await res.json();
+    const difusiones = data.difusiones || [];
+    renderDifusiones(difusiones);
+  } catch (error) {
+    console.error('Error al cargar difusiones:', error);
+  }
+}
+
+function renderDifusiones(difusiones) {
+  const cont = document.getElementById('difusiones-lista');
+  if (!cont) return;
+  if (difusiones.length === 0) {
+    cont.innerHTML = '<span style="color:#9CA3AF;">Sin difusiones todavía</span>';
+    return;
+  }
+  cont.innerHTML = difusiones.map(d => {
+    const fecha = d.fechaEnvio || d.fechaProgramacion || d.createdAt;
+    const fechaTexto = fecha ? new Date(fecha).toLocaleString('es-AR', { dateStyle:'short', timeStyle:'short' }) : '—';
+    return `<div class="config-card" style="margin-bottom:8px;">
+      <strong>${d.mensaje}</strong>
+      <div>Estado: ${d.estado}</div>
+      <div>Destinatarios: ${d.destinatariosEnviados || 0}/${d.destinatariosTotal || 0}</div>
+      <div>${fechaTexto}</div>
+      <button class="btn-guardar-config" data-enviar-difusion="${d._id}">Enviar ahora</button>
+    </div>`;
+  }).join('');
+}
+
+async function crearDifusionDesdePanel() {
+  const mensaje = (document.getElementById('difusion-mensaje') || {}).value?.trim() || '';
+  const etiqueta = (document.getElementById('difusion-etiqueta') || {}).value?.trim() || '';
+  if (!mensaje) {
+    alert('Escribí un mensaje para la difusión');
+    return;
+  }
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/difusiones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ mensaje, etiqueta })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Error al crear difusión');
+      return;
+    }
+    document.getElementById('difusion-mensaje').value = '';
+    document.getElementById('difusion-etiqueta').value = '';
+    cargarDifusiones();
+  } catch (error) {
+    console.error('Error de red al crear difusión:', error);
+    alert('Error al crear difusión');
+  }
+}
+
+async function enviarDifusionDesdePanel(difusionId) {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/difusiones/${difusionId}/enviar`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Error al enviar difusión');
+      return;
+    }
+    cargarDifusiones();
+  } catch (error) {
+    console.error('Error enviando difusión:', error);
+    alert('Error enviando difusión');
+  }
 }
 
 async function actualizarCostosManual() {
@@ -2965,7 +3058,7 @@ async function manejarLogin() {
 
 // ===== Eventos =====
 function precargarVistas() {
-  const archivos = ['chats', 'config', 'perfil', 'pagos'];
+  const archivos = ['chats', 'config', 'perfil', 'pagos', 'difusion'];
   return Promise.all(archivos.map(async (nombre) => {
     if (vistasCache[nombre]) return;
     try {
@@ -2985,6 +3078,8 @@ function precargarVistas() {
     if (perfilView && vistasCache['perfil']) perfilView.innerHTML = vistasCache['perfil'];
     const pagosView = document.getElementById('pagos-view');
     if (pagosView && vistasCache['pagos']) pagosView.innerHTML = vistasCache['pagos'];
+    const difusionView = document.getElementById('difusion-view');
+    if (difusionView && vistasCache['difusion']) difusionView.innerHTML = vistasCache['difusion'];
   });
 }
 
@@ -3060,6 +3155,24 @@ async function init() {
   if (btnPagos) {
     btnPagos.addEventListener('click', () => showView('pagos'));
   }
+
+  const btnDifusion = document.getElementById('btn-difusion');
+  if (btnDifusion) {
+    btnDifusion.addEventListener('click', () => showView('difusion'));
+  }
+
+  const btnCrearDifusion = document.getElementById('btn-crear-difusion');
+  if (btnCrearDifusion) {
+    btnCrearDifusion.addEventListener('click', crearDifusionDesdePanel);
+  }
+
+  document.addEventListener('click', (e) => {
+    const btnEnviar = e.target.closest('[data-enviar-difusion]');
+    if (btnEnviar) {
+      const id = btnEnviar.getAttribute('data-enviar-difusion');
+      enviarDifusionDesdePanel(id);
+    }
+  });
 
   // Cerrar sesión
   const btnLogout = document.getElementById('btn-logout');

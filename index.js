@@ -8,6 +8,7 @@ const { Server } = require('socket.io');
 
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const pedidosRoutes = require('./routes/pedidosRoutes');
+const difusionRoutes = require('./routes/difusionRoutes');
 const auth = require('./middlewares/auth');
 const cron = require('node-cron');
 const { iniciarCronHorarios } = require('./services/horariosCron');
@@ -29,6 +30,7 @@ app.get('/api/conversaciones', auth, obtenerConversaciones);
 
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/difusiones', difusionRoutes);
 
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crm';

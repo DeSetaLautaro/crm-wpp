@@ -32,8 +32,18 @@ async function enviarTextoWhatsApp(empresa, telefono, mensaje) {
   const phoneId = empresa.whatsappPhoneId;
   const destino = normalizarTelefono(telefono);
   if (!accessToken || !phoneId || !destino) {
+    console.log('❌ [DIFUSIÓN] Faltan credenciales o teléfono:', {
+      accessToken: accessToken ? 'SÍ' : 'NO',
+      phoneId: phoneId || 'NO',
+      destino: destino || 'NO'
+    });
     return { ok: false, error: 'Faltan credenciales o teléfono' };
   }
+  console.log('📤 [DIFUSIÓN] Intentando enviar a WhatsApp:');
+  console.log('  - phoneId (whatsappPhoneId):', phoneId);
+  console.log('  - teléfono normalizado:', destino);
+  console.log('  - accessToken definido?', accessToken ? 'SÍ (longitud ' + accessToken.length + ')' : 'NO');
+  console.log('  - mensaje:', mensaje);
   try {
     const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
     const payload = {
@@ -50,12 +60,14 @@ async function enviarTextoWhatsApp(empresa, telefono, mensaje) {
       },
       body: JSON.stringify(payload)
     });
+    const body = await resp.text();
+    console.log('📥 [DIFUSIÓN] Respuesta de Meta:', resp.status, body);
     if (!resp.ok) {
-      const body = await resp.text();
       return { ok: false, error: body };
     }
     return { ok: true };
   } catch (error) {
+    console.error('❌ [DIFUSIÓN] Excepción en fetch a WhatsApp:', error);
     return { ok: false, error: error.message };
   }
 }
@@ -145,6 +157,10 @@ async function crearDifusion(req, res) {
     }
 
     const contactos = Array.from(mapContactos.values());
+    console.log('👥 [DIFUSIÓN] Contactos encontrados:', contactos.length);
+    if (contactos.length > 0) {
+      console.log('  - Primer contacto:', contactos[0]);
+    }
     if (contactos.length === 0) {
       return res.status(400).json({ error: 'No hay contactos para la difusión' });
     }
@@ -177,6 +193,12 @@ async function procesarEnvioDifusion(difusion) {
   const empresa = await Empresa.findById(difusion.empresaId);
   if (!empresa) throw new Error('Empresa no encontrada');
 
+  console.log('🏢 [DIFUSIÓN] Empresa encontrada:', empresa.nombre);
+  console.log('  - empresa.tokenMeta definido?', empresa.tokenMeta ? 'SÍ' : 'NO');
+  console.log('  - empresa.whatsappPhoneId:', empresa.whatsappPhoneId);
+  console.log('  - Difusión ID:', difusion._id);
+  console.log('  - Contactos totales:', difusion.contactos.length);
+
   difusion.estado = 'enviando';
   difusion.fechaEnvio = new Date();
   await difusion.save();
@@ -184,9 +206,11 @@ async function procesarEnvioDifusion(difusion) {
   let enviados = 0;
   const errores = [];
   const pendientes = difusion.contactos.filter(d => d.estado !== 'enviado' && d.telefono);
+  console.log('  - Contactos pendientes:', pendientes.length);
 
   for (let i = 0; i < pendientes.length; i += CONCURRENCIA_ENVIO) {
     const lote = pendientes.slice(i, i + CONCURRENCIA_ENVIO);
+    console.log(`🚀 [DIFUSIÓN] Enviando lote de ${lote.length} contactos (${i + lote.length}/${pendientes.length})`);
     const resultados = await Promise.allSettled(
       lote.map(dest => enviarTextoWhatsApp(empresa, dest.telefono, difusion.mensaje))
     );
@@ -201,11 +225,17 @@ async function procesarEnvioDifusion(difusion) {
         errores.push({ telefono: dest.telefono, error: errMsg });
       }
     });
+    console.log(`✅ [DIFUSIÓN] Lote enviado: enviados=${enviados}, errores=${errores.length}`);
     difusion.destinatariosEnviados = enviados;
     difusion.errores = errores;
     await difusion.save();
   }
 
+  console.log('📊 [DIFUSIÓN] Resumen final:', {
+    enviados,
+    errores: errores.length,
+    estadoFinal: errores.length === 0 ? 'completada' : (enviados > 0 ? 'completada' : 'error')
+  });
   difusion.estado = errores.length === 0 ? 'completada' : (enviados > 0 ? 'completada' : 'error');
   await difusion.save();
   return difusion;
@@ -215,6 +245,7 @@ async function enviarDifusion(req, res) {
   try {
     const difusion = await Difusion.findById(req.params.id);
     if (!difusion) return res.status(404).json({ error: 'Difusión no encontrada' });
+    console.log('📣 [DIFUSIÓN] Petición para enviar difusión:', difusion._id, '| estado:', difusion.estado);
     const idsEmpresas = req.empresas && req.empresas.length ? req.empresas : [req.empresaId];
     if (!idsEmpresas.some(e => String(e) === String(difusion.empresaId))) {
       return res.status(403).json({ error: 'No tienes acceso a esta difusión' });

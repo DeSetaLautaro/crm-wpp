@@ -1991,6 +1991,63 @@ const desbloquearCliente = async (req, res) => {
   }
 };
 
+const crearContactoManual = async (req, res) => {
+  try {
+    const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
+    if (!empresaId) {
+      return res.status(400).json({ error: 'No se pudo identificar la empresa' });
+    }
+
+    const { nombre = '', telefono = '', direccion = '', etiquetas = [] } = req.body || {};
+    const telefonoLimpio = String(telefono || '').replace(/\D/g, '');
+    if (!telefonoLimpio || telefonoLimpio.length < 6) {
+      return res.status(400).json({ error: 'Teléfono inválido' });
+    }
+
+    const contactoExistente = await Cliente.findOne({ empresaId, telefono: telefonoLimpio });
+    if (contactoExistente) {
+      return res.status(409).json({ error: 'Ya existe un contacto con ese teléfono en esta empresa' });
+    }
+
+    const contacto = await Cliente.create({
+      empresaId,
+      telefono: telefonoLimpio,
+      nombre: nombre || 'Cliente',
+      direccion: direccion || '',
+      etiquetas: Array.isArray(etiquetas) ? etiquetas.filter(e => typeof e === 'string' && e.trim() !== '') : []
+    });
+
+    let conversacion = await Conversacion.findOne({ empresaId, contactoId: contacto._id })
+      .sort({ createdAt: -1 });
+
+    if (!conversacion) {
+      const empresa = await Empresa.findById(empresaId);
+      conversacion = await Conversacion.create({
+        empresaId,
+        contactoId: contacto._id,
+        lineaReceptora: empresa?.whatsappPhoneId || '',
+        numeroReceptor: empresa?.whatsappPhoneId || '',
+        botActivo: empresa?.botActivo !== false,
+        estado: 'Abierto',
+        ultimoMensaje: ''
+      });
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresaId.toString()).emit('contacto-creado', {
+        contacto,
+        conversacionId: conversacion._id
+      });
+    }
+
+    return res.status(201).json({ ok: true, contacto, conversacionId: conversacion._id });
+  } catch (error) {
+    console.error('Error al crear contacto manual:', error);
+    return res.status(500).json({ error: 'Error interno al crear contacto' });
+  }
+};
+
 const obtenerMonedero = async (req, res) => {
   try {
     const usuario = await Usuario.findById(req.usuario.id).lean();
@@ -2104,6 +2161,7 @@ module.exports = {
   eliminarNota,
   bloquearCliente,
   desbloquearCliente,
+  crearContactoManual,
   obtenerMonedero,
   cargarSaldoMonedero,
   actualizarCostosManual,

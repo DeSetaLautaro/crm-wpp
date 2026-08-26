@@ -38,6 +38,7 @@ const {
   eliminarNota,
   bloquearCliente,
   desbloquearCliente,
+  crearContactoManual,
   obtenerMonedero,
   cargarSaldoMonedero,
   actualizarCostosManual,
@@ -58,6 +59,9 @@ router.post('/login-pin', loginConPin);
 // Obtener uso de conversaciones en las últimas 24 h
 router.get('/uso-conversaciones', auth, obtenerUsoConversaciones);
 router.get('/meta/actualizar-costos', auth, actualizarCostosManual);
+
+// Crear contacto manualmente desde el panel
+router.post('/contactos', auth, crearContactoManual);
 
 // Envío de mensaje desde el dashboard (POST)
 router.post('/enviar', auth, enviarMensaje);

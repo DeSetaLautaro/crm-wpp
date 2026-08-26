@@ -2023,6 +2023,25 @@ body.modo-login #app {
   }
 }
 
+/* ===== Botón nuevo contacto ===== */
+.btn-nuevo-contacto {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  margin-left: 8px;
+}
+.btn-nuevo-contacto:hover {
+  background: #1d4ed8;
+}
+#modal-nuevo-contacto .modal-content {
+  max-width: 420px;
+}
 /* ===== Modal de recorte de foto ===== */
 .modal-crop {
   position: fixed;

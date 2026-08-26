@@ -2258,6 +2258,10 @@ function setupSocketListeners() {
     }
   });
 
+  socket.on('contacto-creado', (payload) => {
+    cargarConversaciones();
+  });
+
   socket.on('contacto-actualizado', (payload) => {
     const contactoIdStr = String(payload.contactoId || '');
     const contacto = CONTACTOS.find(c => String(c._id) === contactoIdStr);
@@ -2357,6 +2361,48 @@ async function enviarMensajeDesdePanel() {
     actualizarUsoConversaciones();
   } catch (error) {
     console.error('Error de red al enviar mensaje:', error);
+  }
+}
+
+async function guardarNuevoContacto() {
+  const token = localStorage.getItem('token') || '';
+  const nombre = (document.getElementById('nuevo-contacto-nombre') || {}).value?.trim() || '';
+  const telefono = (document.getElementById('nuevo-contacto-telefono') || {}).value?.trim() || '';
+  const direccion = (document.getElementById('nuevo-contacto-direccion') || {}).value?.trim() || '';
+  const etiquetasStr = (document.getElementById('nuevo-contacto-etiquetas') || {}).value?.trim() || '';
+  const etiquetas = etiquetasStr.split(',').map(e => e.trim()).filter(Boolean);
+
+  if (!telefono) {
+    alert('Ingresá al menos el teléfono');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/whatsapp/contactos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ nombre, telefono, direccion, etiquetas })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Error al crear contacto');
+      return;
+    }
+
+    const modal = document.getElementById('modal-nuevo-contacto');
+    if (modal) modal.classList.add('hidden');
+    ['nuevo-contacto-nombre','nuevo-contacto-telefono','nuevo-contacto-direccion','nuevo-contacto-etiquetas'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
+    await cargarConversaciones();
+  } catch (error) {
+    console.error('Error al crear contacto:', error);
+    alert('Error al crear contacto');
   }
 }
 
@@ -3066,6 +3112,27 @@ async function init() {
     btnNuevoAgente.addEventListener('click', () => {
       console.log('Función para crear nuevo agente próximamente');
     });
+  }
+
+  // Botón para nuevo contacto
+  const btnNuevoContacto = document.getElementById('btn-nuevo-contacto');
+  const modalNuevoContacto = document.getElementById('modal-nuevo-contacto');
+  if (btnNuevoContacto && modalNuevoContacto) {
+    btnNuevoContacto.addEventListener('click', () => {
+      modalNuevoContacto.classList.remove('hidden');
+    });
+  }
+
+  const btnCerrarNuevoContacto = document.getElementById('btn-cerrar-nuevo-contacto');
+  if (btnCerrarNuevoContacto && modalNuevoContacto) {
+    btnCerrarNuevoContacto.addEventListener('click', () => {
+      modalNuevoContacto.classList.add('hidden');
+    });
+  }
+
+  const btnGuardarNuevoContacto = document.getElementById('btn-guardar-nuevo-contacto');
+  if (btnGuardarNuevoContacto) {
+    btnGuardarNuevoContacto.addEventListener('click', guardarNuevoContacto);
   }
 
   // Eventos del modal de login

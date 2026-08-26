@@ -1027,6 +1027,7 @@ function renderOpcionesDifusion() {
       <span>${escaparHTML(c.nombre || 'Sin nombre')} (${escaparHTML(c.telefono)})</span>
     </label>
   `).join('');
+  sincronizarCheckboxesConEtiqueta();
 }
 
 function obtenerIdsDestinatarios() {
@@ -1053,6 +1054,19 @@ function obtenerIdsDestinatarios() {
 function actualizarContadorDestinatarios() {
   const span = document.getElementById('difusion-destinatarios-count');
   if (span) span.textContent = obtenerIdsDestinatarios().size;
+}
+
+function sincronizarCheckboxesConEtiqueta() {
+  const etiqueta = document.getElementById('difusion-etiqueta')?.value || '';
+  const destEtiqueta = document.getElementById('difusion-dest-etiqueta')?.checked || false;
+  if (!destEtiqueta || !etiqueta) return;
+  document.querySelectorAll('.difusion-contacto-check').forEach(cb => {
+    const contacto = DIFUSION_CONTACTOS.find(c => c._id === cb.value);
+    if (contacto && (contacto.etiquetas || []).includes(etiqueta)) {
+      cb.checked = true;
+    }
+  });
+  actualizarContadorDestinatarios();
 }
 
 function limpiarSeleccionManual() {
@@ -3330,6 +3344,7 @@ async function init() {
     const manualWrap = document.getElementById('difusion-manual-wrapper');
     if (etiquetaWrap) etiquetaWrap.style.display = destEtiqueta?.checked ? 'block' : 'none';
     if (manualWrap) manualWrap.style.display = destManual?.checked ? 'block' : 'none';
+    sincronizarCheckboxesConEtiqueta();
     actualizarContadorDestinatarios();
   };
   if (destTodos) destTodos.addEventListener('change', actualizarModoDifusion);
@@ -3339,7 +3354,10 @@ async function init() {
 
   const etiquetaDiff = document.getElementById('difusion-etiqueta');
   if (etiquetaDiff) {
-    etiquetaDiff.addEventListener('change', actualizarContadorDestinatarios);
+    etiquetaDiff.addEventListener('change', () => {
+      sincronizarCheckboxesConEtiqueta();
+      actualizarContadorDestinatarios();
+    });
   }
 
   document.addEventListener('change', (e) => {

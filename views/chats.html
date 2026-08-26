@@ -13,6 +13,25 @@
 <div id="inbox-view" class="view">
   <!-- Columna Izquierda -->
   <aside id="col-izquierda" class="col">
+    <!-- Botón para agregar contacto manual -->
+    <button id="btn-nuevo-contacto" class="btn-nuevo-contacto" title="Agregar contacto">+</button>
+
+    <!-- Modal para crear contacto -->
+    <div id="modal-nuevo-contacto" class="modal hidden">
+      <div class="modal-content">
+        <span class="modal-cerrar" id="btn-cerrar-nuevo-contacto">&times;</span>
+        <h3>Nuevo contacto</h3>
+        <label>Nombre</label>
+        <input type="text" id="nuevo-contacto-nombre" placeholder="Nombre del cliente">
+        <label>Teléfono</label>
+        <input type="tel" id="nuevo-contacto-telefono" placeholder="Ej: 5491122334455">
+        <label>Dirección (opcional)</label>
+        <input type="text" id="nuevo-contacto-direccion" placeholder="Calle y número">
+        <label>Etiquetas (separadas por coma, opcional)</label>
+        <input type="text" id="nuevo-contacto-etiquetas" placeholder="VIP, interesado, no compró">
+        <button id="btn-guardar-nuevo-contacto" class="btn-guardar-config">Guardar</button>
+      </div>
+    </div>
     <div class="panel-header">
       <div class="panel-header-titulo">
         <h2>Bandeja de entrada</h2>

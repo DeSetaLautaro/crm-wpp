@@ -1,6 +1,9 @@
 const Empresa = require('../models/Empresa');
 const Cliente = require('../models/Cliente');
 const Difusion = require('../models/Difusion');
+const { Types } = require('mongoose');
+
+const CONCURRENCIA_ENVIO = 10;
 
 async function enviarTextoWhatsApp(empresa, telefono, mensaje) {
   const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
@@ -47,6 +50,32 @@ async function listarDifusiones(req, res) {
   }
 }
 
+async function obtenerOpcionesDifusion(req, res) {
+  try {
+    const idsEmpresas = req.empresas && req.empresas.length ? req.empresas : [req.empresaId];
+    if (!idsEmpresas || idsEmpresas.length === 0) {
+      return res.status(400).json({ error: 'No se pudo identificar la empresa' });
+    }
+    const contactos = await Cliente.find({ empresaId: { $in: idsEmpresas } }).lean();
+    const etiquetasSet = new Set();
+    contactos.forEach(c => (c.etiquetas || []).forEach(e => etiquetasSet.add(e)));
+    const etiquetas = Array.from(etiquetasSet).sort();
+    return res.json({
+      ok: true,
+      contactos: contactos.map(c => ({
+        _id: c._id,
+        nombre: c.nombre || '',
+        telefono: c.telefono,
+        etiquetas: c.etiquetas || []
+      })),
+      etiquetas
+    });
+  } catch (error) {
+    console.error('Error obteniendo opciones de difusión:', error);
+    return res.status(500).json({ error: 'Error interno al obtener opciones' });
+  }
+}
+
 async function crearDifusion(req, res) {
   try {
     const empresaId = req.body.empresaId || req.empresaId;
@@ -54,20 +83,29 @@ async function crearDifusion(req, res) {
     const mensaje = (req.body.mensaje || '').trim();
     if (!mensaje) return res.status(400).json({ error: 'El mensaje es obligatorio' });
 
-    let contactos = Array.isArray(req.body.contactos) ? req.body.contactos : [];
+    const tipoDestinatario = req.body.tipoDestinatario || 'etiqueta';
+    let contactos = [];
 
-    if (contactos.length === 0 && req.body.etiqueta) {
-      const etiqueta = String(req.body.etiqueta);
+    if (tipoDestinatario === 'todos') {
+      const clientes = await Cliente.find({ empresaId }).lean();
+      contactos = clientes.map(c => ({ contactoId: c._id, telefono: c.telefono, nombre: c.nombre || '' }));
+    } else if (tipoDestinatario === 'etiqueta') {
+      const etiqueta = String(req.body.etiqueta || '').trim();
+      if (!etiqueta) return res.status(400).json({ error: 'Elegí una etiqueta' });
       const clientes = await Cliente.find({ empresaId, etiquetas: etiqueta }).lean();
-      contactos = clientes.map(c => ({
-        contactoId: c._id,
-        telefono: c.telefono,
-        nombre: c.nombre || ''
-      }));
+      contactos = clientes.map(c => ({ contactoId: c._id, telefono: c.telefono, nombre: c.nombre || '' }));
+    } else if (tipoDestinatario === 'manual') {
+      const ids = Array.isArray(req.body.contactosIds) ? req.body.contactosIds : [];
+      if (ids.length === 0) return res.status(400).json({ error: 'No se seleccionaron contactos' });
+      const idsValidos = ids.filter(id => Types.ObjectId.isValid(id));
+      const clientes = await Cliente.find({ _id: { $in: idsValidos }, empresaId }).lean();
+      contactos = clientes.map(c => ({ contactoId: c._id, telefono: c.telefono, nombre: c.nombre || '' }));
+    } else {
+      return res.status(400).json({ error: 'Tipo de destinatario inválido' });
     }
 
     if (contactos.length === 0) {
-      return res.status(400).json({ error: 'No se seleccionaron contactos' });
+      return res.status(400).json({ error: 'No hay contactos para la difusión' });
     }
 
     const fechaProgramacion = req.body.fechaProgramacion ? new Date(req.body.fechaProgramacion) : null;
@@ -91,6 +129,47 @@ async function crearDifusion(req, res) {
   }
 }
 
+async function procesarEnvioDifusion(difusion) {
+  if (difusion.estado === 'enviando') {
+    throw new Error('La difusión ya está en proceso');
+  }
+  const empresa = await Empresa.findById(difusion.empresaId);
+  if (!empresa) throw new Error('Empresa no encontrada');
+
+  difusion.estado = 'enviando';
+  difusion.fechaEnvio = new Date();
+  await difusion.save();
+
+  let enviados = 0;
+  const errores = [];
+  const pendientes = difusion.contactos.filter(d => d.estado !== 'enviado' && d.telefono);
+
+  for (let i = 0; i < pendientes.length; i += CONCURRENCIA_ENVIO) {
+    const lote = pendientes.slice(i, i + CONCURRENCIA_ENVIO);
+    const resultados = await Promise.allSettled(
+      lote.map(dest => enviarTextoWhatsApp(empresa, dest.telefono, difusion.mensaje))
+    );
+    resultados.forEach((r, idx) => {
+      const dest = lote[idx];
+      if (r.status === 'fulfilled' && r.value && r.value.ok) {
+        dest.estado = 'enviado';
+        enviados++;
+      } else {
+        dest.estado = 'error';
+        const errMsg = r.status === 'rejected' ? (r.reason?.message || 'Error') : (r.value?.error || 'Error');
+        errores.push({ telefono: dest.telefono, error: errMsg });
+      }
+    });
+    difusion.destinatariosEnviados = enviados;
+    difusion.errores = errores;
+    await difusion.save();
+  }
+
+  difusion.estado = errores.length === 0 ? 'completada' : (enviados > 0 ? 'completada' : 'error');
+  await difusion.save();
+  return difusion;
+}
+
 async function enviarDifusion(req, res) {
   try {
     const difusion = await Difusion.findById(req.params.id);
@@ -99,60 +178,34 @@ async function enviarDifusion(req, res) {
     if (!idsEmpresas.some(e => String(e) === String(difusion.empresaId))) {
       return res.status(403).json({ error: 'No tienes acceso a esta difusión' });
     }
-    const empresa = await Empresa.findById(difusion.empresaId);
-    if (!empresa) return res.status(404).json({ error: 'Empresa no encontrada' });
-
-    if (difusion.estado === 'enviando') {
-      return res.status(409).json({ error: 'La difusión ya está en proceso' });
-    }
-
-    difusion.estado = 'enviando';
-    difusion.fechaEnvio = new Date();
-    await difusion.save();
-
-    let enviados = 0;
-    const errores = [];
-    for (const dest of difusion.contactos) {
-      if (!dest.telefono) continue;
-      const resultado = await enviarTextoWhatsApp(empresa, dest.telefono, difusion.mensaje);
-      if (resultado.ok) {
-        dest.estado = 'enviado';
-        enviados++;
-      } else {
-        dest.estado = 'error';
-        errores.push({ telefono: dest.telefono, error: resultado.error });
-      }
-    }
-    difusion.destinatariosEnviados = enviados;
-    difusion.errores = errores;
-    difusion.estado = errores.length === 0 ? 'completada' : (enviados > 0 ? 'completada' : 'error');
-    await difusion.save();
+    const difusionProcesada = await procesarEnvioDifusion(difusion);
     const io = req.app.get('io');
     if (io) {
       io.to(String(difusion.empresaId)).emit('difusion-completada', { difusionId: difusion._id });
     }
-    return res.json({ ok: true, difusion });
+    return res.json({ ok: true, difusion: difusionProcesada });
   } catch (error) {
     console.error('Error enviando difusión:', error);
     return res.status(500).json({ error: 'Error interno al enviar difusión' });
   }
 }
 
-async function obtenerContactosPorEtiqueta(req, res) {
+async function enviarDifusionesProgramadas() {
   try {
-    const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
-    const etiqueta = req.query.etiqueta || '';
-    if (!empresaId) return res.status(400).json({ error: 'No se pudo identificar la empresa' });
-    if (!etiqueta) return res.json({ contactos: [] });
-    const clientes = await Cliente.find({ empresaId, etiquetas: etiqueta }).lean();
-    return res.json({ ok: true, contactos: clientes.map(c => ({
-      contactoId: c._id,
-      telefono: c.telefono,
-      nombre: c.nombre || ''
-    })) });
+    const ahora = new Date();
+    const difusiones = await Difusion.find({
+      estado: 'programada',
+      fechaProgramacion: { $lte: ahora }
+    }).limit(20);
+    for (const difusion of difusiones) {
+      try {
+        await procesarEnvioDifusion(difusion);
+      } catch (e) {
+        console.error(`Error enviando difusión programada ${difusion._id}:`, e);
+      }
+    }
   } catch (error) {
-    console.error('Error obteniendo contactos por etiqueta:', error);
-    return res.status(500).json({ error: 'Error interno al obtener contactos' });
+    console.error('Error en cron de difusiones programadas:', error);
   }
 }
 
@@ -160,5 +213,6 @@ module.exports = {
   listarDifusiones,
   crearDifusion,
   enviarDifusion,
-  obtenerContactosPorEtiqueta
+  obtenerOpcionesDifusion,
+  enviarDifusionesProgramadas
 };

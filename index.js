@@ -14,6 +14,7 @@ const cron = require('node-cron');
 const { iniciarCronHorarios } = require('./services/horariosCron');
 const { actualizarCostosDeTodasLasEmpresas } = require('./services/metaAnalyticsService');
 const { obtenerConversaciones } = require('./controllers/conversacionesController');
+const { enviarDifusionesProgramadas } = require('./controllers/difusionController');
 
 const app = express();
 
@@ -58,6 +59,9 @@ mongoose.connect(MONGODB_URI)
     // Actualizar costos de Meta al iniciar
     actualizarCostosDeTodasLasEmpresas(io).catch(err => console.error('Error al actualizar costos al inicio:', err));
     iniciarCronHorarios();
+    cron.schedule('* * * * *', () => {
+      enviarDifusionesProgramadas().catch(err => console.error('Error en cron de difusiones programadas:', err));
+    });
     cron.schedule('0 */2 * * *', () => {
       actualizarCostosDeTodasLasEmpresas(io).catch(err => console.error('Error en cron de costos Meta:', err));
     });

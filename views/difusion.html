@@ -4,8 +4,37 @@
   <h3>Nueva difusión</h3>
   <label>Mensaje</label>
   <textarea id="difusion-mensaje" rows="4" placeholder="Escribí el mensaje a difundir"></textarea>
-  <label>Etiqueta (si la dejás vacía, se enviará a todos los contactos de la línea)</label>
-  <input type="text" id="difusion-etiqueta" placeholder="Ej: VIP" />
+
+  <label style="margin-top:8px; display:block;">Destinatarios</label>
+  <select id="difusion-tipo-destinatario" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;">
+    <option value="todos">Todos mis contactos</option>
+    <option value="etiqueta">Solo por etiqueta</option>
+    <option value="manual">Elegir manualmente</option>
+  </select>
+
+  <div id="difusion-etiqueta-wrapper" style="margin-top:8px; display:none;">
+    <label>Etiqueta</label>
+    <select id="difusion-etiqueta" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;">
+      <option value="">Seleccioná una etiqueta...</option>
+    </select>
+  </div>
+
+  <div id="difusion-manual-wrapper" style="margin-top:8px; display:none;">
+    <label>Contactos (marcá los que quieras)</label>
+    <div id="difusion-contactos-lista" style="max-height:200px; overflow-y:auto; border:1px solid #d1d5db; border-radius:6px; padding:8px; margin-top:4px;"></div>
+    <div style="margin-top:4px; display:flex; gap:6px;">
+      <button type="button" id="difusion-seleccionar-todos" class="btn-guardar-config" style="font-size:12px; padding:4px 10px;">Seleccionar todos</button>
+      <button type="button" id="difusion-seleccionar-nada" class="btn-guardar-config" style="font-size:12px; padding:4px 10px;">Limpiar</button>
+    </div>
+  </div>
+
+  <label style="margin-top:8px; display:block;">Programación (opcional)</label>
+  <input type="datetime-local" id="difusion-fecha-programacion" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;" />
+
+  <div style="margin-top:8px;">
+    <strong>Destinatarios: <span id="difusion-destinatarios-count">0</span></strong>
+  </div>
+
   <button id="btn-crear-difusion" type="button" class="btn-guardar-config" style="margin-top:8px;">Crear difusión</button>
 </div>
 

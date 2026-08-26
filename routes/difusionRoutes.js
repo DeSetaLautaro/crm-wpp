@@ -5,12 +5,12 @@ const {
   listarDifusiones,
   crearDifusion,
   enviarDifusion,
-  obtenerContactosPorEtiqueta
+  obtenerOpcionesDifusion
 } = require('../controllers/difusionController');
 
 router.get('/', auth, listarDifusiones);
 router.post('/', auth, crearDifusion);
-router.get('/contactos', auth, obtenerContactosPorEtiqueta);
+router.get('/contactos', auth, obtenerOpcionesDifusion);
 router.post('/:id/enviar', auth, enviarDifusion);
 
 module.exports = router;

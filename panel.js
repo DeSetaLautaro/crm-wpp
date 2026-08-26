@@ -101,6 +101,8 @@ let whatsappSeleccionado = null;
 let etiquetaFiltrada = null;
 let usuarioActual = null;
 let vistasCache = {};
+let DIFUSION_CONTACTOS = [];
+let DIFUSION_ETIQUETAS = [];
 let editandoNombre = false;
 let guardandoNombre = false;
 let editandoEstado = false;
@@ -989,6 +991,66 @@ async function cargarPagos() {
   await cargarMonedero();
 }
 
+async function cargarOpcionesDifusion() {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/difusiones/contactos', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    DIFUSION_CONTACTOS = data.contactos || [];
+    DIFUSION_ETIQUETAS = data.etiquetas || [];
+    renderOpcionesDifusion();
+    actualizarContadorDestinatarios();
+  } catch (error) {
+    console.error('Error cargando opciones de difusión:', error);
+  }
+}
+
+function renderOpcionesDifusion() {
+  const etiquetaSelect = document.getElementById('difusion-etiqueta');
+  if (etiquetaSelect) {
+    etiquetaSelect.innerHTML = '<option value="">Seleccioná una etiqueta...</option>';
+    DIFUSION_ETIQUETAS.forEach(et => {
+      const opt = document.createElement('option');
+      opt.value = et;
+      opt.textContent = et;
+      etiquetaSelect.appendChild(opt);
+    });
+  }
+  const lista = document.getElementById('difusion-contactos-lista');
+  if (!lista) return;
+  lista.innerHTML = DIFUSION_CONTACTOS.map(c => `
+    <label style="display:flex; align-items:center; gap:6px; padding:4px 0; cursor:pointer;">
+      <input type="checkbox" class="difusion-contacto-check" value="${c._id}" />
+      <span>${escaparHTML(c.nombre || 'Sin nombre')} (${escaparHTML(c.telefono)})</span>
+    </label>
+  `).join('');
+}
+
+function actualizarContadorDestinatarios() {
+  const tipo = document.getElementById('difusion-tipo-destinatario')?.value || 'todos';
+  let count = 0;
+  if (tipo === 'todos') {
+    count = DIFUSION_CONTACTOS.length;
+  } else if (tipo === 'etiqueta') {
+    const etiqueta = document.getElementById('difusion-etiqueta')?.value || '';
+    if (etiqueta) {
+      count = DIFUSION_CONTACTOS.filter(c => (c.etiquetas || []).includes(etiqueta)).length;
+    }
+  } else if (tipo === 'manual') {
+    count = document.querySelectorAll('.difusion-contacto-check:checked').length;
+  }
+  const span = document.getElementById('difusion-destinatarios-count');
+  if (span) span.textContent = count;
+}
+
+function limpiarSeleccionManual() {
+  document.querySelectorAll('.difusion-contacto-check').forEach(cb => cb.checked = false);
+  actualizarContadorDestinatarios();
+}
+
 async function cargarDifusiones() {
   const token = localStorage.getItem('token') || '';
   try {
@@ -1005,6 +1067,7 @@ async function cargarDifusiones() {
   } catch (error) {
     console.error('Error al cargar difusiones:', error);
   }
+  await cargarOpcionesDifusion();
 }
 
 function renderDifusiones(difusiones) {
@@ -1015,31 +1078,59 @@ function renderDifusiones(difusiones) {
     return;
   }
   cont.innerHTML = difusiones.map(d => {
-    const fecha = d.fechaEnvio || d.fechaProgramacion || d.createdAt;
-    const fechaTexto = fecha ? new Date(fecha).toLocaleString('es-AR', { dateStyle:'short', timeStyle:'short' }) : '—';
+    const fechaTexto = d.fechaEnvio
+      ? `Enviada: ${new Date(d.fechaEnvio).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
+      : d.fechaProgramacion
+        ? `Programada: ${new Date(d.fechaProgramacion).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
+        : `Creada: ${new Date(d.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`;
+    const puedeEnviar = (d.estado === 'borrador' || d.estado === 'programada') && d.estado !== 'enviando';
+    const erroresHtml = (d.errores && d.errores.length > 0)
+      ? `<div style="color:#ef4444; font-size:0.8rem; margin-top:4px;">Errores: ${d.errores.length}</div>`
+      : '';
     return `<div class="config-card" style="margin-bottom:8px;">
       <strong>${d.mensaje}</strong>
       <div>Estado: ${d.estado}</div>
       <div>Destinatarios: ${d.destinatariosEnviados || 0}/${d.destinatariosTotal || 0}</div>
       <div>${fechaTexto}</div>
-      <button class="btn-guardar-config" data-enviar-difusion="${d._id}">Enviar ahora</button>
+      ${erroresHtml}
+      ${puedeEnviar ? `<button class="btn-guardar-config" data-enviar-difusion="${d._id}">Enviar ahora</button>` : ''}
     </div>`;
   }).join('');
 }
 
 async function crearDifusionDesdePanel() {
-  const mensaje = (document.getElementById('difusion-mensaje') || {}).value?.trim() || '';
-  const etiqueta = (document.getElementById('difusion-etiqueta') || {}).value?.trim() || '';
+  const mensaje = document.getElementById('difusion-mensaje')?.value?.trim() || '';
   if (!mensaje) {
     alert('Escribí un mensaje para la difusión');
     return;
   }
+  const tipo = document.getElementById('difusion-tipo-destinatario')?.value || 'todos';
+  const etiqueta = tipo === 'etiqueta' ? (document.getElementById('difusion-etiqueta')?.value || '') : '';
+  const contactosIds = tipo === 'manual'
+    ? Array.from(document.querySelectorAll('.difusion-contacto-check:checked')).map(cb => cb.value)
+    : [];
+  const fechaProgramacion = document.getElementById('difusion-fecha-programacion')?.value || '';
+
+  const payload = { mensaje, tipoDestinatario: tipo };
+  if (tipo === 'etiqueta') payload.etiqueta = etiqueta;
+  if (tipo === 'manual') payload.contactosIds = contactosIds;
+  if (fechaProgramacion) payload.fechaProgramacion = new Date(fechaProgramacion).toISOString();
+
+  if (tipo === 'etiqueta' && !etiqueta) {
+    alert('Elegí una etiqueta');
+    return;
+  }
+  if (tipo === 'manual' && contactosIds.length === 0) {
+    alert('Seleccioná al menos un contacto');
+    return;
+  }
+
   const token = localStorage.getItem('token') || '';
   try {
     const res = await fetch('/api/difusiones', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ mensaje, etiqueta })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (!res.ok) {
@@ -1047,8 +1138,10 @@ async function crearDifusionDesdePanel() {
       return;
     }
     document.getElementById('difusion-mensaje').value = '';
-    document.getElementById('difusion-etiqueta').value = '';
+    document.getElementById('difusion-fecha-programacion').value = '';
+    limpiarSeleccionManual();
     cargarDifusiones();
+    alert('Difusión creada correctamente');
   } catch (error) {
     console.error('Error de red al crear difusión:', error);
     alert('Error al crear difusión');
@@ -3173,6 +3266,45 @@ async function init() {
       enviarDifusionDesdePanel(id);
     }
   });
+
+  // Controles de difusión
+  const tipoDestinatario = document.getElementById('difusion-tipo-destinatario');
+  if (tipoDestinatario) {
+    tipoDestinatario.addEventListener('change', () => {
+      const tipo = tipoDestinatario.value;
+      const etiquetaWrap = document.getElementById('difusion-etiqueta-wrapper');
+      const manualWrap = document.getElementById('difusion-manual-wrapper');
+      if (etiquetaWrap) etiquetaWrap.style.display = tipo === 'etiqueta' ? 'block' : 'none';
+      if (manualWrap) manualWrap.style.display = tipo === 'manual' ? 'block' : 'none';
+      actualizarContadorDestinatarios();
+    });
+    // Estado inicial
+    tipoDestinatario.dispatchEvent(new Event('change'));
+  }
+
+  const etiquetaDiff = document.getElementById('difusion-etiqueta');
+  if (etiquetaDiff) {
+    etiquetaDiff.addEventListener('change', actualizarContadorDestinatarios);
+  }
+
+  document.addEventListener('change', (e) => {
+    if (e.target.classList && e.target.classList.contains('difusion-contacto-check')) {
+      actualizarContadorDestinatarios();
+    }
+  });
+
+  const btnSelTodos = document.getElementById('difusion-seleccionar-todos');
+  if (btnSelTodos) {
+    btnSelTodos.addEventListener('click', () => {
+      document.querySelectorAll('.difusion-contacto-check').forEach(cb => cb.checked = true);
+      actualizarContadorDestinatarios();
+    });
+  }
+
+  const btnSelNada = document.getElementById('difusion-seleccionar-nada');
+  if (btnSelNada) {
+    btnSelNada.addEventListener('click', limpiarSeleccionManual);
+  }
 
   // Cerrar sesión
   const btnLogout = document.getElementById('btn-logout');

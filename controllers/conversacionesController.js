@@ -36,6 +36,20 @@ const obtenerConversaciones = async (req, res) => {
       .sort({ updatedAt: -1 })
       .lean();
 
+    // Buscar pedidos cancelados en las últimas 24h para marcarlos en la lista
+    const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const pedidosCancelados = await Pedido.find({
+      empresaId: { $in: empresas },
+      estado: 'Cancelado',
+      updatedAt: { $gte: hace24h }
+    }).lean();
+    const canceladosPorConv = new Map();
+    pedidosCancelados.forEach(p => {
+      if (p.conversacionId) {
+        canceladosPorConv.set(p.conversacionId.toString(), p);
+      }
+    });
+
     // 3. Obtener datos básicos de las empresas del usuario para el selector
     const empresasDocs = await Empresa.find({ _id: { $in: empresas } }).lean();
     const empresasInfo = empresasDocs.map(e => ({
@@ -60,6 +74,7 @@ const obtenerConversaciones = async (req, res) => {
           estado: conv.estado,
           ultimoMensaje: conv.ultimoMensaje,
           updatedAt: conv.updatedAt,
+          tieneCancelacionReciente: canceladosPorConv.has(conv._id.toString()),
           mensajes: mensajes.map((m) => ({
             _id: m._id,
             remitente: m.remitente,

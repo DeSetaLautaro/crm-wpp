@@ -850,6 +850,17 @@ JSON:`;
             pedidoId: pedidoActivo?._id,
             estado: 'Cancelado'
           });
+
+          // Aviso especial para el dueño
+          if (pedidoActivo) {
+            ioc.to(empresa._id.toString()).emit('pedido-cancelado', {
+              conversacionId: conversacion._id,
+              pedidoId: pedidoActivo._id,
+              clienteNombre: contacto.nombre || 'Cliente',
+              telefonoCliente: contacto.telefono,
+              total: pedidoActivo.total || 0
+            });
+          }
         }
       }
 

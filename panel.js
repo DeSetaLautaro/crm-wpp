@@ -187,6 +187,30 @@ function autoAjustarTextarea(textarea) {
   textarea.style.overflowY = textarea.scrollHeight > maxAltura ? 'auto' : 'hidden';
 }
 
+function mostrarToast(mensaje, tipo = 'info') {
+  let contenedor = document.getElementById('toast-container');
+  if (!contenedor) {
+    contenedor = document.createElement('div');
+    contenedor.id = 'toast-container';
+    contenedor.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px;';
+    document.body.appendChild(contenedor);
+  }
+  const toast = document.createElement('div');
+  toast.style.cssText = `background:${tipo === 'error' ? '#ef4444' : '#3b82f6'};color:#fff;padding:14px 18px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-weight:bold;max-width:350px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;`;
+  
+  const textoSpan = document.createElement('span');
+  textoSpan.textContent = mensaje;
+  
+  const btnCerrar = document.createElement('button');
+  btnCerrar.textContent = '×';
+  btnCerrar.style.cssText = 'background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;padding:0 4px;';
+  btnCerrar.addEventListener('click', () => toast.remove());
+  
+  toast.appendChild(textoSpan);
+  toast.appendChild(btnCerrar);
+  contenedor.appendChild(toast);
+}
+
 function reproducirSonidoNotificacion() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -295,6 +319,7 @@ function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indic
               </div>
               <div class="chat-item-linea">${conv.numeroReceptor || conv.lineaReceptora}</div>
               <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
+              ${conv.cancelacionReciente ? `<span style="display:inline-block; background:#ef4444; color:#fff; font-size:11px; padding:2px 8px; border-radius:10px; margin-top:4px;">🚫 Canceló pedido</span>` : ''}
               <div class="chat-item-etiquetas">${(contacto.etiquetas || []).map(et => `<span class="chat-chip-etiqueta" data-etiqueta="${et}">${et}</span>`).join('')}</div>
             </div>
             ${botonAccionChat(conv)}
@@ -2030,6 +2055,7 @@ async function cargarConversaciones() {
         estado: conv.estado || 'Abierto',
         ultimoMensaje: conv.ultimoMensaje || '',
         ultimaFecha: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
+        cancelacionReciente: conv.tieneCancelacionReciente === true,
         carrito: conv.carrito || [],
         carritoTotal: conv.carritoTotal || 0
       };
@@ -2218,6 +2244,17 @@ function setupSocketListeners() {
         const contacto = getContactoPorId(conv.contactoId);
         cargarPedidoActivo(payload.conversacionId, contacto?.telefono, contacto?._id);
       }, 2000);
+    }
+  });
+
+  socket.on('pedido-cancelado', (payload) => {
+    const mensaje = `🚫 ${payload.clienteNombre} canceló un pedido de $${(payload.total || 0).toFixed(2)}.\n\nMirá el chat para más detalles.`;
+    reproducirSonidoNotificacion();
+    mostrarToast(mensaje, 'error');
+    const conv = CONVERSACIONES.find(c => c._id === payload.conversacionId);
+    if (conv) {
+      conv.cancelacionReciente = true;
+      renderListaChats();
     }
   });
 
@@ -2540,9 +2577,10 @@ function renderPedido(contenedor, pedido) {
   const total = (pedido.total || 0).toFixed(2);
   const direccion = pedido.direccionEntrega || pedido.direccion || 'No especificada';
   const estado = pedido.estado || 'Pendiente';
+  const colorEstado = estado === 'Cancelado' ? '#ef4444' : estado === 'Entregado' ? '#10b981' : '#f59e0b';
   html += `<div class="pedido-total">Total: $${total}</div>`;
   html += `<div class="pedido-direccion">Entrega: ${direccion}</div>`;
-  html += `<div class="pedido-estado"><span class="badge-estado">${estado}</span></div>`;
+  html += `<div class="pedido-estado"><span style="background:${colorEstado}; color:#fff; padding:3px 12px; border-radius:12px; font-weight:bold; font-size:11px;">${estado}</span></div>`;
   return html;
 }
 

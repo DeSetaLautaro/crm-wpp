@@ -2161,3 +2161,219 @@ body.modo-login #app {
   background: #2563EB;
   color: #fff;
 }
+
+/* ====== Difusiones - Nuevo diseño ====== */
+#difusion-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 36px 48px;
+  background: #f0f2f5;
+  overflow-y: auto;
+}
+
+#difusion-view h2 {
+  font-size: 1.75rem;
+  color: #111b21;
+  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.difusion-card {
+  background: #ffffff;
+  border: 1px solid #e9edef;
+  border-radius: 20px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  padding: 36px 40px;
+  max-width: 760px;
+  width: 100%;
+}
+
+.difusion-field-group {
+  margin-bottom: 22px;
+}
+
+.difusion-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+.difusion-input,
+#difusion-mensaje,
+#difusion-tipo-destinatario,
+#difusion-etiqueta {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 1rem;
+  color: #3b4a54;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.difusion-input:focus,
+#difusion-mensaje:focus,
+#difusion-tipo-destinatario:focus,
+#difusion-etiqueta:focus {
+  border-color: #25d366;
+  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.15);
+}
+
+#difusion-mensaje {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.difusion-contactos-lista {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #e1e9ec;
+  border-radius: 12px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.difusion-contactos-lista label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.difusion-contactos-lista label:hover {
+  background: #f0f2f5;
+}
+
+.difusion-contactos-lista input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #25d366;
+  cursor: pointer;
+}
+
+.difusion-contactos-acciones {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.difusion-btn-secundario,
+.difusion-btn-primario {
+  padding: 12px 18px;
+  border: 1px solid #25d366;
+  background: #25d366;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+
+.difusion-btn-secundario {
+  background: transparent;
+  color: #25d366;
+  border-color: #25d366;
+}
+
+.difusion-btn-secundario:hover,
+.difusion-btn-primario:hover {
+  background: #128C7E;
+  border-color: #128C7E;
+}
+
+.difusion-btn-primario {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.difusion-counter {
+  margin: 16px 0 12px;
+  font-size: 0.95rem;
+  color: #54656f;
+}
+
+.difusion-counter span {
+  font-weight: 700;
+  color: #111b21;
+}
+
+.difusion-radio-group {
+  display: inline-flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.difusion-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+.difusion-radio input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #25d366;
+  cursor: pointer;
+}
+
+.difusion-datetime-wrapper {
+  position: relative;
+}
+
+.difusion-datetime-wrapper .difusion-datetime-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+#difusion-fecha-programacion {
+  padding-left: 36px;
+}
+
+.difusion-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.difusiones-lista {
+  width: 100%;
+  max-width: 760px;
+}
+
+.difusiones-lista .config-card {
+  border-radius: 14px;
+  border-color: #e9edef;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+#slim-sidebar #btn-difusion.activo {
+  background: #25D366;
+  color: #fff;
+}

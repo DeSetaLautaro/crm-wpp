@@ -944,6 +944,11 @@ async function cargarConfiguracion() {
       procesarAudiosCheck.checked = (config.procesarAudios === true);
     }
 
+    const plantillaDifusionInput = document.getElementById('plantilla-difusion-input');
+    if (plantillaDifusionInput) {
+      plantillaDifusionInput.value = config.plantillaDifusion || '';
+    }
+
     // Actualizar atajos rápidos para el autocompletado del input
     ATAJOS_RAPIDOS = (config.atajos || []).map(a => ({
       atajo: a.comando,
@@ -2226,6 +2231,10 @@ async function guardarConfigDesdePanel() {
   const inputFoto = document.getElementById('config-foto');
   const formData = new FormData();
   formData.append('estado', estado);
+  const plantillaDifusionInput = document.getElementById('plantilla-difusion-input');
+  if (plantillaDifusionInput) {
+    formData.append('plantillaDifusion', plantillaDifusionInput.value.trim());
+  }
   if (inputFoto && inputFoto.files && inputFoto.files.length > 0) {
     formData.append('foto', inputFoto.files[0]);
   }

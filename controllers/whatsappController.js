@@ -211,6 +211,22 @@ function detectarIntencionHumano(texto) {
   return frases.some(f => lower.includes(f));
 }
 
+function detectarCancelacionPedido(texto) {
+  const lower = (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const expresiones = [
+    /cancel/,
+    /anul/,
+    /arrepient/,
+    /no (lo|la) quiero/,
+    /no quiero (el|mi) pedido/,
+    /baja (el|mi) pedido/,
+    /darse de baja/
+  ];
+
+  return expresiones.some(re => re.test(lower));
+}
+
 async function incrementarContadorConversaciones(empresaId, conversacionId) {
   const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const existeMensajeSaliente = await Mensaje.findOne({
@@ -721,6 +737,124 @@ Reglas:
     }
 
     console.log(`⏱️ Tiempo hasta mensaje guardado: ${(performance.now() - t0).toFixed(0)} ms`);
+
+    // ===== Cancelación de pedido (validada por IA) =====
+    if (detectarCancelacionPedido(textoMensaje) && process.env.GEMINI_API_KEY) {
+      const promptCancelacion = `Sos el asistente virtual de ${empresa.nombre} y estás atendiendo a un cliente.
+El cliente escribió: "${textoMensaje}"
+
+Quiero que determines si el cliente quiere CANCELAR un pedido que ya hizo, o si simplemente está hablando de cancelar pero no es una intención real.
+
+Respondé SOLO con un JSON válido:
+{
+  "accion": "cancelar" | "no_cancelar",
+  "respuesta_para_cliente": "mensaje breve que le responderías al cliente"
+}
+
+Ejemplos:
+- "quiero cancelar mi pedido" → {"accion": "cancelar", "respuesta_para_cliente": "Listo, tu pedido fue cancelado. ¿Necesitás algo más?"}
+- "no canceles nada, solo preguntaba" → {"accion": "no_cancelar", "respuesta_para_cliente": "Ah, perfecto, sigamos entonces. ¿En qué más te ayudo?"}
+- "me arrepentí, cancelá" → {"accion": "cancelar", "respuesta_para_cliente": "No hay problema, tu pedido fue cancelado."}
+- "¿puedo cancelar si quiero?" → {"accion": "no_cancelar", "respuesta_para_cliente": "Claro, si necesitás cancelar tu pedido avisame y lo hacemos al toque."}
+
+JSON:`;
+
+      const rawCancel = (await generarTexto(promptCancelacion) || '').trim()
+        .replace(/```json/g, '').replace(/```/g, '').trim();
+      const startC = rawCancel.indexOf('{');
+      const endC = rawCancel.lastIndexOf('}');
+      let decisionCancel = null;
+      if (startC !== -1 && endC !== -1) {
+        try {
+          decisionCancel = JSON.parse(rawCancel.substring(startC, endC + 1));
+        } catch (e) {
+          console.warn('⚠️ No se pudo parsear JSON de cancelación:', e.message);
+        }
+      }
+
+      if (decisionCancel?.accion === 'cancelar') {
+        const pedidoActivo = await Pedido.findOne({
+          empresaId: empresa._id,
+          contactoId: contacto._id,
+          estado: { $nin: ['Entregado', 'Cancelado'] }
+        }).sort({ createdAt: -1 });
+
+        if (pedidoActivo) {
+          await Pedido.findByIdAndUpdate(pedidoActivo._id, {
+            $set: { estado: 'Cancelado' }
+          });
+          console.log(`✅ [CANCELACIÓN] Pedido ${pedidoActivo._id} cancelado por el cliente`);
+        } else {
+          decisionCancel.respuesta_para_cliente = 'No tenés ningún pedido en curso para cancelar. ¿Querés hacer un pedido?';
+        }
+      } else if (!decisionCancel) {
+        decisionCancel = {
+          accion: 'no_cancelar',
+          respuesta_para_cliente: 'Disculpá, no entendí bien. ¿Me confirmás si querés cancelar tu pedido?'
+        };
+      }
+
+      const respuestaCancelacion = decisionCancel.respuesta_para_cliente || '¿En qué más te ayudo?';
+
+      const phoneNumberId = metadata?.phone_number_id || whatsappPhoneId;
+      const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+      if (accessToken) {
+        try {
+          const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+          const payload = {
+            messaging_product: 'whatsapp',
+            to: telefonoCliente,
+            type: 'text',
+            text: { body: respuestaCancelacion }
+          };
+          await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+        } catch (error) {
+          console.error('❌ Error al enviar respuesta de cancelación:', error);
+        }
+      }
+
+      await Mensaje.create({
+        conversacionId: conversacion._id,
+        remitente: 'ia',
+        contenido: respuestaCancelacion
+      });
+      await Conversacion.findByIdAndUpdate(conversacion._id, {
+        $set: { ultimoMensaje: respuestaCancelacion }
+      });
+
+      const ioc = req.app.get('io');
+      if (ioc) {
+        ioc.to(empresa._id.toString()).emit('mensaje-nuevo', {
+          conversacionId: conversacion._id,
+          mensaje: {
+            remitente: 'ia',
+            contenido: respuestaCancelacion,
+            fecha: new Date()
+          },
+          conversacion: {
+            _id: conversacion._id,
+            ultimoMensaje: respuestaCancelacion,
+            updatedAt: new Date()
+          }
+        });
+        if (decisionCancel?.accion === 'cancelar') {
+          ioc.to(empresa._id.toString()).emit('pedido-actualizado', {
+            conversacionId: conversacion._id,
+            pedidoId: pedidoActivo?._id,
+            estado: 'Cancelado'
+          });
+        }
+      }
+
+      return;
+    }
 
     // ===== Procesar carrito en vivo (después de mostrar el mensaje) =====
     const carritoProcesado = await procesarCarrito(empresa, conversacion, textoMensaje, productos);

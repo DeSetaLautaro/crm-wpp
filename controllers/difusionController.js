@@ -5,17 +5,40 @@ const { Types } = require('mongoose');
 
 const CONCURRENCIA_ENVIO = 10;
 
+function normalizarTelefono(telefono) {
+  let t = String(telefono || '').replace(/\D/g, '');
+  if (!t) return '';
+  if (t.startsWith('549') && t.length === 13) return t;
+  if (t.startsWith('54')) {
+    if (!t.startsWith('549')) {
+      t = '549' + t.slice(2);
+    }
+    return t;
+  }
+  if (t.startsWith('9') && t.length === 11) {
+    t = '549' + t.slice(1);
+    return t;
+  }
+  if (t.startsWith('15') && t.length === 11) {
+    t = '549' + t.slice(2);
+    return t;
+  }
+  t = t.replace(/^0/, '');
+  return '549' + t;
+}
+
 async function enviarTextoWhatsApp(empresa, telefono, mensaje) {
   const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneId = empresa.whatsappPhoneId;
-  if (!accessToken || !phoneId || !telefono) {
+  const destino = normalizarTelefono(telefono);
+  if (!accessToken || !phoneId || !destino) {
     return { ok: false, error: 'Faltan credenciales o teléfono' };
   }
   try {
     const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
     const payload = {
       messaging_product: 'whatsapp',
-      to: telefono,
+      to: destino,
       type: 'text',
       text: { body: mensaje }
     };
@@ -99,7 +122,7 @@ async function crearDifusion(req, res) {
     const agregarContacto = (c) => {
       const key = c._id.toString();
       if (!mapContactos.has(key)) {
-        mapContactos.set(key, { contactoId: c._id, telefono: c.telefono, nombre: c.nombre || '' });
+        mapContactos.set(key, { contactoId: c._id, telefono: normalizarTelefono(c.telefono), nombre: c.nombre || '' });
       }
     };
 
@@ -201,7 +224,15 @@ async function enviarDifusion(req, res) {
     if (io) {
       io.to(String(difusion.empresaId)).emit('difusion-completada', { difusionId: difusion._id });
     }
-    return res.json({ ok: true, difusion: difusionProcesada });
+    if (difusionProcesada.estado === 'error') {
+      return res.status(502).json({
+        ok: false,
+        error: 'No se pudo enviar la difusión. Revisá los errores.',
+        difusion: difusionProcesada,
+        errores: difusionProcesada.errores || []
+      });
+    }
+    return res.json({ ok: true, difusion: difusionProcesada, errores: difusionProcesada.errores || [] });
   } catch (error) {
     console.error('Error enviando difusión:', error);
     return res.status(500).json({ error: 'Error interno al enviar difusión' });

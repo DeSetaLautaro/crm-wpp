@@ -1136,9 +1136,23 @@ function renderDifusiones(difusiones) {
         ? `Programada: ${new Date(d.fechaProgramacion).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
         : `Creada: ${new Date(d.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`;
     const puedeEnviar = (d.estado === 'borrador' || d.estado === 'programada') && d.estado !== 'enviando';
-    const erroresHtml = (d.errores && d.errores.length > 0)
-      ? `<div style="color:#ef4444; font-size:0.8rem; margin-top:4px;">Errores: ${d.errores.length}</div>`
-      : '';
+    let erroresHtml = '';
+    if (d.errores && d.errores.length > 0) {
+      const listaErrores = Array.isArray(d.errores)
+        ? d.errores.map(e => {
+            const tel = e?.telefono || '';
+            const msg = e?.error || e || '';
+            return `<li style="font-size:0.75rem; color:#6b7280; margin-bottom:2px;">📞 ${tel}: ${msg}</li>`;
+          }).join('')
+        : `<li>${d.errores}</li>`;
+      erroresHtml = `<div style="margin-top:6px;">
+          <strong style="color:#ef4444; font-size:0.8rem;">Errores: ${d.errores.length || 0}</strong>
+          <details style="margin-top:4px;">
+            <summary style="cursor:pointer; color:#2563eb; font-size:0.8rem;">Ver detalle</summary>
+            <ul style="list-style:none; padding-left:0; margin-top:4px;">${listaErrores}</ul>
+          </details>
+        </div>`;
+    }
     return `<div class="config-card" style="margin-bottom:8px;">
       <strong>${d.mensaje}</strong>
       <div>Estado: ${d.estado}</div>
@@ -1235,7 +1249,14 @@ async function enviarDifusionDesdePanel(difusionId, mostrarExito = false) {
     });
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'Error al enviar difusión');
+      const errores = data?.errores || [];
+      if (Array.isArray(errores) && errores.length > 0) {
+        const detalle = errores.map(e => `${e?.telefono || ''}: ${e?.error || e}`).join('\n');
+        alert(`${data?.error || 'Error al enviar difusión'}\n\nDetalle:\n${detalle}`);
+      } else {
+        alert(data?.error || 'Error al enviar difusión');
+      }
+      await cargarDifusiones();
       return false;
     }
     await cargarDifusiones();

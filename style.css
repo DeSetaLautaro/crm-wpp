@@ -2335,6 +2335,24 @@ body.modo-login #app {
   cursor: pointer;
 }
 
+.difusion-checkbox-linea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.difusion-checkbox-linea input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #25d366;
+  cursor: pointer;
+}
+
 .difusion-datetime-wrapper {
   position: relative;
 }

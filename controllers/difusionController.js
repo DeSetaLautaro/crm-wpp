@@ -83,27 +83,45 @@ async function crearDifusion(req, res) {
     const mensaje = (req.body.mensaje || '').trim();
     if (!mensaje) return res.status(400).json({ error: 'El mensaje es obligatorio' });
 
-    const tipoDestinatario = req.body.tipoDestinatario || 'etiqueta';
-    let contactos = [];
+    let tipos = req.body.tipoDestinatario || 'etiqueta';
+    if (!Array.isArray(tipos)) {
+      tipos = [tipos];
+    }
+    const tiposValidos = ['todos', 'etiqueta', 'manual'];
+    if (!tipos.every(t => tiposValidos.includes(t))) {
+      return res.status(400).json({ error: 'Tipo de destinatario inválido' });
+    }
+    if (tipos.length === 0) {
+      return res.status(400).json({ error: 'Elegí al menos un tipo de destinatario' });
+    }
 
-    if (tipoDestinatario === 'todos') {
+    const mapContactos = new Map();
+    const agregarContacto = (c) => {
+      const key = c._id.toString();
+      if (!mapContactos.has(key)) {
+        mapContactos.set(key, { contactoId: c._id, telefono: c.telefono, nombre: c.nombre || '' });
+      }
+    };
+
+    if (tipos.includes('todos')) {
       const clientes = await Cliente.find({ empresaId }).lean();
-      contactos = clientes.map(c => ({ contactoId: c._id, telefono: c.telefono, nombre: c.nombre || '' }));
-    } else if (tipoDestinatario === 'etiqueta') {
+      clientes.forEach(agregarContacto);
+    }
+    if (tipos.includes('etiqueta')) {
       const etiqueta = String(req.body.etiqueta || '').trim();
       if (!etiqueta) return res.status(400).json({ error: 'Elegí una etiqueta' });
       const clientes = await Cliente.find({ empresaId, etiquetas: etiqueta }).lean();
-      contactos = clientes.map(c => ({ contactoId: c._id, telefono: c.telefono, nombre: c.nombre || '' }));
-    } else if (tipoDestinatario === 'manual') {
+      clientes.forEach(agregarContacto);
+    }
+    if (tipos.includes('manual')) {
       const ids = Array.isArray(req.body.contactosIds) ? req.body.contactosIds : [];
       if (ids.length === 0) return res.status(400).json({ error: 'No se seleccionaron contactos' });
       const idsValidos = ids.filter(id => Types.ObjectId.isValid(id));
       const clientes = await Cliente.find({ _id: { $in: idsValidos }, empresaId }).lean();
-      contactos = clientes.map(c => ({ contactoId: c._id, telefono: c.telefono, nombre: c.nombre || '' }));
-    } else {
-      return res.status(400).json({ error: 'Tipo de destinatario inválido' });
+      clientes.forEach(agregarContacto);
     }
 
+    const contactos = Array.from(mapContactos.values());
     if (contactos.length === 0) {
       return res.status(400).json({ error: 'No hay contactos para la difusión' });
     }

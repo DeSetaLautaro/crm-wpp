@@ -1029,21 +1029,30 @@ function renderOpcionesDifusion() {
   `).join('');
 }
 
-function actualizarContadorDestinatarios() {
-  const tipo = document.getElementById('difusion-tipo-destinatario')?.value || 'todos';
-  let count = 0;
-  if (tipo === 'todos') {
-    count = DIFUSION_CONTACTOS.length;
-  } else if (tipo === 'etiqueta') {
+function obtenerIdsDestinatarios() {
+  const ids = new Set();
+  const destTodos = document.getElementById('difusion-dest-todos')?.checked;
+  const destEtiqueta = document.getElementById('difusion-dest-etiqueta')?.checked;
+  const destManual = document.getElementById('difusion-dest-manual')?.checked;
+
+  if (destTodos) {
+    DIFUSION_CONTACTOS.forEach(c => ids.add(c._id));
+  }
+  if (destEtiqueta) {
     const etiqueta = document.getElementById('difusion-etiqueta')?.value || '';
     if (etiqueta) {
-      count = DIFUSION_CONTACTOS.filter(c => (c.etiquetas || []).includes(etiqueta)).length;
+      DIFUSION_CONTACTOS.filter(c => (c.etiquetas || []).includes(etiqueta)).forEach(c => ids.add(c._id));
     }
-  } else if (tipo === 'manual') {
-    count = document.querySelectorAll('.difusion-contacto-check:checked').length;
   }
+  if (destManual) {
+    document.querySelectorAll('.difusion-contacto-check:checked').forEach(cb => ids.add(cb.value));
+  }
+  return ids;
+}
+
+function actualizarContadorDestinatarios() {
   const span = document.getElementById('difusion-destinatarios-count');
-  if (span) span.textContent = count;
+  if (span) span.textContent = obtenerIdsDestinatarios().size;
 }
 
 function limpiarSeleccionManual() {
@@ -1133,11 +1142,18 @@ async function crearDifusionDesdePanel() {
     alert('Escribí un mensaje para la difusión');
     return;
   }
-  const tipo = document.getElementById('difusion-tipo-destinatario')?.value || 'todos';
-  const etiqueta = tipo === 'etiqueta' ? (document.getElementById('difusion-etiqueta')?.value || '') : '';
-  const contactosIds = tipo === 'manual'
-    ? Array.from(document.querySelectorAll('.difusion-contacto-check:checked')).map(cb => cb.value)
-    : [];
+  const modos = [];
+  if (document.getElementById('difusion-dest-todos')?.checked) modos.push('todos');
+  if (document.getElementById('difusion-dest-etiqueta')?.checked) modos.push('etiqueta');
+  if (document.getElementById('difusion-dest-manual')?.checked) modos.push('manual');
+
+  if (modos.length === 0) {
+    alert('Elegí al menos un tipo de destinatario');
+    return;
+  }
+
+  const etiqueta = document.getElementById('difusion-etiqueta')?.value || '';
+  const contactosIds = Array.from(document.querySelectorAll('.difusion-contacto-check:checked')).map(cb => cb.value);
 
   const modoEnvio = document.querySelector('input[name="difusion-modenvio"]:checked')?.value || 'ahora';
   let fechaProgramacion = '';
@@ -1148,16 +1164,16 @@ async function crearDifusionDesdePanel() {
     fechaProgramacion = document.getElementById('difusion-fecha-programacion')?.value || '';
   }
 
-  const payload = { mensaje, tipoDestinatario: tipo };
-  if (tipo === 'etiqueta') payload.etiqueta = etiqueta;
-  if (tipo === 'manual') payload.contactosIds = contactosIds;
+  const payload = { mensaje, tipoDestinatario: modos };
+  if (modos.includes('etiqueta')) payload.etiqueta = etiqueta;
+  if (modos.includes('manual')) payload.contactosIds = contactosIds;
   if (fechaProgramacion) payload.fechaProgramacion = new Date(fechaProgramacion).toISOString();
 
-  if (tipo === 'etiqueta' && !etiqueta) {
+  if (modos.includes('etiqueta') && !etiqueta) {
     alert('Elegí una etiqueta');
     return;
   }
-  if (tipo === 'manual' && contactosIds.length === 0) {
+  if (modos.includes('manual') && contactosIds.length === 0) {
     alert('Seleccioná al menos un contacto');
     return;
   }
@@ -3306,19 +3322,20 @@ async function init() {
   });
 
   // Controles de difusión
-  const tipoDestinatario = document.getElementById('difusion-tipo-destinatario');
-  if (tipoDestinatario) {
-    tipoDestinatario.addEventListener('change', () => {
-      const tipo = tipoDestinatario.value;
-      const etiquetaWrap = document.getElementById('difusion-etiqueta-wrapper');
-      const manualWrap = document.getElementById('difusion-manual-wrapper');
-      if (etiquetaWrap) etiquetaWrap.style.display = tipo === 'etiqueta' ? 'block' : 'none';
-      if (manualWrap) manualWrap.style.display = tipo === 'manual' ? 'block' : 'none';
-      actualizarContadorDestinatarios();
-    });
-    // Estado inicial
-    tipoDestinatario.dispatchEvent(new Event('change'));
-  }
+  const destTodos = document.getElementById('difusion-dest-todos');
+  const destEtiqueta = document.getElementById('difusion-dest-etiqueta');
+  const destManual = document.getElementById('difusion-dest-manual');
+  const actualizarModoDifusion = () => {
+    const etiquetaWrap = document.getElementById('difusion-etiqueta-wrapper');
+    const manualWrap = document.getElementById('difusion-manual-wrapper');
+    if (etiquetaWrap) etiquetaWrap.style.display = destEtiqueta?.checked ? 'block' : 'none';
+    if (manualWrap) manualWrap.style.display = destManual?.checked ? 'block' : 'none';
+    actualizarContadorDestinatarios();
+  };
+  if (destTodos) destTodos.addEventListener('change', actualizarModoDifusion);
+  if (destEtiqueta) destEtiqueta.addEventListener('change', actualizarModoDifusion);
+  if (destManual) destManual.addEventListener('change', actualizarModoDifusion);
+  actualizarModoDifusion();
 
   const etiquetaDiff = document.getElementById('difusion-etiqueta');
   if (etiquetaDiff) {

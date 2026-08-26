@@ -7,12 +7,10 @@
   </div>
 
   <div class="difusion-field-group">
-    <label class="difusion-label" for="difusion-tipo-destinatario">Destinatarios</label>
-    <select id="difusion-tipo-destinatario">
-      <option value="todos">Todos mis contactos</option>
-      <option value="etiqueta">Solo por etiqueta</option>
-      <option value="manual">Elegir manualmente</option>
-    </select>
+    <label class="difusion-label">Destinatarios</label>
+    <label class="difusion-checkbox-linea"><input type="checkbox" id="difusion-dest-todos" value="todos" checked> Todos mis contactos</label>
+    <label class="difusion-checkbox-linea"><input type="checkbox" id="difusion-dest-etiqueta" value="etiqueta"> Solo por etiqueta</label>
+    <label class="difusion-checkbox-linea"><input type="checkbox" id="difusion-dest-manual" value="manual"> Elegir manualmente</label>
   </div>
 
   <div id="difusion-etiqueta-wrapper" class="difusion-field-group" style="display:none;">

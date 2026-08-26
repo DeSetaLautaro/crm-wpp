@@ -2391,6 +2391,52 @@ body.modo-login #app {
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
+/* ====== Lista compacta de difusiones ====== */
+.difusiones-lista {
+  background: #fff;
+  border: 1px solid #e9edef;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.difusion-fila:last-child {
+  border-bottom: none !important;
+}
+
+.difusion-fila:hover {
+  background: #f9fafb;
+}
+
+.difusion-fila-mensaje {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: #111827;
+}
+
+.difusion-fila-meta {
+  color: #9CA3AF;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.difusion-badge-ok {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.difusion-badge-default {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.difusion-btn-enviar:hover {
+  text-decoration: underline;
+}
+
 #slim-sidebar #btn-difusion.activo {
   background: #25D366;
   color: #fff;

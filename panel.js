@@ -1133,59 +1133,48 @@ function renderDifusiones(difusiones) {
   const btnHistorial = document.getElementById('btn-ver-historial');
   if (!cont) return;
 
-  const LIMITE = 5;
-  const visibles = mostrarTodasDifusiones ? difusiones : difusiones.slice(0, LIMITE);
+  const total = difusiones.length;
 
-  if (visibles.length === 0) {
-    cont.innerHTML = '<span style="color:#9CA3AF;">Sin difusiones todavía</span>';
-    if (btnHistorial) btnHistorial.style.display = 'none';
+  // Mostrar botón si hay alguna difusión
+  if (btnHistorial) {
+    if (total === 0) {
+      btnHistorial.style.display = 'none';
+      cont.innerHTML = '<span style="color:#9CA3AF;">Sin difusiones todavía</span>';
+      return;
+    }
+    btnHistorial.style.display = 'block';
+    const chevron = mostrarTodasDifusiones ? '▴' : '▾';
+    btnHistorial.textContent = `${chevron} ${mostrarTodasDifusiones ? 'Ocultar historial' : 'Ver historial'}`;
+  }
+
+  // Lista oculta por defecto
+  if (!mostrarTodasDifusiones) {
+    cont.innerHTML = '';
     return;
   }
 
-  cont.innerHTML = visibles.map(d => {
+  cont.innerHTML = difusiones.map(d => {
     const fechaTexto = d.fechaEnvio
       ? `Enviada: ${new Date(d.fechaEnvio).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
       : d.fechaProgramacion
         ? `Programada: ${new Date(d.fechaProgramacion).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`
         : `Creada: ${new Date(d.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}`;
     const puedeEnviar = (d.estado === 'borrador' || d.estado === 'programada') && d.estado !== 'enviando';
-    let erroresHtml = '';
-    if (d.errores && d.errores.length > 0) {
-      const listaErrores = Array.isArray(d.errores)
-        ? d.errores.map(e => {
-            const tel = e?.telefono || '';
-            const msg = e?.error || e || '';
-            return `<li style="font-size:0.75rem; color:#6b7280; margin-bottom:2px;">📞 ${tel}: ${msg}</li>`;
-          }).join('')
-        : `<li>${d.errores}</li>`;
-      erroresHtml = `<div style="margin-top:6px;">
-          <strong style="color:#ef4444; font-size:0.8rem;">Errores: ${d.errores.length || 0}</strong>
-          <details style="margin-top:4px;">
-            <summary style="cursor:pointer; color:#2563eb; font-size:0.8rem;">Ver detalle</summary>
-            <ul style="list-style:none; padding-left:0; margin-top:4px;">${listaErrores}</ul>
-          </details>
-        </div>`;
-    }
-    return `<div class="config-card" style="margin-bottom:8px;">
-      <strong>${d.mensaje}</strong>
-      <div>Estado: ${d.estado}</div>
-      <div>Destinatarios: ${d.destinatariosEnviados || 0}/${d.destinatariosTotal || 0}</div>
-      <div>${fechaTexto}</div>
-      ${erroresHtml}
-      ${puedeEnviar ? `<button class="btn-guardar-config" data-enviar-difusion="${d._id}">Enviar ahora</button>` : ''}
+    const enviados = d.destinatariosEnviados || 0;
+    const totalDest = d.destinatariosTotal || 0;
+    const estadoLabel = d.estado === 'completada' ? 'Completada' : (d.estado || '');
+    const estadoClass = d.estado === 'completada' ? 'difusion-badge-ok' : 'difusion-badge-default';
+    const btnEnviar = puedeEnviar
+      ? `<button class="difusion-btn-enviar" data-enviar-difusion="${d._id}" style="background:transparent;border:none;color:#2563eb;cursor:pointer;font-size:12px;">Enviar</button>`
+      : '';
+    return `<div class="difusion-fila" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px;border-bottom:1px solid #f3f4f6;">
+      <span class="difusion-fila-mensaje" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;color:#111827;">${d.mensaje}</span>
+      <span class="difusion-fila-meta" style="color:#9CA3AF;font-size:12px;white-space:nowrap;">${fechaTexto}</span>
+      <span class="difusion-fila-meta" style="color:#9CA3AF;font-size:12px;white-space:nowrap;">${enviados}/${totalDest}</span>
+      ${btnEnviar}
+      <span class="difusion-badge ${estadoClass}" style="font-size:10px;padding:2px 8px;border-radius:8px;white-space:nowrap;">${estadoLabel}</span>
     </div>`;
   }).join('');
-
-  // Actualizar visibilidad del botón "Ver historial"
-  if (btnHistorial) {
-    const total = difusiones.length;
-    if (total <= LIMITE) {
-      btnHistorial.style.display = 'none';
-    } else {
-      btnHistorial.style.display = 'block';
-      btnHistorial.textContent = mostrarTodasDifusiones ? `Ocultar historial (${total})` : `Ver historial (${total})`;
-    }
-  }
 }
 
 async function crearDifusionDesdePanel() {

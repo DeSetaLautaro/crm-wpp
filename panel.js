@@ -1051,6 +1051,35 @@ function limpiarSeleccionManual() {
   actualizarContadorDestinatarios();
 }
 
+function cambiarModoEnvioDifusion() {
+  const elegido = document.querySelector('input[name="difusion-modenvio"]:checked')?.value || 'ahora';
+  const wrapper = document.getElementById('difusion-programacion-wrapper');
+  const error = document.getElementById('difusion-fecha-error');
+  if (wrapper) wrapper.style.display = elegido === 'programar' ? 'block' : 'none';
+  if (error) error.style.display = 'none';
+}
+
+function validarFechaProgramacionDifusion() {
+  const input = document.getElementById('difusion-fecha-programacion');
+  const error = document.getElementById('difusion-fecha-error');
+  if (!input || !error) return true;
+  const valor = input.value;
+  if (!valor) {
+    error.textContent = 'Seleccioná fecha y hora';
+    error.style.display = 'block';
+    return false;
+  }
+  const fecha = new Date(valor);
+  const ahora = new Date();
+  if (fecha <= ahora) {
+    error.textContent = 'La fecha debe ser a futuro';
+    error.style.display = 'block';
+    return false;
+  }
+  error.style.display = 'none';
+  return true;
+}
+
 async function cargarDifusiones() {
   const token = localStorage.getItem('token') || '';
   try {
@@ -1109,7 +1138,15 @@ async function crearDifusionDesdePanel() {
   const contactosIds = tipo === 'manual'
     ? Array.from(document.querySelectorAll('.difusion-contacto-check:checked')).map(cb => cb.value)
     : [];
-  const fechaProgramacion = document.getElementById('difusion-fecha-programacion')?.value || '';
+
+  const modoEnvio = document.querySelector('input[name="difusion-modenvio"]:checked')?.value || 'ahora';
+  let fechaProgramacion = '';
+  if (modoEnvio === 'programar') {
+    if (!validarFechaProgramacionDifusion()) {
+      return;
+    }
+    fechaProgramacion = document.getElementById('difusion-fecha-programacion')?.value || '';
+  }
 
   const payload = { mensaje, tipoDestinatario: tipo };
   if (tipo === 'etiqueta') payload.etiqueta = etiqueta;
@@ -1138,7 +1175,8 @@ async function crearDifusionDesdePanel() {
       return;
     }
     document.getElementById('difusion-mensaje').value = '';
-    document.getElementById('difusion-fecha-programacion').value = '';
+    const fechaInput = document.getElementById('difusion-fecha-programacion');
+    if (fechaInput) fechaInput.value = '';
     limpiarSeleccionManual();
     cargarDifusiones();
     alert('Difusión creada correctamente');
@@ -3304,6 +3342,22 @@ async function init() {
   const btnSelNada = document.getElementById('difusion-seleccionar-nada');
   if (btnSelNada) {
     btnSelNada.addEventListener('click', limpiarSeleccionManual);
+  }
+
+  // Modo de programación
+  const radiosModoEnvio = document.querySelectorAll('input[name="difusion-modenvio"]');
+  if (radiosModoEnvio.length > 0) {
+    radiosModoEnvio.forEach(r => r.addEventListener('change', cambiarModoEnvioDifusion));
+    const inicial = document.querySelector('input[name="difusion-modenvio"]:checked');
+    if (inicial) cambiarModoEnvioDifusion();
+  }
+
+  const fechaInputDifusion = document.getElementById('difusion-fecha-programacion');
+  if (fechaInputDifusion) {
+    fechaInputDifusion.addEventListener('input', () => {
+      const error = document.getElementById('difusion-fecha-error');
+      if (error) error.style.display = 'none';
+    });
   }
 
   // Cerrar sesión

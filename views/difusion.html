@@ -1,41 +1,64 @@
 <h2>Difusiones</h2>
 
-<div class="config-card">
-  <h3>Nueva difusión</h3>
-  <label>Mensaje</label>
-  <textarea id="difusion-mensaje" rows="4" placeholder="Escribí el mensaje a difundir"></textarea>
+<div class="difusion-card">
+  <div class="difusion-field-group">
+    <label class="difusion-label" for="difusion-mensaje">Mensaje</label>
+    <textarea id="difusion-mensaje" rows="4" placeholder="Escribí el mensaje a difundir"></textarea>
+  </div>
 
-  <label style="margin-top:8px; display:block;">Destinatarios</label>
-  <select id="difusion-tipo-destinatario" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;">
-    <option value="todos">Todos mis contactos</option>
-    <option value="etiqueta">Solo por etiqueta</option>
-    <option value="manual">Elegir manualmente</option>
-  </select>
+  <div class="difusion-field-group">
+    <label class="difusion-label" for="difusion-tipo-destinatario">Destinatarios</label>
+    <select id="difusion-tipo-destinatario">
+      <option value="todos">Todos mis contactos</option>
+      <option value="etiqueta">Solo por etiqueta</option>
+      <option value="manual">Elegir manualmente</option>
+    </select>
+  </div>
 
-  <div id="difusion-etiqueta-wrapper" style="margin-top:8px; display:none;">
-    <label>Etiqueta</label>
-    <select id="difusion-etiqueta" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;">
+  <div id="difusion-etiqueta-wrapper" class="difusion-field-group" style="display:none;">
+    <label class="difusion-label" for="difusion-etiqueta">Etiqueta</label>
+    <select id="difusion-etiqueta">
       <option value="">Seleccioná una etiqueta...</option>
     </select>
   </div>
 
-  <div id="difusion-manual-wrapper" style="margin-top:8px; display:none;">
-    <label>Contactos (marcá los que quieras)</label>
-    <div id="difusion-contactos-lista" style="max-height:200px; overflow-y:auto; border:1px solid #d1d5db; border-radius:6px; padding:8px; margin-top:4px;"></div>
-    <div style="margin-top:4px; display:flex; gap:6px;">
-      <button type="button" id="difusion-seleccionar-todos" class="btn-guardar-config" style="font-size:12px; padding:4px 10px;">Seleccionar todos</button>
-      <button type="button" id="difusion-seleccionar-nada" class="btn-guardar-config" style="font-size:12px; padding:4px 10px;">Limpiar</button>
+  <div id="difusion-manual-wrapper" class="difusion-field-group" style="display:none;">
+    <label class="difusion-label">Contactos (marcá los que quieras)</label>
+    <input type="search" id="difusion-buscador-contactos" placeholder="Buscar contacto..." class="difusion-input" />
+    <div id="difusion-contactos-lista" class="difusion-contactos-lista"></div>
+    <div class="difusion-contactos-acciones">
+      <button type="button" id="difusion-seleccionar-todos" class="difusion-btn-secundario">Seleccionar todos</button>
+      <button type="button" id="difusion-seleccionar-nada" class="difusion-btn-secundario">Limpiar</button>
     </div>
   </div>
 
-  <label style="margin-top:8px; display:block;">Programación (opcional)</label>
-  <input type="datetime-local" id="difusion-fecha-programacion" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;" />
-
-  <div style="margin-top:8px;">
-    <strong>Destinatarios: <span id="difusion-destinatarios-count">0</span></strong>
+  <div class="difusion-field-group">
+    <span class="difusion-radio-group">
+      <label class="difusion-radio">
+        <input type="radio" name="difusion-modenvio" value="ahora" checked>
+        <span>Enviar ahora</span>
+      </label>
+      <label class="difusion-radio">
+        <input type="radio" name="difusion-modenvio" value="programar">
+        <span>Programar envío</span>
+      </label>
+    </span>
   </div>
 
-  <button id="btn-crear-difusion" type="button" class="btn-guardar-config" style="margin-top:8px;">Crear difusión</button>
+  <div id="difusion-programacion-wrapper" class="difusion-field-group" style="display:none;">
+    <label class="difusion-label" for="difusion-fecha-programacion">Programación</label>
+    <div class="difusion-datetime-wrapper">
+      <span class="difusion-datetime-icon">📅</span>
+      <input type="datetime-local" id="difusion-fecha-programacion" placeholder="Seleccioná fecha y hora" class="difusion-input" />
+    </div>
+    <span id="difusion-fecha-error" class="difusion-error" style="display:none;">La fecha debe ser a futuro</span>
+  </div>
+
+  <div class="difusion-counter">
+    <strong>Destinatarios:</strong> <span id="difusion-destinatarios-count">0</span>
+  </div>
+
+  <button id="btn-crear-difusion" type="button" class="difusion-btn-primario">📤 Crear difusión</button>
 </div>
 
-<div id="difusiones-lista" style="margin-top:12px;"></div>
+<div id="difusiones-lista" class="difusiones-lista"></div>

@@ -2166,6 +2166,7 @@ module.exports = {
   bloquearCliente,
   desbloquearCliente,
   crearContactoManual,
+  obtenerPlantillas,
   obtenerMonedero,
   cargarSaldoMonedero,
   actualizarCostosManual,

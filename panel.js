@@ -4,7 +4,7 @@
 
 const USAR_MOCK_DATA = false;
 
-const MOCK_PLANTILLAS = [
+let MOCK_PLANTILLAS = [
   { id: 'plantilla_bienvenida', nombre: 'Bienvenida', texto: 'Hola {{1}}, gracias por contactarnos' },
   { id: 'plantilla_promocion', nombre: 'Promoción del día', texto: 'Aprovechá nuestra promo {{1}}' },
   { id: 'plantilla_recordatorio', nombre: 'Recordatorio', texto: 'Te recordamos tu pedido para hoy {{1}}' }
@@ -1126,6 +1126,22 @@ function poblarSelectPlantillas() {
     select.appendChild(opt);
   });
   mostrarVistaPreviaPlantilla();
+}
+
+async function cargarPlantillasDesdeMeta() {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/plantillas', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (res.ok && data.plantillas && data.plantillas.length > 0) {
+      MOCK_PLANTILLAS = data.plantillas;
+      poblarSelectPlantillas();
+    }
+  } catch (error) {
+    console.error('Error al cargar plantillas desde Meta:', error);
+  }
 }
 
 function cambiarTipoMensaje() {
@@ -3451,6 +3467,7 @@ async function init() {
 
   // Inicializar selector de tipo de mensaje
   poblarSelectPlantillas();
+  cargarPlantillasDesdeMeta();
   document.querySelectorAll('input[name="difusion-tipo-mensaje"]').forEach(r => {
     r.addEventListener('change', cambiarTipoMensaje);
   });

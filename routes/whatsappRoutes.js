@@ -39,6 +39,7 @@ const {
   bloquearCliente,
   desbloquearCliente,
   crearContactoManual,
+  obtenerPlantillas,
   obtenerMonedero,
   cargarSaldoMonedero,
   actualizarCostosManual,
@@ -106,6 +107,7 @@ router.get('/config', auth, obtenerConfig);
 router.put('/config', auth, upload.single('foto'), actualizarConfig);
 
 // ===== Monedero =====
+router.get('/plantillas', auth, obtenerPlantillas);
 router.get('/monedero', auth, obtenerMonedero);
 router.post('/admin/monedero/cargar', auth, cargarSaldoMonedero);
 

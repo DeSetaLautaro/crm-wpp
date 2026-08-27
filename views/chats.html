@@ -16,17 +16,25 @@
     <!-- Modal para crear contacto -->
     <div id="modal-nuevo-contacto" class="modal hidden">
       <div class="modal-content">
-        <span class="modal-cerrar" id="btn-cerrar-nuevo-contacto">&times;</span>
-        <h3>Nuevo contacto</h3>
-        <label>Nombre</label>
-        <input type="text" id="nuevo-contacto-nombre" placeholder="Nombre del cliente">
-        <label>Teléfono</label>
-        <input type="tel" id="nuevo-contacto-telefono" placeholder="Ej: 5491122334455">
-        <label>Dirección (opcional)</label>
-        <input type="text" id="nuevo-contacto-direccion" placeholder="Calle y número">
-        <label>Etiquetas (separadas por coma, opcional)</label>
-        <input type="text" id="nuevo-contacto-etiquetas" placeholder="VIP, interesado, no compró">
-        <button id="btn-guardar-nuevo-contacto" class="btn-guardar-config">Guardar</button>
+        <div class="modal-header-flex">
+          <h3>Nuevo contacto</h3>
+          <button id="btn-cerrar-nuevo-contacto" class="modal-close-btn" aria-label="Cerrar">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-contacto-form">
+          <label for="nuevo-contacto-nombre" class="form-label">Nombre</label>
+          <input type="text" id="nuevo-contacto-nombre" placeholder="Nombre del cliente" class="form-input">
+          <label for="nuevo-contacto-telefono" class="form-label">Teléfono</label>
+          <input type="tel" id="nuevo-contacto-telefono" placeholder="Ej: 5491122334455" class="form-input">
+          <label for="nuevo-contacto-direccion" class="form-label">Dirección (opcional)</label>
+          <input type="text" id="nuevo-contacto-direccion" placeholder="Calle y número" class="form-input">
+          <label for="nuevo-contacto-etiquetas" class="form-label">Etiquetas (separadas por coma, opcional)</label>
+          <input type="text" id="nuevo-contacto-etiquetas" placeholder="VIP, interesado, no compró" class="form-input">
+          <button id="btn-guardar-nuevo-contacto" class="btn-guardar-config btn-nuevo-contacto-guardar">Guardar</button>
+        </div>
       </div>
     </div>
     <div class="panel-header">

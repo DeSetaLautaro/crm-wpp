@@ -2045,6 +2045,101 @@ body.modo-login #app {
 #modal-nuevo-contacto .modal-content {
   max-width: 420px;
 }
+
+/* ===== Nuevo contacto (rediseño) ===== */
+#modal-nuevo-contacto .modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+#modal-nuevo-contacto .modal-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+#modal-nuevo-contacto .modal-header-flex h3 {
+  font-size: 1.125rem; /* text-lg */
+  font-weight: 600;     /* font-semibold */
+  color: #1F2937;       /* text-gray-800 */
+  margin: 0;
+}
+
+#modal-nuevo-contacto .modal-close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 9999px;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #4B5563;
+  transition: background 0.2s, color 0.2s;
+}
+
+#modal-nuevo-contacto .modal-close-btn:hover {
+  background: #E5E7EB;
+  color: #111827;
+}
+
+#modal-nuevo-contacto .modal-close-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+#modal-nuevo-contacto .modal-contacto-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#modal-nuevo-contacto .form-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4B5563;
+  margin-bottom: 2px;
+}
+
+#modal-nuevo-contacto .form-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #D1D5DB;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#modal-nuevo-contacto .form-input::placeholder {
+  color: #9CA3AF;
+}
+
+#modal-nuevo-contacto .form-input:focus {
+  border-color: #25D366;
+  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+}
+
+#modal-nuevo-contacto .btn-nuevo-contacto-guardar {
+  width: 100%;
+  background: #25D366;
+  color: #fff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#modal-nuevo-contacto .btn-nuevo-contacto-guardar:hover {
+  background: #16A34A;
+}
 /* ===== Modal de recorte de foto ===== */
 .modal-crop {
   position: fixed;

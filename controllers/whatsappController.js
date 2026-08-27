@@ -410,7 +410,7 @@ const recibirMensaje = async (req, res) => {
     
     if (!empresa) {
         console.log("❌ [ERROR GRAVE] La base de datos no encontró ninguna empresa con ese número de ID.");
-        return res.sendStatus(200);
+        return;
     }
     console.log(`🏢 [6] ¡Empresa encontrada!: ${empresa.nombre}`);
     const localAbierto = empresa.abierto !== false;
@@ -1426,6 +1426,42 @@ const actualizarBotActivo = async (req, res) => {
   }
 };
 
+const actualizarBotActivoConversacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { botActivo } = req.body || {};
+    if (typeof botActivo !== 'boolean') {
+      return res.status(400).json({ error: 'botActivo debe ser un booleano' });
+    }
+
+    const conversacion = await Conversacion.findById(id);
+    if (!conversacion) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+
+    // Validación multi-tenant: la conversación debe pertenecer a una empresa del usuario
+    const empresaIdStr = conversacion.empresaId.toString();
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+
+    await Conversacion.findByIdAndUpdate(id, { $set: { botActivo } });
+
+    // Emitir evento para actualizar el panel en tiempo real
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresaIdStr).emit('bot-actualizado', { conversacionId: id, botActivo });
+    }
+
+    return res.json({ ok: true, botActivo });
+  } catch (error) {
+    console.error('Error al actualizar botActivo de conversación:', error);
+    return res.status(500).json({ error: 'Error interno al actualizar botActivo' });
+  }
+};
+
 async function subirFotoWhatsApp(empresa, fotoPath, fileSize, fileType) {
   const token = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
   if (!token) {
@@ -2246,6 +2282,7 @@ module.exports = {
   recibirMensaje,
   enviarMensaje,
   actualizarBotActivo,
+  actualizarBotActivoConversacion,
   actualizarContacto,
   obtenerPedidoActivo,
   marcarAtendido,

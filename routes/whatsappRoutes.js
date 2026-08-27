@@ -46,6 +46,7 @@ const {
   recibirMensaje,
   enviarMensaje,
   actualizarBotActivo,
+  actualizarBotActivoConversacion,
   actualizarContacto,
   obtenerPedidoActivo,
   marcarAtendido,
@@ -87,6 +88,7 @@ router.post('/enviar', auth, enviarMensaje);
 
 // Actualización del estado botActivo de la empresa (PUT)
 router.put('/bot-activo', auth, actualizarBotActivo);
+router.put('/conversacion/:id/bot-activo', auth, actualizarBotActivoConversacion);
 
 // Actualización de datos manuales de un cliente (PUT)
 router.put('/contacto/:contactoId', auth, actualizarContacto);

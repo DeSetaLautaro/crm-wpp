@@ -3399,7 +3399,7 @@ async function init() {
 
     const token = localStorage.getItem('token') || '';
     try {
-      const res = await fetch('/api/whatsapp/bot-activo', {
+      const res = await fetch(`/api/whatsapp/conversacion/${chatActivoId}/bot-activo`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -3415,10 +3415,9 @@ async function init() {
         document.getElementById('estado-bot').textContent = !nuevoValor ? 'Bot Activo' : 'Pausado';
         console.error('Error al actualizar botActivo');
       } else {
-        // Actualizar conversaciones locales para reflejar el nuevo estado
-        CONVERSACIONES.forEach(c => {
-          c.botActivo = nuevoValor;
-        });
+        // Actualizar solo la conversación activa
+        const convLocal = CONVERSACIONES.find(c => c._id === chatActivoId);
+        if (convLocal) convLocal.botActivo = nuevoValor;
         renderListaChats();
         if (chatActivoId) {
           renderChatActivo();

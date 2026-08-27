@@ -318,18 +318,22 @@ function colorFromString(str) {
 }
 
 function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indicadorClase, activaClase) {
+  const nombreSeguro = escaparHTML(contacto.nombre || '');
+  const telefonoSeguro = escaparHTML(contacto.telefono || '');
+  const ultimoSeguro = escaparHTML(conv.ultimoMensaje || '');
+  const etiquetasSeguras = (contacto.etiquetas || []).map(et => `<span class="chat-chip-etiqueta" data-etiqueta="${escaparHTML(et)}">${escaparHTML(et)}</span>`).join('');
   return `
           <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
             <div class="chat-item-avatar">${inicial}</div>
             <div class="chat-item-contenido">
               <div class="chat-item-titulo">
-                <span class="chat-item-nombre">${contacto.nombre}</span>
+                <span class="chat-item-nombre">${nombreSeguro}</span>
                 <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
               </div>
-              <div class="chat-item-linea">${contacto.telefono}</div>
-              <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
+              <div class="chat-item-linea">${telefonoSeguro}</div>
+              <div class="chat-item-ultimo">${ultimoSeguro}</div>
               ${conv.cancelacionReciente ? `<span style="display:inline-block; background:#ef4444; color:#fff; font-size:11px; padding:2px 8px; border-radius:10px; margin-top:4px;">🚫 Canceló pedido</span>` : ''}
-              <div class="chat-item-etiquetas">${(contacto.etiquetas || []).map(et => `<span class="chat-chip-etiqueta" data-etiqueta="${et}">${et}</span>`).join('')}</div>
+              <div class="chat-item-etiquetas">${etiquetasSeguras}</div>
             </div>
             ${botonAccionChat(conv)}
             <div class="chat-item-indicador" style="background-color:${conv.botActivo ? '#10b981' : '#ef4444'}; border:1px solid ${conv.botActivo ? '#10b981' : '#ef4444'};" title="${conv.botActivo ? 'Bot activo' : 'Requiere humano'}"></div>
@@ -663,7 +667,8 @@ function renderChatActivo() {
     else if (['bot', 'humano', 'ia', 'empresa'].includes(msg.remitente)) claseBurbuja = 'bubble-humano';
     else if (msg.remitente === 'nota_interna') claseBurbuja = 'bubble-nota';
 
-    return `<div class="bubble ${claseBurbuja}">${msg.contenido.replace(/\n/g, '<br>')}</div>`;
+    const contenidoSeguro = escaparHTML(msg.contenido || '').replace(/\n/g, '<br>');
+    return `<div class="bubble ${claseBurbuja}">${contenidoSeguro}</div>`;
   }).join('');
 
   // Scroll al último mensaje al abrir el chat
@@ -717,12 +722,15 @@ function renderPerfil(contacto) {
     if (notas.length === 0) {
       contNotas.innerHTML = '<span class="notas-vacio">Sin notas internas</span>';
     } else {
-      contNotas.innerHTML = notas.map(n => `
+      contNotas.innerHTML = notas.map(n => {
+        const nSeguro = escaparHTML(n || '');
+        return `
         <div class="nota-item">
-          <span class="nota-item-texto">${n}</span>
+          <span class="nota-item-texto">${nSeguro}</span>
           <button class="nota-remove-btn" data-nota="${encodeURIComponent(n)}" title="Eliminar nota">×</button>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
   }
 
@@ -1234,7 +1242,7 @@ function renderDifusiones(difusiones) {
       ? `<button class="difusion-btn-enviar" data-enviar-difusion="${d._id}" style="background:transparent;border:none;color:#2563eb;cursor:pointer;font-size:12px;">Enviar</button>`
       : '';
     return `<div class="difusion-fila" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 8px;border-bottom:1px solid #f3f4f6;">
-      <span class="difusion-fila-mensaje" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;color:#111827;">${d.mensaje}</span>
+      <span class="difusion-fila-mensaje" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;color:#111827;">${escaparHTML(d.mensaje || '')}</span>
       <span class="difusion-fila-meta" style="color:#9CA3AF;font-size:12px;white-space:nowrap;">${fechaTexto}</span>
       <span class="difusion-fila-meta" style="color:#9CA3AF;font-size:12px;white-space:nowrap;">${enviados}/${totalDest}</span>
       ${btnEnviar}
@@ -1954,12 +1962,15 @@ function renderAtajosMenu(filtro) {
     return;
   }
 
-  contenedor.innerHTML = items.map((a, idx) => `
+  contenedor.innerHTML = items.map((a, idx) => {
+    const atajoSeguro = escaparHTML(a.atajo);
+    const mensajeSeguro = escaparHTML(a.mensaje);
+    return `
     <div class="atajo-item" data-atajo-index="${idx}">
-      <span class="atajo-comando">/${a.atajo}</span>
-      <span class="atajo-mensaje">${a.mensaje}</span>
+      <span class="atajo-comando">/${atajoSeguro}</span>
+      <span class="atajo-mensaje">${mensajeSeguro}</span>
     </div>
-  `).join('');
+  `}).join('');
 
   contenedor.querySelectorAll('.atajo-item').forEach(item => {
     item.addEventListener('click', function() {
@@ -2965,8 +2976,9 @@ function renderCarrito(items, total) {
     const cantidad = item.cantidad || 1;
     const precio = item.precioUnitario || 0;
     const subtotal = (cantidad * precio).toFixed(2);
+    const nombreSeguro = escaparHTML(item.nombre || '');
     html += `<div class="pedido-item">
-      <span class="pedido-item-nombre">${item.nombre}</span>
+      <span class="pedido-item-nombre">${nombreSeguro}</span>
       <span class="pedido-item-cantidad">× ${cantidad}</span>
       <span class="pedido-item-precio">$${precio.toFixed(2)}</span>
       <span class="pedido-item-subtotal">$${subtotal}</span>
@@ -2998,8 +3010,9 @@ function renderPedido(contenedor, pedido) {
       const cantidad = item.cantidad || 0;
       const precio = item.precioUnitario || 0;
       const subtotal = (cantidad * precio).toFixed(2);
+      const nombreSeguro = escaparHTML(item.nombre || '');
       html += `<div class="pedido-item">
-        <span class="pedido-item-nombre">${item.nombre}</span>
+        <span class="pedido-item-nombre">${nombreSeguro}</span>
         <span class="pedido-item-cantidad">× ${cantidad}</span>
         <span class="pedido-item-precio">$${precio.toFixed(2)}</span>
         <span class="pedido-item-subtotal">$${subtotal}</span>

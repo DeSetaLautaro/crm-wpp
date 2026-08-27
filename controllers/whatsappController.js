@@ -2149,6 +2149,43 @@ const cargarSaldoMonedero = async (req, res) => {
   }
 };
 
+async function obtenerPlantillas(req, res) {
+  try {
+    const empresaId = req.empresaId || (req.empresas && req.empresas[0]);
+    if (!empresaId) return res.status(400).json({ error: 'No se identificó la empresa' });
+
+    const empresa = await Empresa.findById(empresaId).lean();
+    if (!empresa?.wabaId || !empresa?.tokenMeta) {
+      return res.status(400).json({ error: 'Faltan wabaId o tokenMeta' });
+    }
+
+    const url = `https://graph.facebook.com/v19.0/${empresa.wabaId}/message_templates`;
+    const resp = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${empresa.tokenMeta}` }
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      return res.status(502).json({ error: data?.error?.message || 'Error al obtener plantillas' });
+    }
+
+    const plantillas = (data.data || [])
+      .filter(t => t.status === 'APPROVED')
+      .map(t => ({
+        id: t.id,
+        nombre: t.name,
+        lenguaje: t.language,
+        categoria: t.category,
+        texto: t.components?.find(c => c.type === 'BODY')?.text || ''
+      }));
+
+    return res.json({ ok: true, plantillas });
+  } catch (error) {
+    console.error('Error al obtener plantillas:', error);
+    return res.status(500).json({ error: 'Error interno al obtener plantillas' });
+  }
+}
+
 module.exports = {
   verificarFirmaMeta,
   verificarWebhook,

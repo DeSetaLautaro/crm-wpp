@@ -23,7 +23,13 @@ app.use(express.json({
     req.rawBody = buf;
   }
 }));
-app.use(express.static(__dirname));
+// ====== ESTÁTICOS (SOLO ARCHIVOS PERMITIDOS) ======
+app.disable('x-powered-by');
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/panel.js', (req, res) => res.sendFile(path.join(__dirname, 'panel.js')));
+app.get('/style.css', (req, res) => res.sendFile(path.join(__dirname, 'style.css')));
+app.use('/views', express.static(path.join(__dirname, 'views')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Endpoint para listar conversaciones de la Parrilla (protegido)

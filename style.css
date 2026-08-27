@@ -2029,12 +2029,15 @@ body.modo-login #app {
   color: #fff;
   border: none;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 20px;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
-  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .btn-nuevo-contacto:hover {
   background: #1d4ed8;

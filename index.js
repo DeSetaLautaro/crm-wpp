@@ -5,6 +5,9 @@ const mongoose = require('mongoose');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const pedidosRoutes = require('./routes/pedidosRoutes');
@@ -17,6 +20,26 @@ const { obtenerConversaciones } = require('./controllers/conversacionesControlle
 const { enviarDifusionesProgramadas } = require('./controllers/difusionController');
 
 const app = express();
+
+// Helmet bloquea cabeceras HTTP vulnerables de forma automática
+app.use(helmet());
+
+// CORS define explícitamente quién puede consumir la API
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://tu-dominio-real.com'], // Solo estos orígenes pasan
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+}));
+
+// Rate Limiting previene ataques de fuerza bruta
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 50, // Máximo 50 peticiones por IP en ese bloque de tiempo
+    message: 'Demasiados intentos. Por favor, esperá 15 minutos.'
+});
+
+// Aplicación del limitador a la ruta general de la API/Webhook
+app.use('/api', limiter);
 
 app.use(express.json({
   verify: (req, res, buf) => {

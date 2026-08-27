@@ -1894,7 +1894,7 @@ const reabrirConversacion = async (req, res) => {
 const agregarEtiqueta = async (req, res) => {
   try {
     const { contactoId } = req.params;
-    const { etiqueta } = req.body || {};
+    const { etiqueta, aplicadaPor, sucursal } = req.body || {};
 
     if (!etiqueta || typeof etiqueta !== 'string' || etiqueta.trim() === '') {
       return res.status(400).json({ error: 'Etiqueta inválida' });
@@ -1914,9 +1914,18 @@ const agregarEtiqueta = async (req, res) => {
 
     const nueva = etiqueta.trim();
     const actualizadas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
-    if (!actualizadas.includes(nueva)) {
-      actualizadas.push(nueva);
-      await Cliente.findByIdAndUpdate(contactoId, { $set: { etiquetas: actualizadas } }, { new: true });
+    if (!actualizadas.some(e => (e.nombre || e) === nueva)) {
+      const nuevaEtiqueta = {
+        nombre: nueva,
+        aplicadaPor: (aplicadaPor || '').trim(),
+        fecha: new Date(),
+        sucursal: (sucursal || '').trim()
+      };
+      actualizadas.push(nuevaEtiqueta);
+      const updated = await Cliente.findByIdAndUpdate(contactoId, {
+        $set: { etiquetas: actualizadas }
+      }, { new: true });
+      return res.json({ ok: true, etiquetas: updated.etiquetas });
     }
 
     return res.json({ ok: true, etiquetas: actualizadas });
@@ -1948,7 +1957,7 @@ const eliminarEtiqueta = async (req, res) => {
     }
 
     const actuales = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
-    const filtradas = actuales.filter(e => e !== etiqueta);
+    const filtradas = actuales.filter(e => (e.nombre || e) !== etiqueta);
     await Cliente.findByIdAndUpdate(contactoId, { $set: { etiquetas: filtradas } }, { new: true });
 
     return res.json({ ok: true, etiquetas: filtradas });
@@ -1961,10 +1970,10 @@ const eliminarEtiqueta = async (req, res) => {
 // ===== Eliminar nota interna de un contacto =====
 const eliminarNota = async (req, res) => {
   try {
-    const { contactoId, nota } = req.params;
+    const { contactoId, nota: mensajeId } = req.params;
 
-    if (!nota) {
-      return res.status(400).json({ error: 'Nota requerida' });
+    if (!mensajeId || !mongoose.Types.ObjectId.isValid(mensajeId)) {
+      return res.status(400).json({ error: 'ID de mensaje inválido' });
     }
 
     const contacto = await Cliente.findById(contactoId);
@@ -1972,22 +1981,29 @@ const eliminarNota = async (req, res) => {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
-    // Validación multi-tenant
     const empresasPermitidas = req.empresas || [];
     const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contacto.empresaId));
     if (!tieneAcceso) {
       return res.status(403).json({ error: 'No tienes acceso a este contacto' });
     }
 
-    const actuales = Array.isArray(contacto.notas) ? contacto.notas : [];
-    const filtradas = actuales.filter(n => n !== nota);
-    await Cliente.findByIdAndUpdate(
-      contactoId,
-      { $set: { notas: filtradas } },
-      { new: true }
-    );
+    const mensaje = await Mensaje.findById(mensajeId);
+    if (!mensaje || mensaje.remitente !== 'nota_interna') {
+      return res.status(404).json({ error: 'Nota interna no encontrada' });
+    }
 
-    return res.json({ ok: true, notas: filtradas });
+    const conversacion = await Conversacion.findOne({
+      _id: mensaje.conversacionId,
+      contactoId,
+      empresaId: contacto.empresaId
+    });
+    if (!conversacion) {
+      return res.status(403).json({ error: 'No tienes acceso a esta nota' });
+    }
+
+    await Mensaje.findByIdAndDelete(mensajeId);
+
+    return res.json({ ok: true });
   } catch (error) {
     console.error('Error al eliminar nota:', error);
     return res.status(500).json({ error: 'Error interno al eliminar nota' });
@@ -2009,22 +2025,39 @@ const agregarNota = async (req, res) => {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
-    // Validación multi-tenant
     const empresasPermitidas = req.empresas || [];
     const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contacto.empresaId));
     if (!tieneAcceso) {
       return res.status(403).json({ error: 'No tienes acceso a este contacto' });
     }
 
-    const actuales = Array.isArray(contacto.notas) ? contacto.notas : [];
-    actuales.push(nota.trim());
-    const actualizado = await Cliente.findByIdAndUpdate(
-      contactoId,
-      { $set: { notas: actuales } },
-      { new: true }
-    );
+    // Buscar la última conversación del contacto
+    let conversacion = await Conversacion.findOne({
+      empresaId: contacto.empresaId,
+      contactoId
+    }).sort({ createdAt: -1 });
 
-    return res.json({ ok: true, notas: actualizado.notas });
+    if (!conversacion) {
+      // Si no existe, crear una conversación vacía
+      const empresa = await Empresa.findById(contacto.empresaId);
+      conversacion = await Conversacion.create({
+        empresaId: contacto.empresaId,
+        contactoId,
+        lineaReceptora: empresa?.whatsappPhoneId || '',
+        numeroReceptor: '',
+        botActivo: empresa?.botActivo !== false,
+        estado: 'Abierto',
+        ultimoMensaje: ''
+      });
+    }
+
+    const nuevoMensaje = await Mensaje.create({
+      conversacionId: conversacion._id,
+      remitente: 'nota_interna',
+      contenido: nota.trim()
+    });
+
+    return res.status(201).json({ ok: true, mensaje: nuevoMensaje });
   } catch (error) {
     console.error('Error al agregar nota:', error);
     return res.status(500).json({ error: 'Error interno al agregar nota' });

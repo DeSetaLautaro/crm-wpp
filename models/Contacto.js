@@ -30,7 +30,14 @@ const ContactoSchema = new Schema(
       default: ''
     },
     etiquetas: {
-      type: [String],
+      type: [
+        {
+          nombre: { type: String, default: '' },
+          aplicadaPor: { type: String, default: '' },
+          fecha: { type: Date, default: Date.now },
+          sucursal: { type: String, default: '' }
+        }
+      ],
       default: []
     },
     notas: {

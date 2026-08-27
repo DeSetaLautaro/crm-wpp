@@ -275,7 +275,7 @@ function filtrarPorContacto(conversaciones, texto) {
     const contacto = getContactoPorId(conv.contactoId);
     const nombre = (contacto?.nombre || '').toLowerCase();
     const telefono = (contacto?.telefono || '').toLowerCase();
-    const etiquetasTexto = (contacto?.etiquetas || []).map(e => e.toLowerCase()).join(' ');
+    const etiquetasTexto = (contacto?.etiquetas || []).map(e => (e.nombre || e).toLowerCase()).join(' ');
     return nombre.includes(term) || telefono.includes(term) || etiquetasTexto.includes(term);
   });
 }
@@ -321,7 +321,10 @@ function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indic
   const nombreSeguro = escaparHTML(contacto.nombre || '');
   const telefonoSeguro = escaparHTML(contacto.telefono || '');
   const ultimoSeguro = escaparHTML(conv.ultimoMensaje || '');
-  const etiquetasSeguras = (contacto.etiquetas || []).map(et => `<span class="chat-chip-etiqueta" data-etiqueta="${escaparHTML(et)}">${escaparHTML(et)}</span>`).join('');
+  const etiquetasSeguras = (contacto.etiquetas || []).map(et => {
+    const nombre = et.nombre || et;
+    return `<span class="chat-chip-etiqueta" data-etiqueta="${escaparHTML(nombre)}">${escaparHTML(nombre)}</span>`;
+  }).join('');
   return `
           <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
             <div class="chat-item-avatar">${inicial}</div>
@@ -392,7 +395,7 @@ function renderListaChats() {
   const conFiltroEtiqueta = etiquetaFiltrada
     ? filtrados.filter(c => {
         const contacto = getContactoPorId(c.contactoId);
-        const etiquetas = (contacto?.etiquetas || []).map(e => e.toLowerCase());
+        const etiquetas = (contacto?.etiquetas || []).map(e => (e.nombre || e).toLowerCase());
         return etiquetas.includes(etiquetaFiltrada.toLowerCase());
       })
     : filtrados;
@@ -617,8 +620,9 @@ function renderChatActivo() {
   if (etiquetasHeader) {
     const etiquetas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
     etiquetasHeader.innerHTML = etiquetas.map(etiqueta => {
-      const etiquetaSegura = escaparHTML(etiqueta);
-      const color = colorFromString(etiqueta);
+      const nombre = etiqueta.nombre || etiqueta;
+      const etiquetaSegura = escaparHTML(nombre);
+      const color = colorFromString(nombre);
       return `<span style="background:${color}22; border:1px solid ${color}; border-radius:12px; padding:2px 8px; font-size:12px; margin-right:4px; color:${color};">
                 ${etiquetaSegura}
                 <button class="etiqueta-remove" data-etiqueta="${etiquetaSegura}" style="background:none; border:none; color:inherit; margin-left:4px; cursor:pointer; font-size:12px;">×</button>
@@ -719,16 +723,18 @@ function renderPerfil(contacto) {
 
   const contNotas = document.getElementById('lista-notas');
   if (contNotas) {
-    const notas = Array.isArray(contacto.notas) ? contacto.notas : [];
-    if (notas.length === 0) {
+    const notasMensajes = chatActivoId
+      ? MENSAJES.filter(m => m.conversacionId === chatActivoId && m.remitente === 'nota_interna')
+      : [];
+    if (notasMensajes.length === 0) {
       contNotas.innerHTML = '<span class="notas-vacio">Sin notas internas</span>';
     } else {
-      contNotas.innerHTML = notas.map(n => {
-        const nSeguro = escaparHTML(n || '');
+      contNotas.innerHTML = notasMensajes.map(m => {
+        const nSeguro = escaparHTML(m.contenido || '');
         return `
         <div class="nota-item">
           <span class="nota-item-texto">${nSeguro}</span>
-          <button class="nota-remove-btn" data-nota="${encodeURIComponent(n)}" title="Eliminar nota">×</button>
+          <button class="nota-remove-btn" data-nota="${encodeURIComponent(m._id)}" title="Eliminar nota">×</button>
         </div>
       `;
       }).join('');
@@ -3100,8 +3106,7 @@ async function eliminarEtiquetaDesdeUI(etiqueta) {
 }
 
 // ===== Eliminar nota interna =====
-async function eliminarNotaDesdeUI(notaEncode) {
-  const nota = decodeURIComponent(notaEncode);
+async function eliminarNotaDesdeUI(mensajeId) {
   const conv = getConversacionPorId(chatActivoId);
   if (!conv) return;
   const contacto = getContactoPorId(conv.contactoId);
@@ -3109,7 +3114,7 @@ async function eliminarNotaDesdeUI(notaEncode) {
 
   const token = localStorage.getItem('token') || '';
   try {
-    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}/notas/${encodeURIComponent(nota)}`, {
+    const res = await fetch(`/api/whatsapp/contacto/${contacto._id}/notas/${encodeURIComponent(mensajeId)}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -3120,8 +3125,7 @@ async function eliminarNotaDesdeUI(notaEncode) {
       console.error('Error al eliminar nota:', data.error || res.status);
       return;
     }
-    const data = await res.json();
-    contacto.notas = data.notas || [];
+    MENSAJES = MENSAJES.filter(m => !(m._id === mensajeId && m.remitente === 'nota_interna'));
     if (chatActivoId) renderChatActivo();
   } catch (error) {
     console.error('Error de red al eliminar nota:', error);
@@ -3195,9 +3199,17 @@ async function guardarNota() {
       return;
     }
     const data = await res.json();
-    contacto.notas = data.notas || [...(contacto.notas || []), nota];
-    if (textarea) textarea.value = '';
-    if (chatActivoId) renderChatActivo();
+    if (data.ok && data.mensaje) {
+      MENSAJES.push({
+        conversacionId: chatActivoId,
+        _id: data.mensaje._id,
+        remitente: 'nota_interna',
+        contenido: data.mensaje.contenido,
+        fecha: new Date(data.mensaje.fecha || Date.now())
+      });
+      if (textarea) textarea.value = '';
+      if (chatActivoId) renderChatActivo();
+    }
   } catch (error) {
     console.error('Error de red al guardar nota:', error);
   }

@@ -617,10 +617,11 @@ function renderChatActivo() {
   if (etiquetasHeader) {
     const etiquetas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
     etiquetasHeader.innerHTML = etiquetas.map(etiqueta => {
+      const etiquetaSegura = escaparHTML(etiqueta);
       const color = colorFromString(etiqueta);
       return `<span style="background:${color}22; border:1px solid ${color}; border-radius:12px; padding:2px 8px; font-size:12px; margin-right:4px; color:${color};">
-                ${etiqueta}
-                <button class="etiqueta-remove" data-etiqueta="${etiqueta}" style="background:none; border:none; color:inherit; margin-left:4px; cursor:pointer; font-size:12px;">×</button>
+                ${etiquetaSegura}
+                <button class="etiqueta-remove" data-etiqueta="${etiquetaSegura}" style="background:none; border:none; color:inherit; margin-left:4px; cursor:pointer; font-size:12px;">×</button>
               </span>`;
     }).join('');
   }

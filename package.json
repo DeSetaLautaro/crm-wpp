@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "test": "node --test tests/"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^2.4.3",
@@ -12,5 +15,8 @@
     "multer": "^2.2.0",
     "node-cron": "^3.0.3",
     "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
   }
 }

@@ -326,7 +326,7 @@ function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indic
                 <span class="chat-item-nombre">${contacto.nombre}</span>
                 <span class="chat-item-hora">${formatearHora(conv.ultimaFecha)}</span>
               </div>
-              <div class="chat-item-linea">${conv.numeroReceptor || conv.lineaReceptora}</div>
+              <div class="chat-item-linea">${contacto.telefono}</div>
               <div class="chat-item-ultimo">${conv.ultimoMensaje}</div>
               ${conv.cancelacionReciente ? `<span style="display:inline-block; background:#ef4444; color:#fff; font-size:11px; padding:2px 8px; border-radius:10px; margin-top:4px;">🚫 Canceló pedido</span>` : ''}
               <div class="chat-item-etiquetas">${(contacto.etiquetas || []).map(et => `<span class="chat-chip-etiqueta" data-etiqueta="${et}">${et}</span>`).join('')}</div>
@@ -599,7 +599,7 @@ function renderChatActivo() {
   armarHeaderMovil(contacto, conv);
 
   document.getElementById('chat-nombre').textContent = contacto.nombre;
-  document.getElementById('chat-linea').textContent = conv.numeroReceptor || conv.lineaReceptora;
+  document.getElementById('chat-linea').textContent = contacto.telefono;
 
   // Mostrar etiquetas del contacto en el header del chat
   const lineaHeader = document.getElementById('chat-linea');

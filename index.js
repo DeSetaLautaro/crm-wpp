@@ -64,7 +64,16 @@ app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.ht
 app.get('/panel.js', (req, res) => res.sendFile(path.join(__dirname, 'panel.js')));
 app.get('/style.css', (req, res) => res.sendFile(path.join(__dirname, 'style.css')));
 app.use('/views', express.static(path.join(__dirname, 'views')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Endpoint protegido para servidores de archivos subidos (fotos de perfil, etc.)
+app.get('/uploads/:filename', auth, (req, res) => {
+  const filename = req.params.filename;
+  if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    return res.status(400).json({ error: 'Nombre de archivo inválido' });
+  }
+  const filePath = path.join(__dirname, 'uploads', filename);
+  res.sendFile(filePath);
+});
 
 // Endpoint para listar conversaciones de la Parrilla (protegido)
 app.get('/api/conversaciones', auth, obtenerConversaciones);
@@ -76,7 +85,9 @@ app.use('/api/difusiones', difusionRoutes);
 // ===== Manejo de errores global =====
 app.use((err, req, res, next) => {
   console.error('Error global:', err);
-  res.status(500).json({ error: 'Error interno del servidor' });
+  const status = err.status || 500;
+  const mensaje = status === 500 ? 'Error interno del servidor' : err.message;
+  res.status(status).json({ error: mensaje });
 });
 
 const PORT = process.env.PORT || 3000;

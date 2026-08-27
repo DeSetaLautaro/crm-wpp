@@ -5,7 +5,9 @@ const jwt = require('jsonwebtoken');
  */
 module.exports = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const tokenHeader = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const tokenQuery = req.query.token || null;
+  const token = tokenHeader || tokenQuery || null;
 
   if (!token) {
     return res.status(401).json({ error: 'Token no proporcionado' });

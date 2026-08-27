@@ -18,7 +18,25 @@ const storage = multer.diskStorage({
     cb(null, unique + ext);
   }
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    const tiposPermitidos = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    if (tiposPermitidos.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      const err = new Error('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, WEBP) o archivos de Excel.');
+      err.status = 400;
+      cb(err, false);
+    }
+  }
+});
 
 const auth = require('../middlewares/auth');
 const { loginConPin } = require('../controllers/authController');

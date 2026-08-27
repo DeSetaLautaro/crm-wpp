@@ -151,6 +151,12 @@ async function crearDifusion(req, res) {
   try {
     const empresaId = req.body.empresaId || req.empresaId;
     if (!empresaId) return res.status(400).json({ error: 'Falta empresaId' });
+
+    // Validación multi-tenant: la empresa debe pertenecer al usuario logueado
+    const empresasPermitidas = req.empresas || [];
+    if (!empresasPermitidas.some(e => String(e) === String(empresaId))) {
+      return res.status(403).json({ error: 'No tienes acceso a esta empresa' });
+    }
     const mensaje = (req.body.mensaje || '').trim();
     if (!mensaje) return res.status(400).json({ error: 'El mensaje es obligatorio' });
 

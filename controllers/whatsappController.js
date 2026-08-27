@@ -1746,15 +1746,23 @@ const actualizarContacto = async (req, res) => {
       return res.status(400).json({ error: 'Debes enviar al menos direccion, pisoDepto, codigoPostal o nombre' });
     }
 
+    const contactoExistente = await Cliente.findById(contactoId);
+    if (!contactoExistente) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    // Validación multi-tenant: el contacto debe pertenecer a una empresa del usuario
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contactoExistente.empresaId));
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a este contacto' });
+    }
+
     const contacto = await Cliente.findByIdAndUpdate(
       contactoId,
       { $set: updates },
       { new: true }
     );
-
-    if (!contacto) {
-      return res.status(404).json({ error: 'Contacto no encontrado' });
-    }
 
     return res.json({ ok: true, contacto });
   } catch (error) {
@@ -1861,6 +1869,13 @@ const agregarEtiqueta = async (req, res) => {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
+    // Validación multi-tenant
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contacto.empresaId));
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a este contacto' });
+    }
+
     const nueva = etiqueta.trim();
     const actualizadas = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
     if (!actualizadas.includes(nueva)) {
@@ -1889,6 +1904,13 @@ const eliminarEtiqueta = async (req, res) => {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
+    // Validación multi-tenant
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contacto.empresaId));
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a este contacto' });
+    }
+
     const actuales = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
     const filtradas = actuales.filter(e => e !== etiqueta);
     await Cliente.findByIdAndUpdate(contactoId, { $set: { etiquetas: filtradas } }, { new: true });
@@ -1912,6 +1934,13 @@ const eliminarNota = async (req, res) => {
     const contacto = await Cliente.findById(contactoId);
     if (!contacto) {
       return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    // Validación multi-tenant
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contacto.empresaId));
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a este contacto' });
     }
 
     const actuales = Array.isArray(contacto.notas) ? contacto.notas : [];
@@ -1944,6 +1973,13 @@ const agregarNota = async (req, res) => {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
+    // Validación multi-tenant
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contacto.empresaId));
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a este contacto' });
+    }
+
     const actuales = Array.isArray(contacto.notas) ? contacto.notas : [];
     actuales.push(nota.trim());
     const actualizado = await Cliente.findByIdAndUpdate(
@@ -1962,14 +1998,23 @@ const agregarNota = async (req, res) => {
 const bloquearCliente = async (req, res) => {
   try {
     const { contactoId } = req.params;
+    const contactoExistente = await Cliente.findById(contactoId);
+    if (!contactoExistente) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    // Validación multi-tenant
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contactoExistente.empresaId));
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a este contacto' });
+    }
+
     const contacto = await Cliente.findByIdAndUpdate(
       contactoId,
       { $set: { bloqueado: true } },
       { new: true }
     );
-    if (!contacto) {
-      return res.status(404).json({ error: 'Contacto no encontrado' });
-    }
     return res.json({ ok: true, bloqueado: true, contacto });
   } catch (error) {
     console.error('Error al bloquear cliente:', error);
@@ -1980,14 +2025,23 @@ const bloquearCliente = async (req, res) => {
 const desbloquearCliente = async (req, res) => {
   try {
     const { contactoId } = req.params;
+    const contactoExistente = await Cliente.findById(contactoId);
+    if (!contactoExistente) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    // Validación multi-tenant
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contactoExistente.empresaId));
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a este contacto' });
+    }
+
     const contacto = await Cliente.findByIdAndUpdate(
       contactoId,
       { $set: { bloqueado: false } },
       { new: true }
     );
-    if (!contacto) {
-      return res.status(404).json({ error: 'Contacto no encontrado' });
-    }
     return res.json({ ok: true, bloqueado: false, contacto });
   } catch (error) {
     console.error('Error al desbloquear cliente:', error);

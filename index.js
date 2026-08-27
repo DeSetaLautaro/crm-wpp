@@ -24,22 +24,33 @@ const app = express();
 // Helmet bloquea cabeceras HTTP vulnerables de forma automática
 app.use(helmet());
 
-// CORS define explícitamente quién puede consumir la API
+// CORS define explícitamente quién puede consumir la API.
+// En producción podés setear CORS_ORIGIN = https://tu-dominio.com (separado por comas)
+const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['*'];
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://tu-dominio-real.com'], // Solo estos orígenes pasan
+    origin: allowedOrigins.includes('*') ? '*' : allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
+    credentials: !allowedOrigins.includes('*')
 }));
 
 // Rate Limiting previene ataques de fuerza bruta
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 50, // Máximo 50 peticiones por IP en ese bloque de tiempo
+    max: 500, // Máximo 500 peticiones por IP en ese bloque de tiempo
     message: 'Demasiados intentos. Por favor, esperá 15 minutos.'
+});
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Demasiados intentos de login. Esperá 15 minutos y volvé a intentar.'
 });
 
 // Aplicación del limitador a la ruta general de la API/Webhook
 app.use('/api', limiter);
+
+// Solicitudes al login por PIN son particularmente sensibles
+app.use('/api/whatsapp/login-pin', loginLimiter);
 
 app.use(express.json({
   verify: (req, res, buf) => {
@@ -61,6 +72,12 @@ app.get('/api/conversaciones', auth, obtenerConversaciones);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/difusiones', difusionRoutes);
+
+// ===== Manejo de errores global =====
+app.use((err, req, res, next) => {
+  console.error('Error global:', err);
+  res.status(500).json({ error: 'Error interno del servidor' });
+});
 
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/crm';

@@ -59,7 +59,7 @@ test('GET /uploads/foto.png con token válido en query => 200', async () => {
   const token = jwt.sign({ userId: 'x' }, SECRET);
   const res = await supertest(app).get('/uploads/foto.png?token=' + token);
   assert.equal(res.status, 200);
-  assert.equal(res.text, 'contenido');
+  assert.equal(res.body.toString(), 'contenido');
 });
 
 test('GET /uploads/../.env con token válido => 400', async () => {

@@ -36,6 +36,9 @@ function crearAppMulter() {
     res.json({ ok: true, filename: req.file.filename });
   });
   app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(413).json({ error: err.message });
+    }
     res.status(err.status || 500).json({ error: err.message });
   });
   return app;

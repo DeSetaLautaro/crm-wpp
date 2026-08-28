@@ -1324,6 +1324,8 @@ const enviarMensajeMedia = async (req, res) => {
     if (esImagen) tipo = 'imagen';
     else if (esAudio) tipo = 'audio';
     else if (esVideo) tipo = 'video';
+    // Tipo para la API de WhatsApp (valores del enum de Meta)
+    const tipoApi = tipo === 'imagen' ? 'image' : tipo === 'audio' ? 'audio' : tipo === 'video' ? 'video' : 'document';
 
     // Subir archivo a WhatsApp (Media Upload API)
     const mediaForm = new FormData();
@@ -1358,7 +1360,7 @@ const enviarMensajeMedia = async (req, res) => {
     const payload = {
       messaging_product: 'whatsapp',
       to: telefonoCliente,
-      type: tipo
+      type: tipoApi
     };
     if (tipo === 'imagen') {
       payload.image = { id: mediaId, caption: '' };

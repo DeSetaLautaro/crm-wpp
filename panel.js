@@ -196,6 +196,14 @@ function autoAjustarTextarea(textarea) {
   textarea.style.overflowY = textarea.scrollHeight > maxAltura ? 'auto' : 'hidden';
 }
 
+function urlFotoConToken(url) {
+  if (!url) return '';
+  const token = localStorage.getItem('token') || '';
+  if (!token) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}token=${encodeURIComponent(token)}`;
+}
+
 function mostrarToast(mensaje, tipo = 'info') {
   let contenedor = document.getElementById('toast-container');
   if (!contenedor) {
@@ -917,13 +925,13 @@ async function cargarConfiguracion() {
 
     const fotoGrande = document.getElementById('perfil-foto-grande');
     if (fotoGrande && config.fotoPerfil) {
-      fotoGrande.src = config.fotoPerfil;
+      fotoGrande.src = urlFotoConToken(config.fotoPerfil);
       fotoGrande.style.objectPosition = config.fotoPosicion || '50% 50%';
     }
 
     const fotoPreview = document.getElementById('config-foto-preview');
     if (fotoPreview && config.fotoPerfil) {
-      fotoPreview.src = config.fotoPerfil;
+      fotoPreview.src = urlFotoConToken(config.fotoPerfil);
       fotoPreview.style.objectPosition = config.fotoPosicion || '50% 50%';
       fotoPreview.style.display = 'block';
     }
@@ -1721,18 +1729,20 @@ async function guardarFotoPerfil(file, posicion) {
     if (nuevaFoto) {
       const fotoGrande = document.getElementById('perfil-foto-grande');
       if (fotoGrande) {
-        fotoGrande.src = nuevaFoto;
+        fotoGrande.src = urlFotoConToken(nuevaFoto);
         fotoGrande.style.objectPosition = nuevaPos;
       }
       const fotoPreview = document.getElementById('config-foto-preview');
       if (fotoPreview) {
-        fotoPreview.src = nuevaFoto;
+        fotoPreview.src = urlFotoConToken(nuevaFoto);
         fotoPreview.style.objectPosition = nuevaPos;
         fotoPreview.style.display = 'block';
       }
     }
   } catch (error) {
     console.error('Error de red al guardar foto:', error);
+    mostrarToast('No se pudo guardar la foto. Verificá tu conexión.', 'error');
+    throw error;
   }
 }
 
@@ -1779,16 +1789,25 @@ async function aceptarFoto() {
         fotoGrande.style.objectPosition = '50% 50%';
       }
       // Convertir dataUrl a Blob para subir al servidor
-      const blob = await (await fetch(dataUrl)).blob();
+      const resp = await fetch(dataUrl);
+      if (!resp.ok) throw new Error('No se pudo convertir la imagen');
+      const blob = await resp.blob();
       await guardarFotoPerfil(blob, '50% 50%');
     } else {
       await guardarFotoPerfil(fotoCropFile, '50% 50%');
     }
   } catch (err) {
-    console.error('Error al generar recorte:', err);
-    await guardarFotoPerfil(fotoCropFile, '50% 50%');
+    console.error('Error al guardar la foto:', err);
+    mostrarToast('No se pudo guardar la foto. Intentá de nuevo.', 'error');
+    // Si el recorte falla, intentamos subir la imagen original
+    try {
+      await guardarFotoPerfil(fotoCropFile, '50% 50%');
+    } catch (e) {
+      console.error('Error incluso con la imagen original:', e);
+    }
+  } finally {
+    cerrarModalFoto();
   }
-  cerrarModalFoto();
 }
 
 function previewFoto() {

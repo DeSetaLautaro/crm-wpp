@@ -7,6 +7,8 @@ const { Types } = require('mongoose');
 
 const CONCURRENCIA_ENVIO = 10;
 
+let cronEjecutandose = false;
+
 function normalizarTelefono(telefono) {
   let t = String(telefono || '').replace(/\D/g, '');
   if (!t) return '';
@@ -337,6 +339,11 @@ async function enviarDifusion(req, res) {
 }
 
 async function enviarDifusionesProgramadas() {
+  if (cronEjecutandose) {
+    console.log('⏭️ Cron de difusiones ya en ejecución, se omite este tick.');
+    return;
+  }
+  cronEjecutandose = true;
   try {
     const ahora = new Date();
     const difusiones = await Difusion.find({
@@ -352,6 +359,8 @@ async function enviarDifusionesProgramadas() {
     }
   } catch (error) {
     console.error('Error en cron de difusiones programadas:', error);
+  } finally {
+    cronEjecutandose = false;
   }
 }
 

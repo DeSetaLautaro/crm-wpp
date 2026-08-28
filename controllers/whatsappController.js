@@ -1324,8 +1324,8 @@ const enviarMensaje = async (req, res) => {
         return res.status(502).json({ error: 'No se pudo comunicar con WhatsApp' });
       }
     } else {
-      // Sin token configurado, simulamos envío exitoso para desarrollo
-      enviado = true;
+      console.error('❌ No hay tokenMeta ni WHATSAPP_ACCESS_TOKEN, no se puede enviar el mensaje');
+      return res.status(502).json({ error: 'No se pudo enviar el mensaje: falta token de WhatsApp configurado.' });
     }
 
     if (!enviado) {

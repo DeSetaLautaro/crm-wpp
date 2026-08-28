@@ -1266,14 +1266,14 @@ async function crearDifusionDesdePanel() {
     plantillaId = document.getElementById('difusion-plantilla-select')?.value || '';
     const plantilla = MOCK_PLANTILLAS.find(p => p.id === plantillaId);
     if (!plantilla) {
-      alert('Seleccioná una plantilla');
+      mostrarToast('Seleccioná una plantilla', 'error');
       return;
     }
     mensaje = plantilla.texto;
   } else {
     mensaje = document.getElementById('difusion-mensaje')?.value?.trim() || '';
     if (!mensaje) {
-      alert('Escribí un mensaje para la difusión');
+      mostrarToast('Escribí un mensaje para la difusión', 'error');
       return;
     }
   }
@@ -1283,7 +1283,7 @@ async function crearDifusionDesdePanel() {
   if (document.getElementById('difusion-dest-manual')?.checked) modos.push('manual');
 
   if (modos.length === 0) {
-    alert('Elegí al menos un tipo de destinatario');
+    mostrarToast('Elegí al menos un tipo de destinatario', 'error');
     return;
   }
 
@@ -1305,11 +1305,11 @@ async function crearDifusionDesdePanel() {
   if (fechaProgramacion) payload.fechaProgramacion = new Date(fechaProgramacion).toISOString();
 
   if (modos.includes('etiqueta') && !etiqueta) {
-    alert('Elegí una etiqueta');
+    mostrarToast('Elegí una etiqueta', 'error');
     return;
   }
   if (modos.includes('manual') && contactosIds.length === 0) {
-    alert('Seleccioná al menos un contacto');
+    mostrarToast('Seleccioná al menos un contacto', 'error');
     return;
   }
 
@@ -1323,13 +1323,13 @@ async function crearDifusionDesdePanel() {
     });
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'Error al crear difusión');
+      mostrarToast(data.error || 'Error al crear difusión', 'error');
       return;
     }
     difusionId = data.difusion._id;
   } catch (error) {
     console.error('Error de red al crear difusión:', error);
-    alert('Error al crear difusión');
+    mostrarToast('Error al crear difusión', 'error');
     return;
   }
 
@@ -1359,9 +1359,9 @@ async function enviarDifusionDesdePanel(difusionId, mostrarExito = false) {
       const errores = data?.errores || [];
       if (Array.isArray(errores) && errores.length > 0) {
         const detalle = errores.map(e => `${e?.telefono || ''}: ${e?.error || e}`).join('\n');
-        alert(`${data?.error || 'Error al enviar difusión'}\n\nDetalle:\n${detalle}`);
+        mostrarToast(`${data?.error || 'Error al enviar difusión'}\n\nDetalle:\n${detalle}`, 'error');
       } else {
-        alert(data?.error || 'Error al enviar difusión');
+        mostrarToast(data?.error || 'Error al enviar difusión', 'error');
       }
       await cargarDifusiones();
       return false;
@@ -1371,7 +1371,7 @@ async function enviarDifusionDesdePanel(difusionId, mostrarExito = false) {
     return true;
   } catch (error) {
     console.error('Error enviando difusión:', error);
-    alert('Error enviando difusión');
+    mostrarToast('Error enviando difusión', 'error');
     return false;
   }
 }
@@ -1463,7 +1463,7 @@ async function cargarSaldoMonedero() {
   const input = document.getElementById('monedero-cargar-monto');
   const monto = parseFloat(input?.value || '');
   if (!monto || isNaN(monto) || monto <= 0) {
-    alert('Ingresá un monto válido');
+    mostrarToast('Ingresá un monto válido', 'error');
     return;
   }
   try {
@@ -1475,11 +1475,11 @@ async function cargarSaldoMonedero() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al cargar saldo');
     if (input) input.value = '';
-    alert(data.message || 'Saldo cargado');
+    mostrarToast(data.message || 'Saldo cargado', 'info');
     cargarMonedero();
   } catch (error) {
     console.error('Error al cargar saldo:', error);
-    alert('Error al cargar saldo');
+    mostrarToast('Error al cargar saldo', 'error');
   }
 }
 
@@ -1495,7 +1495,7 @@ async function guardarPromptDesdePanel() {
       body: JSON.stringify({ promptIA: prompt.value, aplicarATodasPrompt })
     });
     if (!res.ok) throw new Error('Error al guardar prompt');
-    alert('Prompt guardado correctamente');
+    mostrarToast('Prompt guardado correctamente', 'info');
   } catch (error) {
     console.error('Error al guardar prompt:', error);
   }
@@ -1519,7 +1519,7 @@ async function guardarAtajosDesdePanel({ mostrarCartel = true } = {}) {
       body: JSON.stringify({ atajos, aplicarATodasAtajos })
     });
     if (!res.ok) throw new Error('Error al guardar atajos');
-    if (mostrarCartel) alert('Atajos guardados correctamente');
+    if (mostrarCartel) mostrarToast('Atajos guardados correctamente', 'info');
 
     // Actualizar la lista de atajos para el autocompletado en el chat
     ATAJOS_RAPIDOS = atajos.map(a => ({
@@ -1558,8 +1558,8 @@ function guardarHorariosDesdePanel() {
   })
     .then(res => res.json())
     .then(data => {
-      if (data.ok) alert('Horarios guardados correctamente');
-      else alert('Error al guardar horarios');
+      if (data.ok) mostrarToast('Horarios guardados correctamente', 'info');
+      else mostrarToast('Error al guardar horarios', 'error');
     })
     .catch(err => console.error(err));
 }
@@ -2353,10 +2353,10 @@ async function guardarConfigDesdePanel() {
     const data = await res.json();
     if (!res.ok) {
       console.error('Error al guardar config:', data.error || res.status);
-      alert('Error al guardar configuración');
+      mostrarToast('Error al guardar configuración', 'error');
       return;
     }
-    alert('Configuración guardada correctamente');
+    mostrarToast('Configuración guardada correctamente', 'info');
   } catch (error) {
     console.error('Error de red al guardar config:', error);
   }
@@ -2498,14 +2498,7 @@ async function cargarConversaciones() {
     renderTodo();
   } catch (error) {
     console.error('Error al cargar conversaciones:', error);
-    // Fallback a mock data para que la pantalla no quede vacía
-    CONVERSACIONES = [...MOCK_CONVERSACIONES];
-    CONTACTOS = [...MOCK_CONTACTOS];
-    MENSAJES = [...MOCK_MENSAJES];
-    poblarSelectorWhatsApp(MOCK_USUARIO.telefonosWhatsApp);
-    if (MOCK_USUARIO.telefonosWhatsApp.length > 0) {
-      whatsappSeleccionado = MOCK_USUARIO.telefonosWhatsApp[0];
-    }
+    mostrarToast('Error al cargar conversaciones. Verificá tu conexión.', 'error');
     renderTodo();
   }
 }
@@ -2775,7 +2768,7 @@ async function guardarNuevoContacto() {
   const etiquetas = etiquetasStr.split(',').map(e => e.trim()).filter(Boolean);
 
   if (!telefono) {
-    alert('Ingresá al menos el teléfono');
+    mostrarToast('Ingresá al menos el teléfono', 'error');
     return;
   }
 
@@ -2790,7 +2783,7 @@ async function guardarNuevoContacto() {
     });
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'Error al crear contacto');
+      mostrarToast(data.error || 'Error al crear contacto', 'error');
       return;
     }
 
@@ -2804,7 +2797,7 @@ async function guardarNuevoContacto() {
     await cargarConversaciones();
   } catch (error) {
     console.error('Error al crear contacto:', error);
-    alert('Error al crear contacto');
+    mostrarToast('Error al crear contacto', 'error');
   }
 }
 

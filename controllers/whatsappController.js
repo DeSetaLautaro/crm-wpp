@@ -11,6 +11,7 @@ const Usuario = require('../models/usuario');
 const Pedido = require('../models/Pedido');
 const { guardarPedidoConfirmado } = require('./pedidosController');
 const fs = require('fs');
+const path = require('path');
 const { actualizarCostosEmpresa } = require('../services/metaAnalyticsService');
 
 // Prompt por defecto (mismo que estaba hardcodeado, pero con placeholders)

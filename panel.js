@@ -117,6 +117,7 @@ let editandoBienvenida = false;
 let guardandoBienvenida = false;
 let bienvenidaActual = '';
 let mostrarTodasDifusiones = false;
+let archivoPendiente = null;
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
@@ -2733,7 +2734,25 @@ async function enviarMensajeDesdePanel() {
   // Si el envío fuese por URL (ej: wa.me), usar:
   // const mensajeURL = encodeURIComponent(mensajeLimpio);
   const mensaje = mensajeLimpio;
-  if (!mensaje || !chatActivoId) return;
+  if (!chatActivoId) return;
+  if (!mensaje && !archivoPendiente) return;
+
+  // Si hay un archivo pendiente, primero lo enviamos
+  if (archivoPendiente) {
+    const exito = await enviarMediaDesdePanel(archivoPendiente);
+    if (!exito) {
+      // Si falla, no limpiamos el adjunto y no enviamos el texto
+      return;
+    }
+    limpiarArchivoPendiente();
+  }
+
+  // Si solo era el archivo, ya terminamos
+  if (!mensaje) {
+    input.value = '';
+    autoAjustarTextarea(input);
+    return;
+  }
 
   const token = localStorage.getItem('token') || '';
   try {
@@ -2764,7 +2783,7 @@ async function enviarMensajeDesdePanel() {
 }
 
 async function enviarMediaDesdePanel(file) {
-  if (!chatActivoId) return;
+  if (!chatActivoId) return false;
 
   const token = localStorage.getItem('token') || '';
   const formData = new FormData();
@@ -2783,7 +2802,7 @@ async function enviarMediaDesdePanel(file) {
     if (!res.ok) {
       console.error('Error al enviar multimedia:', data.error || data);
       mostrarToast(data.error || 'Error al enviar multimedia', 'error');
-      return;
+      return false;
     }
 
     // Agregar mensaje localmente para feedback inmediato
@@ -2808,10 +2827,28 @@ async function enviarMediaDesdePanel(file) {
     if (chatActivoId) {
       renderChatActivo();
     }
+    return true;
   } catch (error) {
     console.error('Error de red al enviar multimedia:', error);
     mostrarToast('Error de red al enviar multimedia', 'error');
+    return false;
   }
+}
+
+function mostrarArchivoPendiente(file) {
+  const wrapper = document.getElementById('archivo-pendiente-wrapper');
+  const nombreEl = document.getElementById('archivo-pendiente-nombre');
+  if (!wrapper || !nombreEl) return;
+  nombreEl.textContent = file.name || 'Archivo';
+  wrapper.style.display = 'flex';
+}
+
+function limpiarArchivoPendiente() {
+  archivoPendiente = null;
+  const wrapper = document.getElementById('archivo-pendiente-wrapper');
+  if (wrapper) wrapper.style.display = 'none';
+  const nombreEl = document.getElementById('archivo-pendiente-nombre');
+  if (nombreEl) nombreEl.textContent = '';
 }
 
 async function guardarNuevoContacto() {
@@ -3756,9 +3793,19 @@ async function init() {
     inputAdjuntar.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
       if (file) {
-        enviarMediaDesdePanel(file);
+        // Solo cargar el archivo como adjunto pendiente, no enviarlo todavía
+        archivoPendiente = file;
+        mostrarArchivoPendiente(file);
       }
       e.target.value = '';
+    });
+  }
+
+  // Botón para quitar el archivo adjunto pendiente
+  const btnQuitarAdjunto = document.getElementById('archivo-pendiente-quitar');
+  if (btnQuitarAdjunto) {
+    btnQuitarAdjunto.addEventListener('click', () => {
+      limpiarArchivoPendiente();
     });
   }
 

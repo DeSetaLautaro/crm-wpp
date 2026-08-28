@@ -2402,6 +2402,7 @@ async function cargarConversaciones() {
       if (conv.mensajes) {
         conv.mensajes.forEach(m => {
           mensajesAll.push({
+            _id: m._id,
             conversacionId: conv._id,
             remitente: m.remitente,
             contenido: m.contenido,

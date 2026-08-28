@@ -1026,8 +1026,13 @@ async function cargarOpcionesDifusion() {
     });
     if (!res.ok) return;
     const data = await res.json();
-    DIFUSION_CONTACTOS = data.contactos || [];
-    DIFUSION_ETIQUETAS = data.etiquetas || [];
+    DIFUSION_CONTACTOS = (data.contactos || []).map(c => ({
+      _id: c._id,
+      nombre: c.nombre || '',
+      telefono: c.telefono,
+      etiquetas: (c.etiquetas || []).map(e => typeof e === 'string' ? e : e.nombre || '').filter(Boolean)
+    }));
+    DIFUSION_ETIQUETAS = (data.etiquetas || []).map(et => typeof et === 'string' ? et : et.nombre || '').filter(Boolean);
     renderOpcionesDifusion();
     actualizarContadorDestinatarios();
   } catch (error) {

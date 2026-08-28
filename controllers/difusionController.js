@@ -131,7 +131,10 @@ async function obtenerOpcionesDifusion(req, res) {
     }
     const contactos = await Cliente.find({ empresaId: { $in: idsEmpresas } }).lean();
     const etiquetasSet = new Set();
-    contactos.forEach(c => (c.etiquetas || []).forEach(e => etiquetasSet.add(e)));
+    contactos.forEach(c => (c.etiquetas || []).forEach(e => {
+      const nombre = (typeof e === 'string') ? e : e.nombre;
+      if (nombre) etiquetasSet.add(nombre);
+    }));
     const etiquetas = Array.from(etiquetasSet).sort();
     return res.json({
       ok: true,
@@ -139,7 +142,7 @@ async function obtenerOpcionesDifusion(req, res) {
         _id: c._id,
         nombre: c.nombre || '',
         telefono: c.telefono,
-        etiquetas: c.etiquetas || []
+        etiquetas: (c.etiquetas || []).map(e => (typeof e === 'string' ? e : e.nombre)).filter(Boolean)
       })),
       etiquetas
     });
@@ -189,7 +192,7 @@ async function crearDifusion(req, res) {
     if (tipos.includes('etiqueta')) {
       const etiqueta = String(req.body.etiqueta || '').trim();
       if (!etiqueta) return res.status(400).json({ error: 'Elegí una etiqueta' });
-      const clientes = await Cliente.find({ empresaId, etiquetas: etiqueta }).lean();
+      const clientes = await Cliente.find({ empresaId, 'etiquetas.nombre': etiqueta }).lean();
       clientes.forEach(agregarContacto);
     }
     if (tipos.includes('manual')) {

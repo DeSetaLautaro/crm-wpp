@@ -532,7 +532,7 @@ const recibirMensaje = async (req, res) => {
     }
 
     console.log("📝 [9] Guardando mensaje...");
-    await Mensaje.create({
+    const mensajeClienteDb = await Mensaje.create({
       conversacionId: conversacion._id,
       remitente: 'cliente',
       contenido: contenidoEntrada,
@@ -552,6 +552,7 @@ const recibirMensaje = async (req, res) => {
       ioEntrante.to(empresa._id.toString()).emit('mensaje-nuevo', {
         conversacionId: conversacion._id,
         mensaje: {
+          _id: mensajeClienteDb._id,
           remitente: 'cliente',
           contenido: contenidoEntrada,
           fecha: new Date()
@@ -680,8 +681,9 @@ const recibirMensaje = async (req, res) => {
       }
 
       // Si la empresa activó el procesamiento de audios, intentamos transcribirlo con Gemini
+      // Pero SIEMPRE descargamos y guardamos el audio para que el operador lo escuche en el panel
       const mediaIdMultimedia = mensaje.audio?.id || mensaje.document?.id;
-      if (mediaIdMultimedia && empresa.procesarAudios === true && accessToken) {
+      if (mediaIdMultimedia && accessToken) {
         try {
           // 1. Obtener la URL de descarga
           const mediaResp = await fetch(`https://graph.facebook.com/v19.0/${mediaIdMultimedia}`, {
@@ -690,27 +692,82 @@ const recibirMensaje = async (req, res) => {
           const mediaJson = await mediaResp.json();
           const mimeTypeDetectado = mediaJson.mime_type || (mensaje.type === 'audio' ? 'audio/ogg' : 'application/octet-stream');
           const esArchivoAudio = mimeTypeDetectado.startsWith('audio/') || mensaje.type === 'audio';
+          const esDocumento = mensaje.type === 'document';
 
-          if (esArchivoAudio && mediaJson.url) {
+          if (mediaJson.url && (esArchivoAudio || esDocumento)) {
             // 2. Descargar el archivo binario
-            const audioResp = await fetch(mediaJson.url, {
+            const fileResp = await fetch(mediaJson.url, {
               headers: { 'Authorization': `Bearer ${accessToken}` }
             });
-            const audioBuffer = Buffer.from(await audioResp.arrayBuffer());
+            const fileBuffer = Buffer.from(await fileResp.arrayBuffer());
             const mimeType = mimeTypeDetectado;
-            const base64 = audioBuffer.toString('base64');
 
-            // 3. Enviarlo a Gemini para procesar el audio y responder
-            const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. Un cliente te envió un mensaje de voz. Escuchá el audio y respondé DIRECTAMENTE al cliente, de forma breve y amable, continuando la conversación.
+            // 2b. Guardar el audio en /uploads y actualizar el mensaje del cliente
+            if (esArchivoAudio) {
+              try {
+                const extMap = {
+                  'audio/mpeg': '.mp3',
+                  'audio/mp3': '.mp3',
+                  'audio/ogg': '.ogg',
+                  'audio/opus': '.opus',
+                  'audio/mp4': '.m4a',
+                  'audio/aac': '.aac',
+                  'audio/amr': '.amr',
+                  'audio/wav': '.wav',
+                  'audio/x-wav': '.wav'
+                };
+                const ext = extMap[mimeType] || '.ogg';
+                const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+                fs.writeFileSync(path.join(__dirname, '..', 'uploads', filename), fileBuffer);
+
+                // Actualizar el mensaje del cliente con tipo y urlArchivo
+                await Mensaje.findByIdAndUpdate(mensajeClienteDb._id, {
+                  $set: {
+                    tipo: 'audio',
+                    urlArchivo: `/uploads/${filename}`,
+                    contenido: '📎 [Audio]'
+                  }
+                });
+
+                // Emitir la actualización al panel
+                const ioAudio = req.app.get('io');
+                if (ioAudio) {
+                  ioAudio.to(empresa._id.toString()).emit('mensaje-nuevo', {
+                    conversacionId: conversacion._id,
+                    mensaje: {
+                      _id: mensajeClienteDb._id,
+                      remitente: 'cliente',
+                      contenido: '📎 [Audio]',
+                      tipo: 'audio',
+                      urlArchivo: `/uploads/${filename}`,
+                      fecha: new Date()
+                    },
+                    conversacion: {
+                      _id: conversacion._id,
+                      ultimoMensaje: contenidoEntrada,
+                      updatedAt: new Date()
+                    }
+                  });
+                }
+              } catch (err) {
+                console.error('❌ Error al guardar audio:', err);
+              }
+            }
+
+            // 3. Procesar con Gemini solo si está habilitado y es audio
+            if (esArchivoAudio && empresa.procesarAudios === true) {
+              const base64 = fileBuffer.toString('base64');
+              const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. Un cliente te envió un mensaje de voz. Escuchá el audio y respondé DIRECTAMENTE al cliente, de forma breve y amable, continuando la conversación.
 
 Reglas:
 - NO incluyas la transcripción del audio en tu respuesta.
 - NO uses títulos ni etiquetas como "Transcripción:", "Respuesta:", "Bot:", etc.
 - Respondé SOLO con el mensaje final que se le enviará al cliente por WhatsApp.`;
-            const respuestaIA = await generarTextoConAudio(promptAudio, mimeType, base64);
-            if (respuestaIA) {
-              respuestaAutomatica = respuestaIA;
-              console.log('✅ Audio procesado con Gemini');
+              const respuestaIA = await generarTextoConAudio(promptAudio, mimeType, base64);
+              if (respuestaIA) {
+                respuestaAutomatica = respuestaIA;
+                console.log('✅ Audio procesado con Gemini');
+              }
             }
           }
         } catch (error) {

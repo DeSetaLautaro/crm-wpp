@@ -661,11 +661,11 @@ function renderChatActivo() {
     if (msg.tipo === 'imagen' && msg.urlArchivo) {
       contenidoFinal = `<img src="${urlFotoConToken(msg.urlArchivo)}" alt="Imagen" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px; cursor:pointer;" onclick="window.open('${urlFotoConToken(msg.urlArchivo)}','_blank')">`;
     } else if (msg.tipo === 'audio' && msg.urlArchivo) {
-      contenidoFinal = `<audio controls src="${msg.urlArchivo}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>`;
+      contenidoFinal = `<audio controls src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>`;
     } else if (msg.tipo === 'video' && msg.urlArchivo) {
-      contenidoFinal = `<video controls src="${msg.urlArchivo}" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px;"></video>`;
+      contenidoFinal = `<video controls src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px;"></video>`;
     } else if (msg.tipo === 'documento' && msg.urlArchivo) {
-      contenidoFinal = `<a href="${msg.urlArchivo}" target="_blank" style="color:inherit;">${contenidoSeguro}</a>`;
+      contenidoFinal = `<a href="${urlFotoConToken(msg.urlArchivo)}" target="_blank" style="color:inherit;">${contenidoSeguro}</a>`;
     }
     let indicador = '';
     if (['bot','humano','ia','empresa'].includes(msg.remitente)) {
@@ -2578,8 +2578,33 @@ function setupSocketListeners() {
   socket.on('mensaje-nuevo', (payload) => {
     const { conversacionId, mensaje, conversacion } = payload;
 
-    // Evitar duplicados si el mensaje ya existe (ej: envío propio)
-    if (mensaje._id && MENSAJES.some(m => m._id === mensaje._id)) return;
+    // Si el mensaje ya existe localmente, actualizamos sus campos (ej: multimedia agregado luego)
+    const msgExistente = mensaje._id ? MENSAJES.find(m => m._id === mensaje._id) : null;
+    if (msgExistente) {
+      msgExistente.contenido = mensaje.contenido || msgExistente.contenido;
+      msgExistente.tipo = mensaje.tipo || msgExistente.tipo;
+      msgExistente.urlArchivo = mensaje.urlArchivo || msgExistente.urlArchivo;
+      msgExistente.fecha = new Date(mensaje.fecha || msgExistente.fecha);
+      msgExistente.estado = mensaje.estado || msgExistente.estado;
+      msgExistente.fechaEstado = mensaje.fechaEstado ? new Date(mensaje.fechaEstado) : msgExistente.fechaEstado;
+
+      // Actualizar la conversación local
+      const convLocal = CONVERSACIONES.find(c => c._id === conversacionId);
+      if (convLocal) {
+        convLocal.estado = 'Abierto';
+        convLocal.ultimoMensaje = (conversacion && conversacion.ultimoMensaje) || mensaje.contenido || convLocal.ultimoMensaje;
+        convLocal.ultimaFecha = (conversacion && conversacion.updatedAt)
+          ? new Date(conversacion.updatedAt)
+          : new Date();
+        if (chatActivoId === conversacionId) {
+          renderChatActivo();
+          const area = document.getElementById('area-mensajes');
+          if (area) area.scrollTop = area.scrollHeight;
+        }
+        renderListaChats();
+      }
+      return;
+    }
 
     // Agregar mensaje a la colección local
     MENSAJES.push({

@@ -118,6 +118,7 @@ let guardandoBienvenida = false;
 let bienvenidaActual = '';
 let mostrarTodasDifusiones = false;
 let archivosPendientes = [];
+let enviandoMensaje = false;
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
@@ -2576,6 +2577,9 @@ function setupSocketListeners() {
   socket.on('mensaje-nuevo', (payload) => {
     const { conversacionId, mensaje, conversacion } = payload;
 
+    // Evitar duplicados si el mensaje ya existe (ej: envío propio)
+    if (mensaje._id && MENSAJES.some(m => m._id === mensaje._id)) return;
+
     // Agregar mensaje a la colección local
     MENSAJES.push({
       conversacionId: conversacionId,
@@ -2722,65 +2726,71 @@ function setupSocketListeners() {
 
 // ===== Envío manual de mensaje desde el dashboard =====
 async function enviarMensajeDesdePanel() {
-  const input = document.getElementById('input-mensaje');
-  if (!input) return;
-  const mensajeOriginal = input.value;
-  // Sanitización: reemplazamos etiquetas <br> por saltos de línea nativos
-  const mensajeLimpio = mensajeOriginal
-    .replace(/<br\s*[\/]?>/gi, '\n')
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .trim();
-  // Si el envío fuese por URL (ej: wa.me), usar:
-  // const mensajeURL = encodeURIComponent(mensajeLimpio);
-  const mensaje = mensajeLimpio;
-  if (!chatActivoId) return;
-  if (!mensaje && archivosPendientes.length === 0) return;
-
-  // Si hay archivos pendientes, primero los enviamos
-  if (archivosPendientes.length > 0) {
-    for (const file of archivosPendientes) {
-      const exito = await enviarMediaDesdePanel(file);
-      if (!exito) {
-        // Si falla, no seguimos enviando y dejamos el resto pendiente
-        return;
-      }
-    }
-    limpiarArchivosPendientes();
-  }
-
-  // Si solo era el archivo, ya terminamos
-  if (!mensaje) {
-    input.value = '';
-    autoAjustarTextarea(input);
-    return;
-  }
-
-  const token = localStorage.getItem('token') || '';
+  if (enviandoMensaje) return;
+  enviandoMensaje = true;
   try {
-    const res = await fetch('/api/whatsapp/enviar', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ conversacionId: chatActivoId, mensaje })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      console.error('Error al enviar mensaje:', data.error || data);
+    const input = document.getElementById('input-mensaje');
+    if (!input) return;
+    const mensajeOriginal = input.value;
+    // Sanitización: reemplazamos etiquetas <br> por saltos de línea nativos
+    const mensajeLimpio = mensajeOriginal
+      .replace(/<br\s*[\/]?>/gi, '\n')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim();
+    // Si el envío fuese por URL (ej: wa.me), usar:
+    // const mensajeURL = encodeURIComponent(mensajeLimpio);
+    const mensaje = mensajeLimpio;
+    if (!chatActivoId) return;
+    if (!mensaje && archivosPendientes.length === 0) return;
+
+    // Si hay archivos pendientes, primero los enviamos
+    if (archivosPendientes.length > 0) {
+      for (const file of archivosPendientes) {
+        const exito = await enviarMediaDesdePanel(file);
+        if (!exito) {
+          // Si falla, no seguimos enviando y dejamos el resto pendiente
+          return;
+        }
+      }
+      limpiarArchivosPendientes();
+    }
+
+    // Si solo era el archivo, ya terminamos
+    if (!mensaje) {
+      input.value = '';
+      autoAjustarTextarea(input);
       return;
     }
-    input.value = '';
-    autoAjustarTextarea(input);
-    const conv = getConversacionPorId(chatActivoId);
-    if (conv && conv.estado !== 'Abierto') {
-      conv.estado = 'Abierto';
-      renderListaChats();
+
+    const token = localStorage.getItem('token') || '';
+    try {
+      const res = await fetch('/api/whatsapp/enviar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ conversacionId: chatActivoId, mensaje })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('Error al enviar mensaje:', data.error || data);
+        return;
+      }
+      input.value = '';
+      autoAjustarTextarea(input);
+      const conv = getConversacionPorId(chatActivoId);
+      if (conv && conv.estado !== 'Abierto') {
+        conv.estado = 'Abierto';
+        renderListaChats();
+      }
+      actualizarUsoConversaciones();
+    } catch (error) {
+      console.error('Error de red al enviar mensaje:', error);
     }
-    actualizarUsoConversaciones();
-  } catch (error) {
-    console.error('Error de red al enviar mensaje:', error);
+  } finally {
+    enviandoMensaje = false;
   }
 }
 
@@ -2807,28 +2817,7 @@ async function enviarMediaDesdePanel(file) {
       return false;
     }
 
-    // Agregar mensaje localmente para feedback inmediato
-    const nuevoMsg = data.mensaje || {};
-    MENSAJES.push({
-      _id: nuevoMsg._id || `temp-${Date.now()}`,
-      conversacionId: chatActivoId,
-      remitente: 'empresa',
-      contenido: nuevoMsg.contenido || '📎 [Adjunto]',
-      tipo: nuevoMsg.tipo || 'texto',
-      urlArchivo: nuevoMsg.urlArchivo || '',
-      fecha: new Date(),
-      estado: 'enviado',
-      fechaEstado: null
-    });
-
-    const conv = getConversacionPorId(chatActivoId);
-    if (conv) {
-      conv.ultimoMensaje = nuevoMsg.contenido || '📎 [Adjunto]';
-      conv.ultimaFecha = new Date();
-    }
-    if (chatActivoId) {
-      renderChatActivo();
-    }
+    // No agregamos mensaje localmente; llega por socket 'mensaje-nuevo'
     return true;
   } catch (error) {
     console.error('Error de red al enviar multimedia:', error);

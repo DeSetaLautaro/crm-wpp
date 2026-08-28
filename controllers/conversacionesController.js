@@ -92,7 +92,9 @@ const obtenerConversaciones = async (req, res) => {
         _id: m._id,
         remitente: m.remitente,
         contenido: m.contenido,
-        fecha: m.createdAt
+        fecha: m.createdAt,
+        estado: m.estado || 'enviado',
+        fechaEstado: m.fechaEstado || null
       }))
     }));
 

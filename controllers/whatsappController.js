@@ -367,7 +367,42 @@ const recibirMensaje = async (req, res) => {
     }
 
     const metadata = value?.metadata || {};
-  // 1. Verificamos que 'contacts' exista y tenga al menos un elemento
+    // 📍 Manejar actualización de estado (entregado/leído)
+    if (value?.statuses && Array.isArray(value.statuses) && value.statuses.length > 0) {
+      for (const status of value.statuses) {
+        const whatsappMsgId = status?.id || status?.message_id || null;
+        const tipoEstado = status?.status || '';
+        if (!whatsappMsgId) continue;
+        let nuevoEstado = null;
+        if (tipoEstado === 'sent') nuevoEstado = 'enviado';
+        else if (tipoEstado === 'delivered') nuevoEstado = 'entregado';
+        else if (tipoEstado === 'read') nuevoEstado = 'leido';
+        if (!nuevoEstado) continue;
+        try {
+          const mensajeDb = await Mensaje.findOneAndUpdate(
+            { whatsappMsgId },
+            { $set: { estado: nuevoEstado, fechaEstado: new Date() } },
+            { new: true }
+          );
+          if (mensajeDb) {
+            const conversacionActual = await Conversacion.findById(mensajeDb.conversacionId);
+            const ioStatus = req.app.get('io');
+            if (conversacionActual && ioStatus) {
+              ioStatus.to(conversacionActual.empresaId.toString()).emit('mensaje-estado', {
+                mensajeId: mensajeDb._id,
+                conversacionId: mensajeDb.conversacionId,
+                estado: nuevoEstado,
+                fechaEstado: new Date()
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error al actualizar estado de mensaje:', error);
+        }
+      }
+      return res.sendStatus(200);
+    }
+    // 1. Verificamos que 'contacts' exista y tenga al menos un elemento
     const contact = value?.contacts?.[0];
     // 2. Extraemos el nombre de forma segura (si no viene, le ponemos 'Cliente' por defecto)
     const nombre = contact?.profile?.name || 'Cliente';    
@@ -1095,6 +1130,7 @@ JSON:`;
       // Enviar la respuesta al cliente por WhatsApp
       const phoneNumberId = metadata?.phone_number_id || whatsappPhoneId;
       const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+      let msgIdIA = '';
 
       if (accessToken) {
         try {
@@ -1119,6 +1155,7 @@ JSON:`;
           });
 
           const respBody = await resp.json().catch(() => ({}));
+          msgIdIA = respBody?.messages?.[0]?.id || '';
           if (!resp.ok) {
             console.error('❌ Error al enviar respuesta IA a WhatsApp:', resp.status, respBody);
           } else {
@@ -1135,7 +1172,8 @@ JSON:`;
       await Mensaje.create({
         conversacionId: conversacion._id,
         remitente: 'ia',
-        contenido: respuestaIA
+        contenido: respuestaIA,
+        whatsappMsgId: msgIdIA
       });
 
       await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: respuestaIA });
@@ -1356,7 +1394,8 @@ const enviarMensaje = async (req, res) => {
     const nuevoMensaje = await Mensaje.create({
       conversacionId: conversacion._id,
       remitente: 'empresa',
-      contenido: mensaje
+      contenido: mensaje,
+      whatsappMsgId: respuestaWhatsApp?.messages?.[0]?.id || ''
     });
 
     await Conversacion.findByIdAndUpdate(conversacion._id, { ultimoMensaje: mensaje, estado: 'Abierto' });

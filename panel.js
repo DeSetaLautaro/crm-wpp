@@ -2406,7 +2406,9 @@ async function cargarConversaciones() {
             conversacionId: conv._id,
             remitente: m.remitente,
             contenido: m.contenido,
-            fecha: m.fecha ? new Date(m.fecha) : new Date()
+            fecha: m.fecha ? new Date(m.fecha) : new Date(),
+            estado: m.estado || 'enviado',
+            fechaEstado: m.fechaEstado ? new Date(m.fechaEstado) : null
           });
         });
       }
@@ -2558,7 +2560,9 @@ function setupSocketListeners() {
       conversacionId: conversacionId,
       remitente: mensaje.remitente,
       contenido: mensaje.contenido,
-      fecha: new Date(mensaje.fecha)
+      fecha: new Date(mensaje.fecha),
+      estado: mensaje.estado || 'enviado',
+      fechaEstado: mensaje.fechaEstado ? new Date(mensaje.fechaEstado) : null
     });
 
     // Actualizar la conversación local
@@ -2657,6 +2661,20 @@ function setupSocketListeners() {
       reproducirSonidoNotificacion();
     }
     renderListaChats();
+  });
+
+  socket.on('mensaje-estado', (payload) => {
+    if (!payload || !payload.mensajeId) return;
+    const msg = MENSAJES.find(m => m._id === payload.mensajeId);
+    if (msg) {
+      msg.estado = payload.estado;
+      msg.fechaEstado = payload.fechaEstado ? new Date(payload.fechaEstado) : null;
+      if (chatActivoId === payload.conversacionId) {
+        renderChatActivo();
+        const area = document.getElementById('area-mensajes');
+        if (area) area.scrollTop = area.scrollHeight;
+      }
+    }
   });
 
   socket.on('limite-conversaciones-alcanzado', (payload) => {

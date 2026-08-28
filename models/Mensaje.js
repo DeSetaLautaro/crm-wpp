@@ -21,6 +21,15 @@ const MensajeSchema = new Schema(
     contenido: {
       type: String,
       required: true
+    },
+    estado: {
+      type: String,
+      enum: ['enviado', 'entregado', 'leido'],
+      default: 'enviado'
+    },
+    fechaEstado: {
+      type: Date,
+      default: null
     }
   },
   { timestamps: true }

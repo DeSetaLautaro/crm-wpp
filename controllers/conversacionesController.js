@@ -94,7 +94,9 @@ const obtenerConversaciones = async (req, res) => {
         contenido: m.contenido,
         fecha: m.createdAt,
         estado: m.estado || 'enviado',
-        fechaEstado: m.fechaEstado || null
+        fechaEstado: m.fechaEstado || null,
+        tipo: m.tipo || 'texto',
+        urlArchivo: m.urlArchivo || ''
       }))
     }));
 

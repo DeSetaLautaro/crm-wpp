@@ -655,6 +655,16 @@ function renderChatActivo() {
     else if (msg.remitente === 'nota_interna') claseBurbuja = 'bubble-nota';
 
     const contenidoSeguro = escaparHTML(msg.contenido || '').replace(/\n/g, '<br>');
+    let contenidoFinal = contenidoSeguro;
+    if (msg.tipo === 'imagen' && msg.urlArchivo) {
+      contenidoFinal = `<img src="${urlFotoConToken(msg.urlArchivo)}" alt="Imagen" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px; cursor:pointer;" onclick="window.open('${urlFotoConToken(msg.urlArchivo)}','_blank')">`;
+    } else if (msg.tipo === 'audio' && msg.urlArchivo) {
+      contenidoFinal = `<audio controls src="${msg.urlArchivo}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>`;
+    } else if (msg.tipo === 'video' && msg.urlArchivo) {
+      contenidoFinal = `<video controls src="${msg.urlArchivo}" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px;"></video>`;
+    } else if (msg.tipo === 'documento' && msg.urlArchivo) {
+      contenidoFinal = `<a href="${msg.urlArchivo}" target="_blank" style="color:inherit;">${contenidoSeguro}</a>`;
+    }
     let indicador = '';
     if (['bot','humano','ia','empresa'].includes(msg.remitente)) {
       const estado = msg.estado || 'enviado';
@@ -663,7 +673,7 @@ function renderChatActivo() {
       const titulo = estado === 'leido' ? 'Leído' : (estado === 'entregado' ? 'Entregado' : 'Enviado');
       indicador = `<span class="mensaje-estado" title="${titulo}" style="font-size:13px; font-weight:bold; color:${color}; margin-left:6px; line-height:1;">${simbolo}</span>`;
     }
-    return `<div class="bubble ${claseBurbuja}">${contenidoSeguro}${indicador}</div>`;
+    return `<div class="bubble ${claseBurbuja}">${contenidoFinal}${indicador}</div>`;
   }).join('');
 
   // Scroll al último mensaje al abrir el chat
@@ -2416,7 +2426,9 @@ async function cargarConversaciones() {
             contenido: m.contenido,
             fecha: m.fecha ? new Date(m.fecha) : new Date(),
             estado: m.estado || 'enviado',
-            fechaEstado: m.fechaEstado ? new Date(m.fechaEstado) : null
+            fechaEstado: m.fechaEstado ? new Date(m.fechaEstado) : null,
+            tipo: m.tipo || 'texto',
+            urlArchivo: m.urlArchivo || ''
           });
         });
       }
@@ -2570,7 +2582,9 @@ function setupSocketListeners() {
       contenido: mensaje.contenido,
       fecha: new Date(mensaje.fecha),
       estado: mensaje.estado || 'enviado',
-      fechaEstado: mensaje.fechaEstado ? new Date(mensaje.fechaEstado) : null
+      fechaEstado: mensaje.fechaEstado ? new Date(mensaje.fechaEstado) : null,
+      tipo: mensaje.tipo || 'texto',
+      urlArchivo: mensaje.urlArchivo || ''
     });
 
     // Actualizar la conversación local
@@ -2746,6 +2760,57 @@ async function enviarMensajeDesdePanel() {
     actualizarUsoConversaciones();
   } catch (error) {
     console.error('Error de red al enviar mensaje:', error);
+  }
+}
+
+async function enviarMediaDesdePanel(file) {
+  if (!chatActivoId) return;
+
+  const token = localStorage.getItem('token') || '';
+  const formData = new FormData();
+  formData.append('conversacionId', chatActivoId);
+  formData.append('archivo', file);
+
+  try {
+    const res = await fetch('/api/whatsapp/enviar-media', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('Error al enviar multimedia:', data.error || data);
+      mostrarToast(data.error || 'Error al enviar multimedia', 'error');
+      return;
+    }
+
+    // Agregar mensaje localmente para feedback inmediato
+    const nuevoMsg = data.mensaje || {};
+    MENSAJES.push({
+      _id: nuevoMsg._id || `temp-${Date.now()}`,
+      conversacionId: chatActivoId,
+      remitente: 'empresa',
+      contenido: nuevoMsg.contenido || '📎 [Adjunto]',
+      tipo: nuevoMsg.tipo || 'texto',
+      urlArchivo: nuevoMsg.urlArchivo || '',
+      fecha: new Date(),
+      estado: 'enviado',
+      fechaEstado: null
+    });
+
+    const conv = getConversacionPorId(chatActivoId);
+    if (conv) {
+      conv.ultimoMensaje = nuevoMsg.contenido || '📎 [Adjunto]';
+      conv.ultimaFecha = new Date();
+    }
+    if (chatActivoId) {
+      renderChatActivo();
+    }
+  } catch (error) {
+    console.error('Error de red al enviar multimedia:', error);
+    mostrarToast('Error de red al enviar multimedia', 'error');
   }
 }
 
@@ -3677,6 +3742,23 @@ async function init() {
         e.preventDefault();
         enviarMensajeDesdePanel();
       }
+    });
+  }
+
+  // Botón de adjuntar archivo
+  const btnAdjuntar = document.getElementById('btn-adjuntar');
+  const inputAdjuntar = document.getElementById('input-adjuntar');
+  if (btnAdjuntar && inputAdjuntar) {
+    btnAdjuntar.addEventListener('click', (e) => {
+      e.preventDefault();
+      inputAdjuntar.click();
+    });
+    inputAdjuntar.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        enviarMediaDesdePanel(file);
+      }
+      e.target.value = '';
     });
   }
 

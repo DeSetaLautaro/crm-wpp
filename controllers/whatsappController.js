@@ -1275,6 +1275,179 @@ JSON:`;
   }
 };
 
+// ===== Enviar multimedia desde el dashboard =====
+const enviarMensajeMedia = async (req, res) => {
+  try {
+    const { conversacionId } = req.body || {};
+    const archivo = req.file;
+
+    if (!conversacionId) {
+      return res.status(400).json({ error: 'Falta conversacionId' });
+    }
+    if (!archivo) {
+      return res.status(400).json({ error: 'No se recibió ningún archivo' });
+    }
+
+    const conversacion = await Conversacion.findById(conversacionId)
+      .populate('empresaId')
+      .populate('contactoId');
+    if (!conversacion) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+
+    const empresaId = conversacion.empresaId?._id || conversacion.empresaId;
+    const empresaIdStr = empresaId ? empresaId.toString() : '';
+    const empresasPermitidas = req.empresas && req.empresas.length > 0 ? req.empresas : [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+
+    const empresa = conversacion.empresaId;
+    const contacto = conversacion.contactoId;
+
+    const telefonoCliente = contacto?.telefono;
+    const whatsappPhoneId = empresa?.whatsappPhoneId;
+    const accessToken = empresa?.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+
+    if (!whatsappPhoneId || !telefonoCliente || !accessToken) {
+      return res.status(500).json({ error: 'Faltan datos de empresa, contacto o token para enviar el mensaje' });
+    }
+
+    const mimeType = archivo.mimetype || '';
+    const ext = path.extname(archivo.originalname || '').toLowerCase();
+    const esImagen = mimeType.startsWith('image/') || ['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext);
+    const esAudio = mimeType.startsWith('audio/') || ['.mp3', '.ogg', '.opus', '.m4a', '.amr'].includes(ext);
+    const esVideo = mimeType.startsWith('video/') || ['.mp4', '.mov', '.avi', '.mkv'].includes(ext);
+    let tipo = 'documento';
+    if (esImagen) tipo = 'imagen';
+    else if (esAudio) tipo = 'audio';
+    else if (esVideo) tipo = 'video';
+
+    // Subir archivo a WhatsApp (Media Upload API)
+    const mediaForm = new FormData();
+    mediaForm.append('messaging_product', 'whatsapp');
+    mediaForm.append('type', mimeType);
+    const fileBuffer = fs.readFileSync(archivo.path);
+    mediaForm.append('file', new Blob([fileBuffer], { type: mimeType }), archivo.originalname || 'archivo');
+
+    let mediaId = '';
+    try {
+      const urlSubida = `https://graph.facebook.com/v19.0/${whatsappPhoneId}/media`;
+      const respSubida = await fetch(urlSubida, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: mediaForm
+      });
+      const dataSubida = await respSubida.json();
+      if (!respSubida.ok) {
+        console.error('❌ Error al subir media a WhatsApp:', dataSubida);
+        return res.status(502).json({ error: 'No se pudo subir el archivo a WhatsApp', detalle: dataSubida });
+      }
+      mediaId = dataSubida.id;
+    } catch (error) {
+      console.error('❌ Error de red al subir media:', error);
+      return res.status(502).json({ error: 'No se pudo conectar con WhatsApp' });
+    }
+
+    // Enviar mensaje multimedia al cliente
+    const urlEnvio = `https://graph.facebook.com/v19.0/${whatsappPhoneId}/messages`;
+    const payload = {
+      messaging_product: 'whatsapp',
+      to: telefonoCliente,
+      type: tipo
+    };
+    if (tipo === 'imagen') {
+      payload.image = { id: mediaId, caption: '' };
+    } else if (tipo === 'audio') {
+      payload.audio = { id: mediaId };
+    } else if (tipo === 'video') {
+      payload.video = { id: mediaId };
+    } else {
+      payload.document = { id: mediaId, filename: archivo.originalname || 'archivo' };
+    }
+
+    let respuestaWhatsApp = null;
+    let enviadoOK = false;
+    try {
+      const resp = await fetch(urlEnvio, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      respuestaWhatsApp = await resp.json();
+      if (resp.ok) {
+        enviadoOK = true;
+      } else {
+        console.error('Error al enviar multimedia a WhatsApp:', respuestaWhatsApp);
+      }
+    } catch (error) {
+      console.error('Error de red enviando multimedia a la Graph API:', error);
+      return res.status(502).json({ error: 'No se pudo comunicar con WhatsApp' });
+    }
+
+    if (!enviadoOK) {
+      return res.status(502).json({ error: 'El envío del mensaje multimedia falló', detalle: respuestaWhatsApp });
+    }
+
+    // Guardar mensaje en la base de datos
+    const urlArchivoLocal = `/uploads/${archivo.filename}`;
+    const nuevoMensaje = await Mensaje.create({
+      conversacionId: conversacion._id,
+      remitente: 'empresa',
+      contenido: esImagen ? '📎 [Imagen]' : (esAudio ? '📎 [Audio]' : (esVideo ? '📎 [Video]' : '📎 [Documento]')),
+      tipo,
+      urlArchivo: urlArchivoLocal,
+      whatsappMsgId: respuestaWhatsApp?.messages?.[0]?.id || ''
+    });
+
+    await Conversacion.findByIdAndUpdate(conversacion._id, {
+      ultimoMensaje: nuevoMensaje.contenido,
+      estado: 'Abierto'
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresaIdStr).emit('mensaje-nuevo', {
+        conversacionId: conversacion._id,
+        mensaje: {
+          _id: nuevoMensaje._id,
+          remitente: 'empresa',
+          contenido: nuevoMensaje.contenido,
+          tipo: nuevoMensaje.tipo,
+          urlArchivo: nuevoMensaje.urlArchivo,
+          fecha: new Date()
+        },
+        conversacion: {
+          _id: conversacion._id,
+          ultimoMensaje: nuevoMensaje.contenido,
+          updatedAt: new Date()
+        }
+      });
+    }
+
+    return res.json({
+      ok: true,
+      mensaje: {
+        _id: nuevoMensaje._id,
+        remitente: nuevoMensaje.remitente,
+        contenido: nuevoMensaje.contenido,
+        tipo: nuevoMensaje.tipo,
+        urlArchivo: nuevoMensaje.urlArchivo,
+        fecha: nuevoMensaje.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error al enviar multimedia:', error);
+    return res.status(500).json({ error: 'Error interno al enviar multimedia' });
+  }
+};
+
 // ===== Enviar mensaje desde el dashboard =====
 const enviarMensaje = async (req, res) => {
   try {
@@ -2352,6 +2525,7 @@ module.exports = {
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
+  enviarMensajeMedia,
   actualizarBotActivo,
   actualizarBotActivoConversacion,
   actualizarContacto,

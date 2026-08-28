@@ -20,18 +20,32 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
   fileFilter: (req, file, cb) => {
     const tiposPermitidos = [
       'image/jpeg',
       'image/png',
       'image/webp',
+      'image/gif',
+      'audio/ogg',
+      'audio/mpeg',
+      'audio/mp3',
+      'audio/mp4',
+      'audio/amr',
+      'audio/wav',
+      'video/mp4',
+      'video/mpeg',
+      'video/quicktime',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
     if (tiposPermitidos.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      const err = new Error('Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, WEBP) o archivos de Excel.');
+      const err = new Error('Tipo de archivo no permitido. Solo se permiten imágenes, audio, video, PDF, Word o Excel.');
       err.status = 400;
       cb(err, false);
     }
@@ -45,6 +59,7 @@ const {
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
+  enviarMensajeMedia,
   actualizarBotActivo,
   actualizarBotActivoConversacion,
   actualizarContacto,
@@ -85,6 +100,9 @@ router.post('/contactos', auth, crearContactoManual);
 
 // Envío de mensaje desde el dashboard (POST)
 router.post('/enviar', auth, enviarMensaje);
+
+// Envío de multimedia desde el dashboard (POST)
+router.post('/enviar-media', auth, upload.single('archivo'), enviarMensajeMedia);
 
 // Actualización del estado botActivo de la empresa (PUT)
 router.put('/bot-activo', auth, actualizarBotActivo);

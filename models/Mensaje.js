@@ -22,6 +22,15 @@ const MensajeSchema = new Schema(
       type: String,
       required: true
     },
+    tipo: {
+      type: String,
+      enum: ['texto', 'imagen', 'audio', 'video', 'documento'],
+      default: 'texto'
+    },
+    urlArchivo: {
+      type: String,
+      default: ''
+    },
     estado: {
       type: String,
       enum: ['enviado', 'entregado', 'leido'],

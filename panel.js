@@ -948,10 +948,6 @@ async function cargarConfiguracion() {
       procesarAudiosCheck.checked = (config.procesarAudios === true);
     }
 
-    const plantillaDifusionInput = document.getElementById('plantilla-difusion-input');
-    if (plantillaDifusionInput) {
-      plantillaDifusionInput.value = config.plantillaDifusion || '';
-    }
 
     // Actualizar atajos rápidos para el autocompletado del input
     ATAJOS_RAPIDOS = (config.atajos || []).map(a => ({
@@ -2328,37 +2324,6 @@ function initEditarBienvenida() {
   }
 }
 
-async function guardarConfigDesdePanel() {
-  const estadoDisplay = document.getElementById('perfil-estado-display');
-  const estado = (estadoDisplay?.textContent || '').trim();
-  const inputFoto = document.getElementById('config-foto');
-  const formData = new FormData();
-  formData.append('estado', estado);
-  const plantillaDifusionInput = document.getElementById('plantilla-difusion-input');
-  if (plantillaDifusionInput) {
-    formData.append('plantillaDifusion', plantillaDifusionInput.value.trim());
-  }
-  if (inputFoto && inputFoto.files && inputFoto.files.length > 0) {
-    formData.append('foto', inputFoto.files[0]);
-  }
-  const token = localStorage.getItem('token') || '';
-  try {
-    const res = await fetch('/api/whatsapp/config', {
-      method: 'PUT',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      console.error('Error al guardar config:', data.error || res.status);
-      mostrarToast('Error al guardar configuración', 'error');
-      return;
-    }
-    mostrarToast('Configuración guardada correctamente', 'info');
-  } catch (error) {
-    console.error('Error de red al guardar config:', error);
-  }
-}
 
 function updateVisibilidad() {
   const app = document.getElementById('app');
@@ -3579,8 +3544,6 @@ async function init() {
   initEditarBienvenida();
   const btnGuardarHorarios = document.getElementById('btn-guardar-horarios');
   if (btnGuardarHorarios) btnGuardarHorarios.addEventListener('click', guardarHorariosDesdePanel);
-  const btnGuardarConfigDatos = document.getElementById('btn-guardar-config-datos');
-  if (btnGuardarConfigDatos) btnGuardarConfigDatos.addEventListener('click', guardarConfigDesdePanel);
   const inputFoto = document.getElementById('config-foto');
   if (inputFoto) inputFoto.addEventListener('change', previewFoto);
 

@@ -1646,9 +1646,6 @@ const actualizarConfig = async (req, res) => {
     if (typeof req.body.procesarAudios === 'boolean') {
       updates.procesarAudios = req.body.procesarAudios;
     }
-    if (typeof req.body.plantillaDifusion === 'string') {
-      updates.plantillaDifusion = req.body.plantillaDifusion.trim();
-    }
 
     if (req.body.fotoPosicion && typeof req.body.fotoPosicion === 'string') {
       updates.fotoPosicion = req.body.fotoPosicion.trim();
@@ -1756,7 +1753,6 @@ const obtenerConfig = async (req, res) => {
         abierto: empresa.abierto !== false,
         procesarImagenes: empresa.procesarImagenes === true,
         procesarAudios: empresa.procesarAudios === true,
-        plantillaDifusion: empresa.plantillaDifusion || '',
         meta: {
           costoTotal: empresa.metaCostoTotal || 0,
           ultimaActualizacion: empresa.metaUltimaActualizacion || null

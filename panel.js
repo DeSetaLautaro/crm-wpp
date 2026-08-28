@@ -675,7 +675,8 @@ function renderChatActivo() {
       const titulo = estado === 'leido' ? 'Leído' : (estado === 'entregado' ? 'Entregado' : 'Enviado');
       indicador = `<span class="mensaje-estado" title="${titulo}" style="font-size:13px; font-weight:bold; color:${color}; margin-left:6px; line-height:1;">${simbolo}</span>`;
     }
-    return `<div class="bubble ${claseBurbuja}">${contenidoFinal}${indicador}</div>`;
+    const estiloMedia = (msg.tipo === 'imagen' && msg.urlArchivo) ? ' style="background:transparent; padding:0; box-shadow:none;"' : '';
+    return `<div class="bubble ${claseBurbuja}"${estiloMedia}>${contenidoFinal}${indicador}</div>`;
   }).join('');
 
   // Scroll al último mensaje al abrir el chat

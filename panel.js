@@ -659,9 +659,9 @@ function renderChatActivo() {
     if (['bot','humano','ia','empresa'].includes(msg.remitente)) {
       const estado = msg.estado || 'enviado';
       const simbolo = estado === 'leido' ? '✓✓' : (estado === 'entregado' ? '✓✓' : '✓');
-      const colorFondo = estado === 'leido' ? '#34b7f1' : (estado === 'entregado' ? '#10b981' : '#9ca3af');
+      const color = estado === 'leido' ? '#34b7f1' : (estado === 'entregado' ? '#10b981' : '#9ca3af');
       const titulo = estado === 'leido' ? 'Leído' : (estado === 'entregado' ? 'Entregado' : 'Enviado');
-      indicador = `<span class="mensaje-estado" title="${titulo}" style="display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 4px; margin-left:6px; border-radius:10px; background:${colorFondo}; color:#fff; font-size:12px; font-weight:bold; line-height:1;">${simbolo}</span>`;
+      indicador = `<span class="mensaje-estado" title="${titulo}" style="font-size:13px; font-weight:bold; color:${color}; margin-left:6px; line-height:1;">${simbolo}</span>`;
     }
     return `<div class="bubble ${claseBurbuja}">${contenidoSeguro}${indicador}</div>`;
   }).join('');

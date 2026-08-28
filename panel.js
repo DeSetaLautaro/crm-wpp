@@ -117,7 +117,7 @@ let editandoBienvenida = false;
 let guardandoBienvenida = false;
 let bienvenidaActual = '';
 let mostrarTodasDifusiones = false;
-let archivoPendiente = null;
+let archivosPendientes = [];
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
@@ -2735,16 +2735,18 @@ async function enviarMensajeDesdePanel() {
   // const mensajeURL = encodeURIComponent(mensajeLimpio);
   const mensaje = mensajeLimpio;
   if (!chatActivoId) return;
-  if (!mensaje && !archivoPendiente) return;
+  if (!mensaje && archivosPendientes.length === 0) return;
 
-  // Si hay un archivo pendiente, primero lo enviamos
-  if (archivoPendiente) {
-    const exito = await enviarMediaDesdePanel(archivoPendiente);
-    if (!exito) {
-      // Si falla, no limpiamos el adjunto y no enviamos el texto
-      return;
+  // Si hay archivos pendientes, primero los enviamos
+  if (archivosPendientes.length > 0) {
+    for (const file of archivosPendientes) {
+      const exito = await enviarMediaDesdePanel(file);
+      if (!exito) {
+        // Si falla, no seguimos enviando y dejamos el resto pendiente
+        return;
+      }
     }
-    limpiarArchivoPendiente();
+    limpiarArchivosPendientes();
   }
 
   // Si solo era el archivo, ya terminamos
@@ -2835,20 +2837,32 @@ async function enviarMediaDesdePanel(file) {
   }
 }
 
-function mostrarArchivoPendiente(file) {
+function mostrarArchivosPendientes() {
   const wrapper = document.getElementById('archivo-pendiente-wrapper');
-  const nombreEl = document.getElementById('archivo-pendiente-nombre');
-  if (!wrapper || !nombreEl) return;
-  nombreEl.textContent = file.name || 'Archivo';
+  const lista = document.getElementById('archivo-pendiente-lista');
+  if (!wrapper || !lista) return;
+  if (archivosPendientes.length === 0) {
+    wrapper.style.display = 'none';
+    lista.innerHTML = '';
+    return;
+  }
+  lista.innerHTML = archivosPendientes.map((f, i) => `
+    <div style="display:flex; align-items:center; gap:6px; font-size:13px; color:#374151;">
+      <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.name}</span>
+      <button onclick="quitarArchivoPendiente(${i})" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:14px;">×</button>
+    </div>
+  `).join('');
   wrapper.style.display = 'flex';
 }
 
-function limpiarArchivoPendiente() {
-  archivoPendiente = null;
-  const wrapper = document.getElementById('archivo-pendiente-wrapper');
-  if (wrapper) wrapper.style.display = 'none';
-  const nombreEl = document.getElementById('archivo-pendiente-nombre');
-  if (nombreEl) nombreEl.textContent = '';
+function quitarArchivoPendiente(index) {
+  archivosPendientes.splice(index, 1);
+  mostrarArchivosPendientes();
+}
+
+function limpiarArchivosPendientes() {
+  archivosPendientes = [];
+  mostrarArchivosPendientes();
 }
 
 async function guardarNuevoContacto() {
@@ -3791,11 +3805,10 @@ async function init() {
       inputAdjuntar.click();
     });
     inputAdjuntar.addEventListener('change', (e) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        // Solo cargar el archivo como adjunto pendiente, no enviarlo todavía
-        archivoPendiente = file;
-        mostrarArchivoPendiente(file);
+      const files = Array.from(e.target.files || []);
+      if (files.length > 0) {
+        archivosPendientes = archivosPendientes.concat(files);
+        mostrarArchivosPendientes();
       }
       e.target.value = '';
     });
@@ -3805,7 +3818,7 @@ async function init() {
   const btnQuitarAdjunto = document.getElementById('archivo-pendiente-quitar');
   if (btnQuitarAdjunto) {
     btnQuitarAdjunto.addEventListener('click', () => {
-      limpiarArchivoPendiente();
+      limpiarArchivosPendientes();
     });
   }
 

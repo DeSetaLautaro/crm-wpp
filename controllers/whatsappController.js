@@ -1403,7 +1403,7 @@ const enviarMensajeMedia = async (req, res) => {
     const nuevoMensaje = await Mensaje.create({
       conversacionId: conversacion._id,
       remitente: 'empresa',
-      contenido: esImagen ? '📎 [Imagen]' : (esAudio ? '📎 [Audio]' : (esVideo ? '📎 [Video]' : '📎 [Documento]')),
+      contenido: esImagen ? '📎 [Imagen]' : (esAudio ? '📎 [Audio]' : (esVideo ? '📎 [Video]' : `📎 ${archivo.originalname || 'Documento'}`)),
       tipo,
       urlArchivo: urlArchivoLocal,
       whatsappMsgId: respuestaWhatsApp?.messages?.[0]?.id || ''

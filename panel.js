@@ -655,7 +655,15 @@ function renderChatActivo() {
     else if (msg.remitente === 'nota_interna') claseBurbuja = 'bubble-nota';
 
     const contenidoSeguro = escaparHTML(msg.contenido || '').replace(/\n/g, '<br>');
-    return `<div class="bubble ${claseBurbuja}">${contenidoSeguro}</div>`;
+    let indicador = '';
+    if (['bot','humano','ia','empresa'].includes(msg.remitente)) {
+      const estado = msg.estado || 'enviado';
+      let simbolo = '✓';
+      if (estado === 'entregado' || estado === 'leido') simbolo = '✓✓';
+      const color = estado === 'leido' ? '#3b82f6' : '#9ca3af';
+      indicador = `<span class="mensaje-estado" style="font-size:11px; margin-left:6px; color:${color};">${simbolo}</span>`;
+    }
+    return `<div class="bubble ${claseBurbuja}">${contenidoSeguro}${indicador}</div>`;
   }).join('');
 
   // Scroll al último mensaje al abrir el chat

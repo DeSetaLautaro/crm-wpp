@@ -661,7 +661,7 @@ function renderChatActivo() {
     if (msg.tipo === 'imagen' && msg.urlArchivo) {
       contenidoFinal = `<img src="${urlFotoConToken(msg.urlArchivo)}" alt="Imagen" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px; cursor:pointer;" onclick="window.open('${urlFotoConToken(msg.urlArchivo)}','_blank')">`;
     } else if (msg.tipo === 'audio' && msg.urlArchivo) {
-      contenidoFinal = `<audio controls src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>`;
+      contenidoFinal = `<audio controls preload="none" data-audio-url="${msg.urlArchivo}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>`;
     } else if (msg.tipo === 'video' && msg.urlArchivo) {
       contenidoFinal = `<video controls src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px;"></video>`;
     } else if (msg.tipo === 'documento' && msg.urlArchivo) {
@@ -683,6 +683,9 @@ function renderChatActivo() {
   if (areaMensajes) {
     areaMensajes.scrollTop = areaMensajes.scrollHeight;
   }
+
+  // Cargar los audios como blob para que el navegador pueda reproducirlos
+  cargarAudiosConBlob(areaMensajes);
 
   // Habilitar campo de envío de mensajes para el chat activo
   const inputMensaje = document.getElementById('input-mensaje');
@@ -2849,6 +2852,33 @@ async function enviarMediaDesdePanel(file) {
     console.error('Error de red al enviar multimedia:', error);
     mostrarToast('Error de red al enviar multimedia', 'error');
     return false;
+  }
+}
+
+async function cargarAudiosConBlob(contenedor) {
+  if (!contenedor) return;
+  const audios = contenedor.querySelectorAll('audio[data-audio-url]');
+  const token = localStorage.getItem('token') || '';
+  for (const audio of audios) {
+    const url = audio.dataset.audioUrl;
+    if (!url || audio.dataset.cargado) continue;
+    try {
+      const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      audio.src = objectUrl;
+      audio.dataset.cargado = '1';
+      audio.addEventListener('error', () => {
+        URL.revokeObjectURL(objectUrl);
+        audio.removeAttribute('src');
+        console.error('No se pudo reproducir el audio');
+      });
+    } catch (error) {
+      console.error('Error al cargar audio:', error);
+    }
   }
 }
 

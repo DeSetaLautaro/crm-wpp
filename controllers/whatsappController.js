@@ -701,21 +701,23 @@ const recibirMensaje = async (req, res) => {
           const esDocumento = mensaje.type === 'document';
 
           if (mediaJson.url && (esArchivoAudio || esDocumento)) {
-            // 2. Descargar el archivo binario
-            const fileResp = await fetch(mediaJson.url, {
-              headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
+            // 2. Descargar el archivo binario con token en la URL (más confiable)
+            const urlDescarga = `${mediaJson.url}?access_token=${accessToken}`;
+            const fileResp = await fetch(urlDescarga);
+            let fileBuffer = Buffer.alloc(0);
             if (!fileResp.ok) {
-              console.error('❌ Error al descargar el archivo de Meta:', fileResp.status, fileResp.statusText);
-            }
-            const fileBuffer = Buffer.from(await fileResp.arrayBuffer());
-            if (!fileBuffer || fileBuffer.length === 0) {
-              console.error('⚠️ Archivo descargado vacío, se ignora');
+              console.error('❌ Error al descargar el archivo de Meta:', fileResp.status, await fileResp.text());
+            } else {
+              fileBuffer = Buffer.from(await fileResp.arrayBuffer());
+              if (!fileBuffer || fileBuffer.length < 1000) {
+                console.error('⚠️ Archivo descargado vacío o muy chico, se descarta');
+                fileBuffer = Buffer.alloc(0);
+              }
             }
             const mimeType = mimeTypeDetectado;
 
             // 2b. Guardar el audio en /uploads y actualizar el mensaje del cliente
-            if (esArchivoAudio) {
+            if (esArchivoAudio && fileBuffer.length > 0) {
               try {
                 const extMap = {
                   'audio/mpeg': '.mp3',
@@ -729,9 +731,26 @@ const recibirMensaje = async (req, res) => {
                   'audio/x-wav': '.wav'
                 };
                 const ext = extMap[mimeType] || '.ogg';
-                const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-                fs.writeFileSync(path.join(__dirname, '..', 'uploads', filename), fileBuffer);
+                const nombreBase = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+                const archivoTemp = path.join(__dirname, '..', 'uploads', `${nombreBase}${ext}`);
+                fs.writeFileSync(archivoTemp, fileBuffer);
 
+                // Intentar conversion a MP3 para máxima compatibilidad (Chrome, Safari, Firefox, Edge)
+                const archivoFinal = path.join(__dirname, '..', 'uploads', `${nombreBase}.mp3`);
+                let archivoGuardado = archivoTemp;
+                let extensionFinal = ext;
+                try {
+                  await execFileAsync('ffmpeg', ['-version'], { timeout: 3000 });
+                  await execFileAsync('ffmpeg', ['-i', archivoTemp, '-codec:a', 'libmp3lame', '-qscale:a', '2', archivoFinal]);
+                  archivoGuardado = archivoFinal;
+                  extensionFinal = '.mp3';
+                  // Eliminamos el .ogg temporal
+                  if (fs.existsSync(archivoTemp)) fs.unlinkSync(archivoTemp);
+                } catch (convErr) {
+                  console.warn('⚠️ No se pudo convertir a MP3, se usará el archivo original:', convErr.message);
+                }
+
+                const filename = path.basename(archivoGuardado);
                 // Actualizar el mensaje del cliente con tipo y urlArchivo
                 await Mensaje.findByIdAndUpdate(mensajeClienteDb._id, {
                   $set: {
@@ -767,7 +786,7 @@ const recibirMensaje = async (req, res) => {
             }
 
             // 3. Procesar con Gemini solo si está habilitado y es audio
-            if (esArchivoAudio && empresa.procesarAudios === true) {
+            if (esArchivoAudio && empresa.procesarAudios === true && fileBuffer.length > 0) {
               const base64 = fileBuffer.toString('base64');
               const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. Un cliente te envió un mensaje de voz. Escuchá el audio y respondé DIRECTAMENTE al cliente, de forma breve y amable, continuando la conversación.
 
@@ -775,10 +794,14 @@ Reglas:
 - NO incluyas la transcripción del audio en tu respuesta.
 - NO uses títulos ni etiquetas como "Transcripción:", "Respuesta:", "Bot:", etc.
 - Respondé SOLO con el mensaje final que se le enviará al cliente por WhatsApp.`;
-              const respuestaIA = await generarTextoConAudio(promptAudio, mimeType, base64);
-              if (respuestaIA) {
-                respuestaAutomatica = respuestaIA;
-                console.log('✅ Audio procesado con Gemini');
+              try {
+                const respuestaIA = await generarTextoConAudio(promptAudio, mimeType, base64);
+                if (respuestaIA) {
+                  respuestaAutomatica = respuestaIA;
+                  console.log('✅ Audio procesado con Gemini');
+                }
+              } catch (errorGemini) {
+                console.error('❌ Error al procesar audio con Gemini:', errorGemini);
               }
             }
           }

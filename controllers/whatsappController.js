@@ -17,6 +17,23 @@ const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 const { actualizarCostosEmpresa } = require('../services/metaAnalyticsService');
 
+// Lee la duración real de un archivo de audio/video usando ffprobe
+async function obtenerDuracionArchivo(ruta) {
+  try {
+    const { stdout } = await execFileAsync('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'json',
+      ruta
+    ]);
+    const data = JSON.parse(stdout);
+    return data.format?.duration ? parseFloat(data.format.duration) : null;
+  } catch (e) {
+    console.warn('⚠️ No se pudo obtener duración con ffprobe:', e.message);
+    return null;
+  }
+}
+
 // Prompt por defecto (mismo que estaba hardcodeado, pero con placeholders)
 const PROMPT_IA_CONTEXTO = `Sos el asistente virtual de {nombreLocal}. Respondé de forma breve y amable a los clientes.
 
@@ -616,6 +633,13 @@ const recibirMensaje = async (req, res) => {
         procesarAudios: empresa.procesarAudios,
         tieneToken: !!accessToken
       });
+      // 🔍 Log del payload completo de audio para diagnosticar duración
+      console.log('🎵 PAYLOAD AUDIO COMPLETO:', JSON.stringify({
+        type: mensaje.type,
+        audio: mensaje.audio,
+        voice: mensaje.voice,
+        document: mensaje.document
+      }, null, 2));
 
       // ===== Manejo de ubicaciones (maps) =====
       if (mensaje.type === 'location') {
@@ -693,6 +717,7 @@ const recibirMensaje = async (req, res) => {
             headers: { 'Authorization': `Bearer ${accessToken}` }
           });
           const mediaJson = await mediaResp.json();
+          console.log('🎵 MEDIA JSON DE META:', JSON.stringify(mediaJson, null, 2));
           if (!mediaResp.ok) {
             console.error('❌ Error al obtener media de Meta:', mediaResp.status, mediaJson);
           }
@@ -756,7 +781,19 @@ const recibirMensaje = async (req, res) => {
                 }
 
                 const filename = path.basename(archivoGuardado);
-                const duracionSegundos = mensaje.audio?.duration || mensaje.voice?.duration || null;
+                let duracionSegundos = mensaje.audio?.duration || mensaje.voice?.duration || null;
+                console.log('🎵 duración desde payload de Meta:', duracionSegundos);
+                // Si no vino duración desde Meta, intentamos leerla del archivo convertido
+                try {
+                  const duracionReal = await obtenerDuracionArchivo(archivoGuardado);
+                  console.log('🎵 duración real del archivo con ffprobe:', duracionReal);
+                  if ((!duracionSegundos || duracionSegundos === 0) && duracionReal) {
+                    duracionSegundos = duracionReal;
+                    console.log('🎵 usando duración real como fallback:', duracionSegundos);
+                  }
+                } catch (e) {
+                  console.warn('⚠️ No se pudo obtener duración con ffprobe:', e.message);
+                }
                 // Actualizar el mensaje del cliente con tipo y urlArchivo
                 await Mensaje.findByIdAndUpdate(mensajeClienteDb._id, {
                   $set: {

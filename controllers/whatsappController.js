@@ -756,12 +756,14 @@ const recibirMensaje = async (req, res) => {
                 }
 
                 const filename = path.basename(archivoGuardado);
+                const duracionSegundos = mensaje.audio?.duration || mensaje.voice?.duration || null;
                 // Actualizar el mensaje del cliente con tipo y urlArchivo
                 await Mensaje.findByIdAndUpdate(mensajeClienteDb._id, {
                   $set: {
                     tipo: 'audio',
                     urlArchivo: `/uploads/${filename}`,
-                    contenido: '📎 [Audio]'
+                    contenido: '📎 [Audio]',
+                    duracionSegundos
                   }
                 });
 
@@ -776,6 +778,7 @@ const recibirMensaje = async (req, res) => {
                       contenido: '📎 [Audio]',
                       tipo: 'audio',
                       urlArchivo: `/uploads/${filename}`,
+                      duracionSegundos,
                       fecha: new Date()
                     },
                     conversacion: {

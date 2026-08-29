@@ -48,55 +48,28 @@ const obtenerConversaciones = async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 25, 100);
     const skip = (page - 1) * limit;
 
-    const [conversacionesAgg, total] = await Promise.all([
-      Conversacion.aggregate([
-        { $match: query },
-        { $sort: { _id: -1 } },
-        { $skip: skip },
-        { $limit: limit },
-        {
-          $lookup: {
-            from: 'mensajes',
-            let: { convId: '$_id' },
-            pipeline: [
-              { $match: { $expr: { $eq: ['$conversacionId', '$$convId'] } } },
-              { $sort: { _id: -1 } },
-              { $limit: 50 },
-              { $project: { _id: 1, remitente: 1, contenido: 1, createdAt: 1, estado: 1, fechaEstado: 1, tipo: 1, urlArchivo: 1 } }
-            ],
-            as: 'mensajes'
-          }
-        }
-      ]),
+    const [conversacionesFind, total] = await Promise.all([
+      Conversacion.find(query)
+        .sort({ _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
       Conversacion.countDocuments(query)
     ]);
-    console.log('[obtenerConversaciones] conversacionesAgg devueltas:', conversacionesAgg.length);
+    console.log('[obtenerConversaciones] conversacionesFind devueltas:', conversacionesFind.length);
     console.log('[obtenerConversaciones] total (countDocuments):', total);
 
-    // Si no hay conversaciones, intentar un find directo para comparar
-    if (conversacionesAgg.length === 0) {
-      const pruebaFind = await Conversacion.find(query).sort({ _id: -1 }).limit(5).lean();
-      console.log('[obtenerConversaciones] 🔍 DEBUG: Conversacion.find con mismo query devuelve:', pruebaFind.length);
-      if (pruebaFind.length > 0) {
-        const primera = pruebaFind[0];
-        console.log('[obtenerConversaciones] 🔍 DEBUG: Primera conversación del find:', JSON.stringify({
-          _id: primera._id,
-          empresaId: primera.empresaId,
-          contactoId: primera.contactoId,
-          botActivo: primera.botActivo,
-          ultimoMensaje: primera.ultimoMensaje
-        }, null, 2));
-      } else {
-        const todasConv = await Conversacion.find({}).select('empresaId contactoId').limit(10).lean();
-        const totalCol = await Conversacion.countDocuments({});
-        console.log('[obtenerConversaciones] 🔍 DEBUG: Total de conversaciones en la colección (sin filtro):', totalCol);
-        console.log('[obtenerConversaciones] 🔍 DEBUG: Muestras de conversaciones:', todasConv.map(c => ({
-          _id: String(c._id),
-          empresaId: String(c.empresaId),
-          contactoId: String(c.contactoId)
-        })));
-      }
-    }
+    // Traer mensajes de las conversaciones de esta página en una sola consulta
+    const idsConversaciones = conversacionesFind.map(c => c._id);
+    const mensajesPorConversacion = idsConversaciones.length > 0
+      ? await Mensaje.aggregate([
+          { $match: { conversacionId: { $in: idsConversaciones } } },
+          { $sort: { _id: -1 } },
+          { $group: { _id: '$conversacionId', mensajes: { $push: '$$ROOT' } } },
+          { $project: { mensajes: { $slice: ['$mensajes', 51] } } }
+        ])
+      : [];
+    const mapaMensajes = new Map(mensajesPorConversacion.map(g => [String(g._id), g.mensajes]));
 
     const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const pedidosCancelados = await Pedido.find({
@@ -119,15 +92,16 @@ const obtenerConversaciones = async (req, res) => {
     }));
 
     // Cargar contactos presentes en esta página
-    const idsContactos = conversacionesAgg.map(c => c.contactoId).filter(Boolean);
+    const idsContactos = conversacionesFind.map(c => c.contactoId).filter(Boolean);
     const contactos = await Cliente.find({ _id: { $in: idsContactos } }).lean();
     const mapaContactos = new Map(contactos.map(c => [String(c._id), c]));
 
-    const conversacionesConMensajes = conversacionesAgg.map(conv => {
+    const conversacionesConMensajes = conversacionesFind.map(conv => {
       const contacto = mapaContactos.get(String(conv.contactoId)) || {};
-      const mensajesDesc = Array.isArray(conv.mensajes) ? conv.mensajes : [];
-      const mensajesAsc = mensajesDesc.slice().reverse();
-      const tieneMas = mensajesAsc.length === 50;
+      const mensajesDesc = Array.isArray(mapaMensajes.get(String(conv._id))) ? mapaMensajes.get(String(conv._id)) : [];
+      // Los mensajes vienen ordenados descendente; limitamos a 50 y los invertimos
+      const mensajesAsc = mensajesDesc.slice(0, 50).reverse();
+      const tieneMas = mensajesDesc.length > 50;
       return {
         _id: conv._id,
         empresaId: conv.empresaId,

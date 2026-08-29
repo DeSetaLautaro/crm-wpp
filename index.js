@@ -16,7 +16,7 @@ const auth = require('./middlewares/auth');
 const cron = require('node-cron');
 const { iniciarCronHorarios } = require('./services/horariosCron');
 const { actualizarCostosDeTodasLasEmpresas } = require('./services/metaAnalyticsService');
-const { obtenerConversaciones } = require('./controllers/conversacionesController');
+const { obtenerConversaciones, obtenerMensajesConversacion } = require('./controllers/conversacionesController');
 const { enviarDifusionesProgramadas } = require('./controllers/difusionController');
 
 const app = express();
@@ -77,6 +77,7 @@ app.get('/uploads/:filename', auth, (req, res) => {
 
 // Endpoint para listar conversaciones de la Parrilla (protegido)
 app.get('/api/conversaciones', auth, obtenerConversaciones);
+app.get('/api/conversaciones/:id/mensajes', auth, obtenerMensajesConversacion);
 
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/pedidos', pedidosRoutes);

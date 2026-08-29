@@ -119,6 +119,7 @@ let bienvenidaActual = '';
 let mostrarTodasDifusiones = false;
 let archivosPendientes = [];
 let enviandoMensaje = false;
+let cargandoMensajes = false;
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
@@ -650,7 +651,7 @@ function renderChatActivo() {
   const areaMensajes = document.getElementById('area-mensajes');
   const mensajes = getMensajesDeConversacion(conv._id);
 
-  areaMensajes.innerHTML = mensajes.map(msg => {
+  const mensajesHTML = mensajes.map(msg => {
     let claseBurbuja = '';
     if (msg.remitente === 'cliente') claseBurbuja = 'bubble-cliente';
     else if (['bot', 'humano', 'ia', 'empresa'].includes(msg.remitente)) claseBurbuja = 'bubble-humano';
@@ -682,9 +683,23 @@ function renderChatActivo() {
     return `<div class="bubble ${claseBurbuja}"${estiloMedia}>${contenidoFinal}${indicador}</div>`;
   }).join('');
 
+  const botonCargarMas = conv.tieneMas
+    ? `<div id="cargar-mas-wrapper" style="text-align:center; padding:6px;">
+        <button id="cargar-mas-mensajes" class="cargar-mas-btn" style="background:transparent; border:1px solid #cbd5e1; border-radius:8px; padding:6px 12px; color:#2563eb; cursor:pointer; font-size:13px;">↥ Cargar mensajes anteriores</button>
+      </div>`
+    : '';
+
+  areaMensajes.innerHTML = botonCargarMas + mensajesHTML;
+
   // Scroll al último mensaje al abrir el chat
   if (areaMensajes) {
     areaMensajes.scrollTop = areaMensajes.scrollHeight;
+  }
+
+  // Si existe el botón de paginación, ligarlo a la función correspondiente
+  const btnCargarMas = document.getElementById('cargar-mas-mensajes');
+  if (btnCargarMas) {
+    btnCargarMas.addEventListener('click', cargarMasMensajes);
   }
 
   // Cargar los audios como blob para que el navegador pueda reproducirlos
@@ -2454,6 +2469,7 @@ async function cargarConversaciones() {
         ultimoMensaje: conv.ultimoMensaje || '',
         ultimaFecha: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
         cancelacionReciente: conv.tieneCancelacionReciente === true,
+        tieneMas: conv.mensajes && conv.mensajes.length === 50,
         carrito: conv.carrito || [],
         carritoTotal: conv.carritoTotal || 0
       };
@@ -2496,6 +2512,56 @@ async function cargarConversaciones() {
     console.error('Error al cargar conversaciones:', error);
     mostrarToast('Error al cargar conversaciones. Verificá tu conexión.', 'error');
     renderTodo();
+  }
+}
+
+async function cargarMasMensajes() {
+  if (!chatActivoId || cargandoMensajes) return;
+  const conv = getConversacionPorId(chatActivoId);
+  if (!conv) return;
+  const mensajesDeConv = getMensajesDeConversacion(chatActivoId);
+  if (mensajesDeConv.length === 0) return;
+
+  const antesDe = mensajesDeConv[0]._id;
+  const token = localStorage.getItem('token') || '';
+  cargandoMensajes = true;
+  const btn = document.getElementById('cargar-mas-mensajes');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Cargando...';
+  }
+  try {
+    const res = await fetch(`/api/conversaciones/${chatActivoId}/mensajes?before=${encodeURIComponent(antesDe)}&limit=50`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+    const data = await res.json();
+    const nuevos = data.mensajes || [];
+    const existentes = getMensajesDeConversacion(chatActivoId);
+    const idsExistentes = new Set(existentes.map(m => m._id));
+    const unicos = nuevos.filter(m => !idsExistentes.has(m._id));
+    const combinados = unicos.concat(existentes);
+    MENSAJES = MENSAJES.filter(m => m.conversacionId !== chatActivoId).concat(combinados);
+
+    conv.tieneMas = data.hasMore === true || nuevos.length === 50;
+
+    const area = document.getElementById('area-mensajes');
+    const prevHeight = area ? area.scrollHeight : 0;
+    const prevTop = area ? area.scrollTop : 0;
+
+    renderChatActivo();
+    if (area) {
+      area.scrollTop = area.scrollHeight - prevHeight + prevTop;
+    }
+  } catch (error) {
+    console.error('Error al cargar mensajes anteriores:', error);
+    mostrarToast('Error al cargar mensajes anteriores', 'error');
+  } finally {
+    cargandoMensajes = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '↥ Cargar mensajes anteriores';
+    }
   }
 }
 

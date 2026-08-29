@@ -1,5 +1,7 @@
+const mongoose = require('mongoose');
 const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
+const Cliente = require('../models/Cliente');
 const Empresa = require('../models/Empresa');
 const Pedido = require('../models/Pedido');
 
@@ -29,22 +31,33 @@ const obtenerConversaciones = async (req, res) => {
     const empresas = req.empresas && req.empresas.length > 0 ? req.empresas : [empresaId];
     const query = { empresaId: { $in: empresas } };
 
-    // Paginación básica (skip/limit)
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 25, 100);
     const skip = (page - 1) * limit;
 
-    const [conversaciones, total] = await Promise.all([
-      Conversacion.find(query)
-        .sort({ updatedAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate('contactoId', 'nombre telefono direccion pisoDepto codigoPostal etiquetas notas')
-        .lean(),
+    const [conversacionesAgg, total] = await Promise.all([
+      Conversacion.aggregate([
+        { $match: query },
+        { $sort: { _id: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: 'mensajes',
+            let: { convId: '$_id' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$conversacionId', '$$convId'] } } },
+              { $sort: { _id: -1 } },
+              { $limit: 50 },
+              { $project: { _id: 1, remitente: 1, contenido: 1, createdAt: 1, estado: 1, fechaEstado: 1, tipo: 1, urlArchivo: 1 } }
+            ],
+            as: 'mensajes'
+          }
+        }
+      ]),
       Conversacion.countDocuments(query)
     ]);
 
-    // Buscar pedidos cancelados en las últimas 24h para marcarlos en la lista
     const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const pedidosCancelados = await Pedido.find({
       empresaId: { $in: empresas },
@@ -65,40 +78,40 @@ const obtenerConversaciones = async (req, res) => {
       whatsappPhoneId: e.whatsappPhoneId
     }));
 
-    // Evitar N+1 consultas: traer todos los mensajes de las conversaciones de la página en una sola query
-    const idsConversaciones = conversaciones.map(c => c._id);
-    const mensajesPorConversacion = await Mensaje.aggregate([
-      { $match: { conversacionId: { $in: idsConversaciones } } },
-      { $sort: { createdAt: 1 } },
-      { $group: { _id: '$conversacionId', mensajes: { $push: '$$ROOT' } } }
-    ]);
+    // Cargar contactos presentes en esta página
+    const idsContactos = conversacionesAgg.map(c => c.contactoId).filter(Boolean);
+    const contactos = await Cliente.find({ _id: { $in: idsContactos } }).lean();
+    const mapaContactos = new Map(contactos.map(c => [String(c._id), c]));
 
-    const mapaMensajes = new Map(
-      mensajesPorConversacion.map(g => [String(g._id), g.mensajes])
-    );
-
-    const conversacionesConMensajes = conversaciones.map(conv => ({
-      _id: conv._id,
-      empresaId: conv.empresaId,
-      contactoId: conv.contactoId,
-      lineaReceptora: conv.lineaReceptora,
-      numeroReceptor: conv.numeroReceptor || '',
-      botActivo: conv.botActivo,
-      estado: conv.estado,
-      ultimoMensaje: conv.ultimoMensaje,
-      updatedAt: conv.updatedAt,
-      tieneCancelacionReciente: canceladosPorConv.has(conv._id.toString()),
-      mensajes: (mapaMensajes.get(String(conv._id)) || []).map(m => ({
-        _id: m._id,
-        remitente: m.remitente,
-        contenido: m.contenido,
-        fecha: m.createdAt,
-        estado: m.estado || 'enviado',
-        fechaEstado: m.fechaEstado || null,
-        tipo: m.tipo || 'texto',
-        urlArchivo: m.urlArchivo || ''
-      }))
-    }));
+    const conversacionesConMensajes = conversacionesAgg.map(conv => {
+      const contacto = mapaContactos.get(String(conv.contactoId)) || {};
+      const mensajesDesc = Array.isArray(conv.mensajes) ? conv.mensajes : [];
+      const mensajesAsc = mensajesDesc.slice().reverse();
+      const tieneMas = mensajesAsc.length === 50;
+      return {
+        _id: conv._id,
+        empresaId: conv.empresaId,
+        contactoId: conv.contactoId,
+        lineaReceptora: conv.lineaReceptora,
+        numeroReceptor: conv.numeroReceptor || '',
+        botActivo: conv.botActivo,
+        estado: conv.estado,
+        ultimoMensaje: conv.ultimoMensaje,
+        updatedAt: conv.updatedAt,
+        tieneCancelacionReciente: canceladosPorConv.has(conv._id.toString()),
+        tieneMas,
+        mensajes: mensajesAsc.map(m => ({
+          _id: m._id,
+          remitente: m.remitente,
+          contenido: m.contenido,
+          fecha: m.createdAt,
+          estado: m.estado || 'enviado',
+          fechaEstado: m.fechaEstado || null,
+          tipo: m.tipo || 'texto',
+          urlArchivo: m.urlArchivo || ''
+        }))
+      };
+    });
 
     return res.json({
       ok: true,
@@ -115,6 +128,66 @@ const obtenerConversaciones = async (req, res) => {
   }
 };
 
+const obtenerMensajesConversacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const before = req.query.before || null;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'ID de conversación inválido' });
+    }
+
+    const conversacion = await Conversacion.findById(id);
+    if (!conversacion) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+
+    const empresaIdStr = conversacion.empresaId.toString();
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+
+    const filtro = { conversacionId: id };
+    if (before) {
+      if (!mongoose.Types.ObjectId.isValid(before)) {
+        return res.status(400).json({ error: 'ID de mensaje inválido' });
+      }
+      filtro._id = { $lt: mongoose.Types.ObjectId(before) };
+    }
+
+    const mensajes = await Mensaje.find(filtro)
+      .sort({ _id: -1 })
+      .limit(limit)
+      .lean();
+
+    const hasMore = mensajes.length === limit;
+    mensajes.reverse();
+
+    return res.json({
+      ok: true,
+      mensajes: mensajes.map(m => ({
+        _id: m._id,
+        remitente: m.remitente,
+        contenido: m.contenido,
+        fecha: m.createdAt,
+        estado: m.estado || 'enviado',
+        fechaEstado: m.fechaEstado || null,
+        tipo: m.tipo || 'texto',
+        urlArchivo: m.urlArchivo || ''
+      })),
+      hasMore,
+      total: mensajes.length
+    });
+  } catch (error) {
+    console.error('Error al obtener mensajes de conversación:', error);
+    return res.status(500).json({ error: 'Error interno al obtener mensajes' });
+  }
+};
+
 module.exports = {
-  obtenerConversaciones
+  obtenerConversaciones,
+  obtenerMensajesConversacion
 };

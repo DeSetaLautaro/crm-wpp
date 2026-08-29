@@ -682,7 +682,7 @@ const recibirMensaje = async (req, res) => {
 
       // Si la empresa activó el procesamiento de audios, intentamos transcribirlo con Gemini
       // Pero SIEMPRE descargamos y guardamos el audio para que el operador lo escuche en el panel
-      const mediaIdMultimedia = mensaje.audio?.id || mensaje.document?.id;
+      const mediaIdMultimedia = mensaje.audio?.id || mensaje.voice?.id || mensaje.document?.id;
       if (mediaIdMultimedia && accessToken) {
         try {
           // 1. Obtener la URL de descarga
@@ -690,8 +690,11 @@ const recibirMensaje = async (req, res) => {
             headers: { 'Authorization': `Bearer ${accessToken}` }
           });
           const mediaJson = await mediaResp.json();
-          const mimeTypeDetectado = mediaJson.mime_type || (mensaje.type === 'audio' ? 'audio/ogg' : 'application/octet-stream');
-          const esArchivoAudio = mimeTypeDetectado.startsWith('audio/') || mensaje.type === 'audio';
+          if (!mediaResp.ok) {
+            console.error('❌ Error al obtener media de Meta:', mediaResp.status, mediaJson);
+          }
+          const mimeTypeDetectado = mediaJson.mime_type || (mensaje.type === 'voice' || mensaje.type === 'audio' ? 'audio/ogg' : (mensaje.type === 'document' ? 'application/octet-stream' : ''));
+          const esArchivoAudio = mensaje.type === 'voice' || mensaje.type === 'audio' || mimeTypeDetectado.startsWith('audio/');
           const esDocumento = mensaje.type === 'document';
 
           if (mediaJson.url && (esArchivoAudio || esDocumento)) {
@@ -699,7 +702,13 @@ const recibirMensaje = async (req, res) => {
             const fileResp = await fetch(mediaJson.url, {
               headers: { 'Authorization': `Bearer ${accessToken}` }
             });
+            if (!fileResp.ok) {
+              console.error('❌ Error al descargar el archivo de Meta:', fileResp.status, fileResp.statusText);
+            }
             const fileBuffer = Buffer.from(await fileResp.arrayBuffer());
+            if (!fileBuffer || fileBuffer.length === 0) {
+              console.error('⚠️ Archivo descargado vacío, se ignora');
+            }
             const mimeType = mimeTypeDetectado;
 
             // 2b. Guardar el audio en /uploads y actualizar el mensaje del cliente

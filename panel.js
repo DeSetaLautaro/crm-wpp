@@ -2855,6 +2855,26 @@ async function enviarMediaDesdePanel(file) {
   }
 }
 
+function mimeTypeDesdeUrl(url) {
+  const ext = (url.split('?')[0].split('.').pop() || '').toLowerCase();
+  const map = {
+    'ogg': 'audio/ogg',
+    'opus': 'audio/ogg',
+    'mp3': 'audio/mpeg',
+    'm4a': 'audio/mp4',
+    'aac': 'audio/aac',
+    'amr': 'audio/amr',
+    'wav': 'audio/wav',
+    'mp4': 'video/mp4',
+    'webm': 'video/webm',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'webp': 'image/webp'
+  };
+  return map[ext] || 'application/octet-stream';
+}
+
 async function cargarAudiosConBlob(contenedor) {
   if (!contenedor) return;
   const audios = contenedor.querySelectorAll('audio[data-audio-url]');
@@ -2867,7 +2887,9 @@ async function cargarAudiosConBlob(contenedor) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
-      const blob = await res.blob();
+      const arrayBuffer = await res.arrayBuffer();
+      const mimeType = mimeTypeDesdeUrl(url);
+      const blob = new Blob([arrayBuffer], { type: mimeType });
       const objectUrl = URL.createObjectURL(blob);
       audio.src = objectUrl;
       audio.dataset.cargado = '1';

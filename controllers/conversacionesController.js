@@ -50,7 +50,7 @@ const obtenerConversaciones = async (req, res) => {
 
     const [conversacionesFind, total] = await Promise.all([
       Conversacion.find(query)
-        .sort({ _id: -1 })
+        .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),

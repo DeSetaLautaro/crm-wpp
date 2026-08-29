@@ -701,9 +701,14 @@ const recibirMensaje = async (req, res) => {
           const esDocumento = mensaje.type === 'document';
 
           if (mediaJson.url && (esArchivoAudio || esDocumento)) {
-            // 2. Descargar el archivo binario con token en la URL (más confiable)
-            const urlDescarga = `${mediaJson.url}?access_token=${accessToken}`;
-            const fileResp = await fetch(urlDescarga);
+            // 2. Descargar el archivo binario con header; si falla reintenta con query param
+            let fileResp = await fetch(mediaJson.url, {
+              headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            if (!fileResp.ok) {
+              console.warn(`⚠️ Falló descarga con header. Reintentando con query param. Status: ${fileResp.status}`);
+              fileResp = await fetch(`${mediaJson.url}?access_token=${accessToken}`);
+            }
             let fileBuffer = Buffer.alloc(0);
             if (!fileResp.ok) {
               console.error('❌ Error al descargar el archivo de Meta:', fileResp.status, await fileResp.text());

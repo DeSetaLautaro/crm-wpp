@@ -2434,7 +2434,8 @@ async function cargarConversaciones() {
             estado: m.estado || 'enviado',
             fechaEstado: m.fechaEstado ? new Date(m.fechaEstado) : null,
             tipo: m.tipo || 'texto',
-            urlArchivo: m.urlArchivo || ''
+            urlArchivo: m.urlArchivo || '',
+            duracionSegundos: m.duracionSegundos || null
           });
         });
       }
@@ -2590,6 +2591,7 @@ function setupSocketListeners() {
       msgExistente.fecha = new Date(mensaje.fecha || msgExistente.fecha);
       msgExistente.estado = mensaje.estado || msgExistente.estado;
       msgExistente.fechaEstado = mensaje.fechaEstado ? new Date(mensaje.fechaEstado) : msgExistente.fechaEstado;
+      msgExistente.duracionSegundos = mensaje.duracionSegundos || msgExistente.duracionSegundos;
 
       // Actualizar la conversación local
       const convLocal = CONVERSACIONES.find(c => c._id === conversacionId);
@@ -2618,7 +2620,8 @@ function setupSocketListeners() {
       estado: mensaje.estado || 'enviado',
       fechaEstado: mensaje.fechaEstado ? new Date(mensaje.fechaEstado) : null,
       tipo: mensaje.tipo || 'texto',
-      urlArchivo: mensaje.urlArchivo || ''
+      urlArchivo: mensaje.urlArchivo || '',
+      duracionSegundos: mensaje.duracionSegundos || null
     });
 
     // Actualizar la conversación local

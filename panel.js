@@ -662,7 +662,7 @@ function renderChatActivo() {
       contenidoFinal = `<img src="${urlFotoConToken(msg.urlArchivo)}" alt="Imagen" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px; cursor:pointer;" onclick="window.open('${urlFotoConToken(msg.urlArchivo)}','_blank')">`;
     } else if (msg.tipo === 'audio' && msg.urlArchivo) {
       const duracionSeg = msg.duracionSegundos
-        ? `<div style="font-size:12px; color:#6b7280; margin-top:2px;">Duración: ${msg.duracionSegundos.toFixed(1).replace('.', ',')}s</div>`
+        ? `<div style="font-size:12px; color:#6b7280; margin-top:2px;">`
         : '';
       contenidoFinal = `<audio controls preload="metadata" src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>${duracionSeg}`;
     } else if (msg.tipo === 'video' && msg.urlArchivo) {

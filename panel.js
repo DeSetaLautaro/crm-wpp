@@ -650,6 +650,7 @@ function renderChatActivo() {
   // Mensajes
   const areaMensajes = document.getElementById('area-mensajes');
   const mensajes = getMensajesDeConversacion(conv._id);
+  console.log('[renderChatActivo] chat:', chatActivoId, '| mensajes en memoria:', mensajes.length);
 
   const mensajesHTML = mensajes.map(msg => {
     let claseBurbuja = '';
@@ -2558,12 +2559,51 @@ async function cargarMasMensajes() {
     conv.tieneMas = data.hasMore === true || nuevos.length === 50;
 
     const area = document.getElementById('area-mensajes');
-    const prevHeight = area ? area.scrollHeight : 0;
-    const prevTop = area ? area.scrollTop : 0;
+    const prevScrollHeight = area ? area.scrollHeight : 0;
+    const prevScrollTop = area ? area.scrollTop : 0;
 
-    renderChatActivo();
+    // Insertar los mensajes nuevos en el DOM sin re-renderizar todo el chat
+    const htmlNuevos = unicos.map(msg => {
+      let claseBurbuja = '';
+      if (msg.remitente === 'cliente') claseBurbuja = 'bubble-cliente';
+      else if (['bot', 'humano', 'ia', 'empresa'].includes(msg.remitente)) claseBurbuja = 'bubble-humano';
+      else if (msg.remitente === 'nota_interna') claseBurbuja = 'bubble-nota';
+
+      const contenidoSeguro = escaparHTML(msg.contenido || '').replace(/\n/g, '<br>');
+      let contenidoFinal = contenidoSeguro;
+      if (msg.tipo === 'imagen' && msg.urlArchivo) {
+        contenidoFinal = `<img src="${urlFotoConToken(msg.urlArchivo)}" alt="Imagen" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px; cursor:pointer;" onclick="window.open('${urlFotoConToken(msg.urlArchivo)}','_blank')">`;
+      } else if (msg.tipo === 'audio' && msg.urlArchivo) {
+        contenidoFinal = `<audio controls preload="metadata" data-audio-url="${urlFotoConToken(msg.urlArchivo)}" src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>`;
+      } else if (msg.tipo === 'video' && msg.urlArchivo) {
+        contenidoFinal = `<video controls src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px;"></video>`;
+      } else if (msg.tipo === 'documento' && msg.urlArchivo) {
+        contenidoFinal = `<a href="${urlFotoConToken(msg.urlArchivo)}" target="_blank" style="color:inherit;">${contenidoSeguro}</a>`;
+      }
+      let indicador = '';
+      if (['bot','humano','ia','empresa'].includes(msg.remitente)) {
+        const estado = msg.estado || 'enviado';
+        const simbolo = estado === 'leido' ? '✓✓' : (estado === 'entregado' ? '✓✓' : '✓');
+        const color = estado === 'leido' ? '#34b7f1' : '#ffffff';
+        const titulo = estado === 'leido' ? 'Leído' : (estado === 'entregado' ? 'Entregado' : 'Enviado');
+        indicador = `<span class="mensaje-estado" title="${titulo}" style="font-size:13px; font-weight:bold; color:${color}; margin-left:6px; line-height:1;">${simbolo}</span>`;
+      }
+      const estiloMedia = ((msg.tipo === 'imagen' || msg.tipo === 'audio' || msg.tipo === 'video') && msg.urlArchivo) ? ' style="background:transparent; padding:0; box-shadow:none; border:none;"' : '';
+      return `<div class="bubble ${claseBurbuja}"${estiloMedia}>${contenidoFinal}${indicador}</div>`;
+    }).join('');
+
     if (area) {
-      area.scrollTop = area.scrollHeight - prevHeight + prevTop;
+      // El botón "cargar más" está en un wrapper al inicio del area
+      const btnWrapper = document.getElementById('cargar-mas-wrapper');
+      if (btnWrapper) {
+        btnWrapper.insertAdjacentHTML('afterend', htmlNuevos);
+      } else {
+        area.insertAdjacentHTML('afterbegin', htmlNuevos);
+      }
+      // Restaurar el scroll relativo
+      area.scrollTop = area.scrollHeight - prevScrollHeight + prevScrollTop;
+      // Cargar audios nuevos
+      cargarAudiosConBlob(area);
     }
   } catch (error) {
     console.error('Error al cargar mensajes anteriores:', error);

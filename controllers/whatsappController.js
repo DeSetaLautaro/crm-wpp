@@ -12,6 +12,9 @@ const Pedido = require('../models/Pedido');
 const { guardarPedidoConfirmado } = require('./pedidosController');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+const execFileAsync = promisify(execFile);
 const { actualizarCostosEmpresa } = require('../services/metaAnalyticsService');
 
 // Prompt por defecto (mismo que estaba hardcodeado, pero con placeholders)

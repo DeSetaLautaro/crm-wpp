@@ -183,10 +183,20 @@ const obtenerMensajesConversacion = async (req, res) => {
       filtro._id = { $lt: new mongoose.Types.ObjectId(before) };
     }
 
+    console.log('[obtenerMensajesConversacion] before:', before);
+    console.log('[obtenerMensajesConversacion] filtro:', JSON.stringify(filtro));
+    console.log('[obtenerMensajesConversacion] limit:', limit);
+
     const mensajes = await Mensaje.find(filtro)
       .sort({ _id: -1 })
       .limit(limit)
       .lean();
+
+    console.log('[obtenerMensajesConversacion] mensajes encontrados:', mensajes.length);
+    if (mensajes.length > 0) {
+      console.log('[obtenerMensajesConversacion] primer mensaje devuelto:', mensajes[0]._id.toString());
+      console.log('[obtenerMensajesConversacion] último mensaje devuelto:', mensajes[mensajes.length - 1]._id.toString());
+    }
 
     const hasMore = mensajes.length === limit;
     mensajes.reverse();

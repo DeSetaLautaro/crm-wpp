@@ -2530,6 +2530,9 @@ async function cargarMasMensajes() {
 
   const antesDe = mensajesDeConv[0]._id;
   const token = localStorage.getItem('token') || '';
+  console.log('[cargarMasMensajes] chatActivoId:', chatActivoId);
+  console.log('[cargarMasMensajes] antesDe:', antesDe);
+  console.log('[cargarMasMensajes] mensajesDeConv.length:', mensajesDeConv.length);
   cargandoMensajes = true;
   const btn = document.getElementById('cargar-mas-mensajes');
   if (btn) {
@@ -2542,11 +2545,14 @@ async function cargarMasMensajes() {
     });
     if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
     const data = await res.json();
+    console.log('[cargarMasMensajes] Respuesta del endpoint:', data);
     const nuevos = data.mensajes || [];
     const existentes = getMensajesDeConversacion(chatActivoId);
     const idsExistentes = new Set(existentes.map(m => m._id));
     const unicos = nuevos.filter(m => !idsExistentes.has(m._id));
+    console.log('[cargarMasMensajes] nuevos:', nuevos.length, '| existentes:', existentes.length, '| unicos:', unicos.length);
     const combinados = unicos.concat(existentes);
+    console.log('[cargarMasMensajes] combinados:', combinados.length);
     MENSAJES = MENSAJES.filter(m => m.conversacionId !== chatActivoId).concat(combinados);
 
     conv.tieneMas = data.hasMore === true || nuevos.length === 50;

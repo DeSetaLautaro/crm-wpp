@@ -4023,6 +4023,27 @@ function ocultarBotonLlamarEnEscritorio() {
   document.head.appendChild(style);
 }
 
+// Ocultar el control de volumen de los audios y hacer que la barra de progreso sea más larga
+(function() {
+  const style = document.createElement('style');
+  style.textContent = `
+    #area-mensajes audio::-webkit-media-controls-volume-slider,
+    #area-mensajes audio::-webkit-media-controls-mute-button,
+    #area-mensajes audio::-webkit-media-controls-toggle-closed-captions-button {
+      display: none !important;
+    }
+    #area-mensajes audio::-webkit-media-controls-panel {
+      display: flex;
+      align-items: center;
+    }
+    #area-mensajes audio::-webkit-media-controls-timeline {
+      flex: 1;
+      min-width: 0;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
 document.addEventListener('DOMContentLoaded', async () => {
   await precargarVistas();
   init();

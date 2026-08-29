@@ -23,8 +23,15 @@ function normalizarTelefono(tel) {
  */
 const obtenerConversaciones = async (req, res) => {
   try {
+    console.log('[obtenerConversaciones] ===== INICIO =====');
+    console.log('[obtenerConversaciones] req.empresas:', req.empresas);
+    console.log('[obtenerConversaciones] req.empresaId:', req.empresaId);
+    console.log('[obtenerConversaciones] req.parrillaId:', req.parrillaId);
+    console.log('[obtenerConversaciones] req.usuario:', req.usuario ? { id: req.usuario.id, rol: req.usuario.rol, nombre: req.usuario.nombre } : null);
+
     const empresaId = req.empresaId || req.parrillaId;
     if (!empresaId) {
+      console.log('[obtenerConversaciones] ❌ No se pudo identificar empresaId');
       return res.status(400).json({ error: 'No se pudo identificar la Empresa asociada al usuario' });
     }
 
@@ -32,7 +39,10 @@ const obtenerConversaciones = async (req, res) => {
     const empresas = empresasRaw.map(id => {
       try { return mongoose.Types.ObjectId(id); } catch { return id; }
     });
+    console.log('[obtenerConversaciones] empresasRaw:', empresasRaw);
+    console.log('[obtenerConversaciones] empresas convertidas:', empresas.map(e => String(e)));
     const query = { empresaId: { $in: empresas } };
+    console.log('[obtenerConversaciones] query:', JSON.stringify(query, null, 2));
 
     const page = Math.max(parseInt(req.query.page) || 1, 1);
     const limit = Math.min(parseInt(req.query.limit) || 25, 100);
@@ -60,6 +70,33 @@ const obtenerConversaciones = async (req, res) => {
       ]),
       Conversacion.countDocuments(query)
     ]);
+    console.log('[obtenerConversaciones] conversacionesAgg devueltas:', conversacionesAgg.length);
+    console.log('[obtenerConversaciones] total (countDocuments):', total);
+
+    // Si no hay conversaciones, intentar un find directo para comparar
+    if (conversacionesAgg.length === 0) {
+      const pruebaFind = await Conversacion.find(query).sort({ _id: -1 }).limit(5).lean();
+      console.log('[obtenerConversaciones] 🔍 DEBUG: Conversacion.find con mismo query devuelve:', pruebaFind.length);
+      if (pruebaFind.length > 0) {
+        const primera = pruebaFind[0];
+        console.log('[obtenerConversaciones] 🔍 DEBUG: Primera conversación del find:', JSON.stringify({
+          _id: primera._id,
+          empresaId: primera.empresaId,
+          contactoId: primera.contactoId,
+          botActivo: primera.botActivo,
+          ultimoMensaje: primera.ultimoMensaje
+        }, null, 2));
+      } else {
+        const todasConv = await Conversacion.find({}).select('empresaId contactoId').limit(10).lean();
+        const totalCol = await Conversacion.countDocuments({});
+        console.log('[obtenerConversaciones] 🔍 DEBUG: Total de conversaciones en la colección (sin filtro):', totalCol);
+        console.log('[obtenerConversaciones] 🔍 DEBUG: Muestras de conversaciones:', todasConv.map(c => ({
+          _id: String(c._id),
+          empresaId: String(c.empresaId),
+          contactoId: String(c.contactoId)
+        })));
+      }
+    }
 
     const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const pedidosCancelados = await Pedido.find({
@@ -126,6 +163,7 @@ const obtenerConversaciones = async (req, res) => {
       };
     });
 
+    console.log('[obtenerConversaciones] ✅ Respondiendo con conversacionesConMensajes:', conversacionesConMensajes.length);
     return res.json({
       ok: true,
       conversaciones: conversacionesConMensajes,

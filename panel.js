@@ -2416,6 +2416,9 @@ async function cargarConversaciones() {
     }
 
     const data = await res.json();
+    console.log('[cargarConversaciones] 📦 Respuesta completa de /api/conversaciones:', data);
+    console.log('[cargarConversaciones] convsApi count:', (data.conversaciones || []).length);
+    console.log('[cargarConversaciones] empresas info:', data.empresas);
     const convsApi = data.conversaciones || [];
 
     const contactosMap = new Map();
@@ -2475,6 +2478,9 @@ async function cargarConversaciones() {
       };
     });
 
+    console.log('[cargarConversaciones] CONTACTOS armados:', contactosMap.size);
+    console.log('[cargarConversaciones] CONVERSACIONES armadas:', conversacionesLocal.length);
+    console.log('[cargarConversaciones] MENSAJES totales:', mensajesAll.length);
     CONTACTOS = Array.from(contactosMap.values());
     CONVERSACIONES = conversacionesLocal;
     MENSAJES = mensajesAll;

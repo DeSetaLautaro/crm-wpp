@@ -37,7 +37,7 @@ const obtenerConversaciones = async (req, res) => {
 
     const empresasRaw = req.empresas && req.empresas.length > 0 ? req.empresas : [empresaId];
     const empresas = empresasRaw.map(id => {
-      try { return mongoose.Types.ObjectId(id); } catch { return id; }
+      try { return new mongoose.Types.ObjectId(id); } catch { return id; }
     });
     console.log('[obtenerConversaciones] empresasRaw:', empresasRaw);
     console.log('[obtenerConversaciones] empresas convertidas:', empresas.map(e => String(e)));
@@ -180,7 +180,7 @@ const obtenerMensajesConversacion = async (req, res) => {
       if (!mongoose.Types.ObjectId.isValid(before)) {
         return res.status(400).json({ error: 'ID de mensaje inválido' });
       }
-      filtro._id = { $lt: mongoose.Types.ObjectId(before) };
+      filtro._id = { $lt: new mongoose.Types.ObjectId(before) };
     }
 
     const mensajes = await Mensaje.find(filtro)
@@ -224,7 +224,7 @@ const buscarMensajes = async (req, res) => {
       return res.status(400).json({ error: 'No se pudo identificar la empresa' });
     }
     const empresas = empresasRaw.map(id => {
-      try { return mongoose.Types.ObjectId(id); } catch { return id; }
+      try { return new mongoose.Types.ObjectId(id); } catch { return id; }
     });
 
     const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

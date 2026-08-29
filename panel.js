@@ -664,7 +664,7 @@ function renderChatActivo() {
       const duracionSeg = msg.duracionSegundos
         ? `<div style="font-size:12px; color:#6b7280; margin-top:2px;">Duración: ${msg.duracionSegundos.toFixed(1).replace('.', ',')}s</div>`
         : '';
-      contenidoFinal = `<audio controls preload="none" data-audio-url="${msg.urlArchivo}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>${duracionSeg}`;
+      contenidoFinal = `<audio controls preload="metadata" src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; display:block; margin-bottom:4px;"></audio>${duracionSeg}`;
     } else if (msg.tipo === 'video' && msg.urlArchivo) {
       contenidoFinal = `<video controls src="${urlFotoConToken(msg.urlArchivo)}" style="max-width:220px; border-radius:8px; display:block; margin-bottom:4px;"></video>`;
     } else if (msg.tipo === 'documento' && msg.urlArchivo) {

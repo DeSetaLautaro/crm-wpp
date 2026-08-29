@@ -3096,7 +3096,7 @@ async function guardarDetallesDesdeModal() {
 }
 
 // ===== Cargar pedido activo =====
-async function cargarPedidoActivo(conversacionId, telefono, contactoId) {
+async function cargarPedidoActivo(conversacionId, telefono, contactoId, mostrarGenerarSiVacio = false) {
   const token = localStorage.getItem('token') || '';
   const contenedor = document.getElementById('pedido-info');
   if (!contenedor) return;
@@ -3136,13 +3136,76 @@ async function cargarPedidoActivo(conversacionId, telefono, contactoId) {
     if (!res.ok) throw new Error(data.error || `Error HTTP ${res.status}`);
     const pedido = data.pedido;
     if (!pedido || pedido.estado === 'Entregado' || pedido.estado === 'Cancelado') {
-      contenedor.innerHTML = '<span style="color:#9CA3AF;">Sin pedidos en curso</span>';
+      if (mostrarGenerarSiVacio) {
+        mostrarBotonGenerarPedido();
+      } else {
+        contenedor.innerHTML = '<span style="color:#9CA3AF;">Sin pedidos en curso</span>';
+      }
       return;
     }
     contenedor.innerHTML = renderPedido(contenedor, pedido);
   } catch (error) {
     console.error('Error al obtener pedido:', error);
-    contenedor.innerHTML = '<span style="color:#9CA3AF;">No se pudo cargar el pedido</span>';
+    if (mostrarGenerarSiVacio) {
+      mostrarBotonGenerarPedido();
+    } else {
+      contenedor.innerHTML = '<span style="color:#9CA3AF;">No se pudo cargar el pedido</span>';
+    }
+  }
+}
+
+function mostrarBotonGenerarPedido() {
+  const contenedor = document.getElementById('pedido-info');
+  if (!contenedor) return;
+  contenedor.innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:12px; align-items:center; padding:20px 0;">
+      <span style="color:#9CA3AF; font-size:14px;">No hay pedido en curso</span>
+      <button id="generar-pedido-btn" 
+        style="background:#2563eb; color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:bold; cursor:pointer;">
+        ⚡ Generar pedido
+      </button>
+      <span style="color:#9CA3AF; font-size:12px;">La IA analiza la conversación y crea el pedido</span>
+    </div>
+  `;
+  const btn = document.getElementById('generar-pedido-btn');
+  if (btn) btn.addEventListener('click', generarPedidoManualDesdeUI);
+}
+
+async function generarPedidoManualDesdeUI() {
+  if (!chatActivoId) return;
+  const token = localStorage.getItem('token') || '';
+  const btn = document.getElementById('generar-pedido-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Generando...';
+  }
+  try {
+    const res = await fetch('/api/whatsapp/generar-pedido', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ conversacionId: chatActivoId })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      mostrarToast(data.error || 'No se pudo generar el pedido', 'error');
+      return;
+    }
+    mostrarToast('Pedido generado correctamente', 'info');
+    const conv = getConversacionPorId(chatActivoId);
+    const contacto = getContactoPorId(conv.contactoId);
+    await cargarPedidoActivo(conv._id, contacto.telefono, contacto._id, true);
+    renderTodo();
+  } catch (error) {
+    console.error('Error al generar pedido:', error);
+    mostrarToast('Error de red al generar pedido', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '⚡ Generar pedido';
+    }
   }
 }
 
@@ -3178,8 +3241,8 @@ function renderPanelPedido(conv, contacto) {
     return;
   }
 
-  // No hay carrito en construcción → buscamos último pedido confirmado
-  cargarPedidoActivo(conv._id, contacto.telefono, contacto._id);
+  // No hay carrito en construcción → buscamos último pedido confirmado o mostramos botón de generación manual
+  cargarPedidoActivo(conv._id, contacto.telefono, contacto._id, true);
 }
 
 function renderPedido(contenedor, pedido) {

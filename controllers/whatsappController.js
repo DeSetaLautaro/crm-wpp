@@ -510,8 +510,11 @@ const recibirMensaje = async (req, res) => {
       await conversacion.save();
     }
 
+    // Habilitación del bot para esta conversación (global de empresa y por conversación)
+    const botHabilitado = (empresa.botActivo !== false) && (conversacion.botActivo !== false);
+
     // 🎉 Mensaje de bienvenida para clientes nuevos
-    if (esClienteNuevo && empresa.bienvenida && empresa.bienvenida.trim() !== '') {
+    if (botHabilitado && esClienteNuevo && empresa.bienvenida && empresa.bienvenida.trim() !== '') {
       const phoneNumberIdBienvenida = metadata?.phone_number_id || whatsappPhoneId;
       const accessTokenBienvenida = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
       if (phoneNumberIdBienvenida && accessTokenBienvenida) {
@@ -593,7 +596,7 @@ const recibirMensaje = async (req, res) => {
       const accessToken = empresa.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
 
       // Si la empresa activó el procesamiento de imágenes, intentamos analizarla con Gemini
-      if (mensaje.type === 'image' && empresa.procesarImagenes === true && accessToken) {
+      if (botHabilitado && mensaje.type === 'image' && empresa.procesarImagenes === true && accessToken) {
         const mediaId = mensaje.image?.id;
         if (mediaId) {
           try {
@@ -831,7 +834,7 @@ const recibirMensaje = async (req, res) => {
             }
 
             // 3. Procesar con Gemini solo si está habilitado y es audio
-            if (esArchivoAudio && empresa.procesarAudios === true && fileBuffer.length > 0) {
+            if (botHabilitado && esArchivoAudio && empresa.procesarAudios === true && fileBuffer.length > 0) {
               const base64 = fileBuffer.toString('base64');
               const promptAudio = `Sos el asistente virtual de ${empresa.nombre}. Un cliente te envió un mensaje de voz. Escuchá el audio y respondé DIRECTAMENTE al cliente, de forma breve y amable, continuando la conversación.
 
@@ -856,7 +859,7 @@ Reglas:
       }
 
       // Enviar respuesta al cliente por WhatsApp (si tenemos token)
-      if (accessToken) {
+      if (botHabilitado && accessToken) {
         try {
           const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
           const payload = {
@@ -879,32 +882,34 @@ Reglas:
         }
       }
 
-      // Guardar mensaje del bot en BD
-      await Mensaje.create({
-        conversacionId: conversacion._id,
-        remitente: 'ia',
-        contenido: respuestaAutomatica
-      });
-
-      await Conversacion.findByIdAndUpdate(conversacion._id, {
-        $set: { ultimoMensaje: respuestaAutomatica }
-      });
-
-      const ioResp = req.app.get('io');
-      if (ioResp) {
-        ioResp.to(empresa._id.toString()).emit('mensaje-nuevo', {
+      if (botHabilitado) {
+        // Guardar mensaje del bot en BD
+        await Mensaje.create({
           conversacionId: conversacion._id,
-          mensaje: {
-            remitente: 'ia',
-            contenido: respuestaAutomatica,
-            fecha: new Date()
-          },
-          conversacion: {
-            _id: conversacion._id,
-            ultimoMensaje: respuestaAutomatica,
-            updatedAt: new Date()
-          }
+          remitente: 'ia',
+          contenido: respuestaAutomatica
         });
+
+        await Conversacion.findByIdAndUpdate(conversacion._id, {
+          $set: { ultimoMensaje: respuestaAutomatica }
+        });
+
+        const ioResp = req.app.get('io');
+        if (ioResp) {
+          ioResp.to(empresa._id.toString()).emit('mensaje-nuevo', {
+            conversacionId: conversacion._id,
+            mensaje: {
+              remitente: 'ia',
+              contenido: respuestaAutomatica,
+              fecha: new Date()
+            },
+            conversacion: {
+              _id: conversacion._id,
+              ultimoMensaje: respuestaAutomatica,
+              updatedAt: new Date()
+            }
+          });
+        }
       }
 
       // Finalizamos aquí, no procesamos carrito ni IA
@@ -914,7 +919,7 @@ Reglas:
     console.log(`⏱️ Tiempo hasta mensaje guardado: ${(performance.now() - t0).toFixed(0)} ms`);
 
     // ===== Cancelación de pedido (validada por IA) =====
-    if (detectarCancelacionPedido(textoMensaje) && process.env.GEMINI_API_KEY) {
+    if (botHabilitado && detectarCancelacionPedido(textoMensaje) && process.env.GEMINI_API_KEY) {
       const promptCancelacion = `Sos el asistente virtual de ${empresa.nombre} y estás atendiendo a un cliente.
 El cliente escribió: "${textoMensaje}"
 
@@ -1043,7 +1048,10 @@ JSON:`;
     }
 
     // ===== Procesar carrito en vivo (después de mostrar el mensaje) =====
-    const carritoProcesado = await procesarCarrito(empresa, conversacion, textoMensaje, productos);
+    let carritoProcesado = null;
+    if (botHabilitado) {
+      carritoProcesado = await procesarCarrito(empresa, conversacion, textoMensaje, productos);
+    }
     if (carritoProcesado) {
       conversacion.carrito = carritoProcesado.items;
       conversacion.carritoTotal = carritoProcesado.total;
@@ -1065,7 +1073,7 @@ JSON:`;
 
     // ===== Extracción automática de datos del cliente con IA =====
     try {
-      if (process.env.GEMINI_API_KEY) {
+      if (botHabilitado && process.env.GEMINI_API_KEY) {
         const promptExtract = `Analizá el siguiente mensaje de un cliente. Si contiene una dirección física (calle y número), indicála en el campo "direccion". Si contiene un piso o departamento, indicálo en el campo "pisoDepto". Si contiene un código postal o localidad, indicálo en el campo "codigoPostal". Respondé solo con un JSON válido con estos tres campos, usando string vacío cuando no se encuentre el dato.
 
 Mensaje: "${textoMensaje}"
@@ -1113,9 +1121,7 @@ JSON:`;
 
     console.log(`⏱️ Tiempo extracción IA: ${(performance.now() - t0).toFixed(0)} ms`);
 
-    // Habilitación del bot para esta conversación
-    const botHabilitado = (empresa.botActivo !== false);
-
+    // Habilitación del bot para esta conversación (ya definida antes)
     // ===== Detectar intención de hablar con un humano =====
     if (botHabilitado && detectarIntencionHumano(textoMensaje)) {
       console.log(`🙋 Cliente pidió ser atendido por un humano: ${telefonoCliente}`);
@@ -2660,6 +2666,143 @@ async function obtenerPlantillas(req, res) {
   }
 }
 
+async function generarPedidoManual(req, res) {
+  try {
+    const { conversacionId } = req.body || {};
+    if (!conversacionId) return res.status(400).json({ error: 'Falta conversacionId' });
+
+    const conversacion = await Conversacion.findById(conversacionId);
+    if (!conversacion) return res.status(404).json({ error: 'Conversación no encontrada' });
+
+    const empresaIdStr = conversacion.empresaId.toString();
+    const empresasPermitidas = req.empresas || [];
+    if (!empresasPermitidas.some(e => String(e) === empresaIdStr)) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+
+    const empresa = await Empresa.findById(conversacion.empresaId);
+    const usuario = await Usuario.findById(empresa.usuarioAppId).lean();
+    const productos = (usuario?.platos || []).filter(p => p.disponible !== false);
+
+    const contacto = await Cliente.findById(conversacion.contactoId);
+    if (!contacto) return res.status(404).json({ error: 'Contacto no encontrado' });
+
+    const desde = new Date(Date.now() - 60 * 60 * 1000);
+    const mensajes = await Mensaje.find({
+      conversacionId: conversacion._id,
+      remitente: { $nin: ['nota_interna'] },
+      createdAt: { $gte: desde }
+    }).sort({ createdAt: 1 }).lean();
+
+    if (mensajes.length === 0) {
+      return res.status(422).json({ error: 'No hay mensajes recientes para analizar' });
+    }
+
+    const textoConversacion = mensajes
+      .map(m => `${m.remitente === 'cliente' ? 'Cliente' : 'Bot/Operador'}: ${m.contenido}`)
+      .join('\n');
+
+    const menuTexto = productos.length
+      ? productos.map(p => `- ${p.nombre} ($${p.precio})`).join('\n')
+      : 'No hay productos cargados';
+
+    const prompt = `Actuás como sistema de punto de venta. Analizá la siguiente conversación:
+"""${textoConversacion}"""
+
+Interpretá el pedido final del cliente y devolvé SOLO un JSON (sin texto adicional) con la estructura:
+{"items":[{"nombre":"...", "cantidad":2, "precioUnitario":10}],"total":40}
+
+Reglas:
+- Incluí únicamente los productos que el cliente confirmó explícitamente.
+- Si no hay un pedido claro, devolvé null.
+- No inventes items ni precios que no estén en el catálogo.
+- Precio unitario debe ser el precio del catálogo.
+
+Catálogo:
+${menuTexto}
+
+JSON:`;
+
+    const raw = (await generarTexto(prompt) || '').trim()
+      .replace(/```json/g, '').replace(/```/g, '').trim();
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start === -1 || end === -1) {
+      return res.status(422).json({ error: 'No se pudo interpretar un pedido de la conversación' });
+    }
+
+    let data;
+    try {
+      data = JSON.parse(raw.substring(start, end + 1));
+    } catch (e) {
+      return res.status(422).json({ error: 'Respuesta de IA inválida' });
+    }
+
+    if (!data || !Array.isArray(data.items) || data.items.length === 0) {
+      return res.status(422).json({ error: 'No se detectaron productos en la conversación' });
+    }
+
+    const items = data.items.map(item => {
+      const prod = productos.find(p => p.nombre.toLowerCase() === String(item.nombre || '').toLowerCase());
+      if (!prod) return null;
+      return {
+        nombre: prod.nombre,
+        cantidad: Math.max(1, parseInt(item.cantidad) || 1),
+        precioUnitario: prod.precio
+      };
+    }).filter(Boolean);
+
+    if (items.length === 0) {
+      return res.status(422).json({ error: 'Los productos detectados no están en el catálogo' });
+    }
+
+    const total = items.reduce((sum, it) => sum + (it.cantidad * it.precioUnitario), 0);
+
+    let direccion = contacto.direccion || '';
+    if (!direccion) {
+      const texto = mensajes.map(m => m.contenido).join(' ');
+      const match = texto.match(/([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ ]+ \d+)/);
+      if (match) direccion = match[1];
+    }
+
+    const pedido = await guardarPedidoConfirmado({
+      localId: usuario?._id,
+      empresaId: empresa._id,
+      contactoId: contacto._id,
+      cliente: contacto.nombre || 'Cliente',
+      telefonoCliente: contacto.telefono,
+      items,
+      total,
+      metodoPago: 'Pendiente',
+      estado: 'confirmado',
+      direccionEntrega: direccion,
+      notas: '',
+      fechaTurno: '',
+      fecha: new Date(),
+      latitud: conversacion.latitud || null,
+      longitud: conversacion.longitud || null
+    });
+
+    await Conversacion.findByIdAndUpdate(conversacion._id, {
+      $set: { carrito: [], carritoTotal: 0, latitud: null, longitud: null }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresaIdStr).emit('pedido-actualizado', {
+        conversacionId: conversacion._id,
+        pedidoId: pedido._id,
+        estado: 'confirmado'
+      });
+    }
+
+    return res.json({ ok: true, pedido });
+  } catch (error) {
+    console.error('Error al generar pedido manual:', error);
+    return res.status(500).json({ error: 'Error interno al generar pedido' });
+  }
+}
+
 module.exports = {
   verificarFirmaMeta,
   verificarWebhook,
@@ -2685,5 +2828,6 @@ module.exports = {
   actualizarCostosManual,
   actualizarConfig,
   obtenerUsoConversaciones,
-  obtenerConfig
+  obtenerConfig,
+  generarPedidoManual
 };

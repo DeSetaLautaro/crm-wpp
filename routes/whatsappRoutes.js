@@ -79,7 +79,8 @@ const {
   actualizarCostosManual,
   actualizarConfig,
   obtenerUsoConversaciones,
-  obtenerConfig
+  obtenerConfig,
+  generarPedidoManual
 } = require('../controllers/whatsappController');
 
 // Verificación del webhook (GET)
@@ -137,6 +138,9 @@ router.put('/contacto/:contactoId/bloquear', auth, bloquearCliente);
 
 // Desbloquear cliente (PUT)
 router.put('/contacto/:contactoId/desbloquear', auth, desbloquearCliente);
+
+// Generar pedido manualmente desde el panel (analiza la conversación con IA)
+router.post('/generar-pedido', auth, generarPedidoManual);
 
 // Obtener configuración actual (prompt, atajos, estado, bienvenida)
 router.get('/config', auth, obtenerConfig);

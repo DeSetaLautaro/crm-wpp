@@ -4027,17 +4027,28 @@ function ocultarBotonLlamarEnEscritorio() {
 (function() {
   const style = document.createElement('style');
   style.textContent = `
-    #area-mensajes audio::-webkit-media-controls-volume-slider,
-    #area-mensajes audio::-webkit-media-controls-mute-button,
-    #area-mensajes audio::-webkit-media-controls-toggle-closed-captions-button {
-      display: none !important;
+    #area-mensajes audio {
+      max-width: 220px;
+    }
+    #area-mensajes audio::-webkit-media-controls-enclosure {
+      padding: 0;
     }
     #area-mensajes audio::-webkit-media-controls-panel {
+      padding: 0;
       display: flex;
       align-items: center;
     }
+    #area-mensajes audio::-webkit-media-controls-mute-button,
+    #area-mensajes audio::-webkit-media-controls-volume-slider-container,
+    #area-mensajes audio::-webkit-media-controls-volume-slider,
+    #area-mensajes audio::-webkit-media-controls-toggle-closed-captions-button {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    #area-mensajes audio::-webkit-media-controls-timeline-container,
     #area-mensajes audio::-webkit-media-controls-timeline {
-      flex: 1;
+      flex: 1 1 100% !important;
       min-width: 0;
     }
   `;

@@ -2422,7 +2422,7 @@ async function cargarConversaciones() {
     const mensajesAll = [];
 
     const conversacionesLocal = convsApi.map(conv => {
-      const contacto = conv.contactoId || {};
+      const contacto = conv.contacto || {};
       const cId = contacto._id || conv.contactoId;
       const nombre = contacto.nombre || '';
       const telefono = contacto.telefono || '';

@@ -28,7 +28,10 @@ const obtenerConversaciones = async (req, res) => {
       return res.status(400).json({ error: 'No se pudo identificar la Empresa asociada al usuario' });
     }
 
-    const empresas = req.empresas && req.empresas.length > 0 ? req.empresas : [empresaId];
+    const empresasRaw = req.empresas && req.empresas.length > 0 ? req.empresas : [empresaId];
+    const empresas = empresasRaw.map(id => {
+      try { return mongoose.Types.ObjectId(id); } catch { return id; }
+    });
     const query = { empresaId: { $in: empresas } };
 
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -92,6 +95,16 @@ const obtenerConversaciones = async (req, res) => {
         _id: conv._id,
         empresaId: conv.empresaId,
         contactoId: conv.contactoId,
+        contacto: {
+          _id: conv.contactoId,
+          nombre: contacto.nombre || '',
+          telefono: contacto.telefono || '',
+          direccion: contacto.direccion || '',
+          pisoDepto: contacto.pisoDepto || '',
+          codigoPostal: contacto.codigoPostal || '',
+          etiquetas: Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [],
+          notas: Array.isArray(contacto.notas) ? contacto.notas : []
+        },
         lineaReceptora: conv.lineaReceptora,
         numeroReceptor: conv.numeroReceptor || '',
         botActivo: conv.botActivo,
@@ -194,10 +207,13 @@ const buscarMensajes = async (req, res) => {
       return res.status(400).json({ error: 'Falta el parámetro q' });
     }
 
-    const empresas = req.empresas && req.empresas.length > 0 ? req.empresas : [];
-    if (!empresas.length) {
+    const empresasRaw = req.empresas && req.empresas.length > 0 ? req.empresas : [];
+    if (!empresasRaw.length) {
       return res.status(400).json({ error: 'No se pudo identificar la empresa' });
     }
+    const empresas = empresasRaw.map(id => {
+      try { return mongoose.Types.ObjectId(id); } catch { return id; }
+    });
 
     const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

@@ -3908,8 +3908,83 @@ async function init() {
   // Buscador de chats
   const inputBuscador = document.getElementById('buscador');
   if (inputBuscador) {
+    let debounceTimeout = null;
     inputBuscador.addEventListener('input', () => {
-      renderListaChats();
+      const texto = (inputBuscador.value || '').trim();
+      clearTimeout(debounceTimeout);
+      if (texto.length >= 3) {
+        debounceTimeout = setTimeout(async () => {
+          try {
+            const token = localStorage.getItem('token') || '';
+            const q = encodeURIComponent(texto);
+            const res = await fetch(`/api/mensajes/buscar?q=${q}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error(`Error ${res.status}`);
+            const data = await res.json();
+            const convsApi = data.conversaciones || [];
+            const contactosMap = new Map();
+            const mensajesAll = [];
+            const conversacionesLocal = convsApi.map(conv => {
+              const contacto = conv.contacto || {};
+              const cId = contacto._id || conv.contactoId;
+              if (!contactosMap.has(cId)) {
+                contactosMap.set(cId, {
+                  _id: cId,
+                  empresaId: conv.empresaId,
+                  telefono: contacto.telefono || '',
+                  nombre: contacto.nombre || '',
+                  direccion: contacto.direccion || '',
+                  pisoDepto: contacto.pisoDepto || '',
+                  codigoPostal: contacto.codigoPostal || '',
+                  etiquetas: Array.isArray(contacto.etiquetas) ? contacto.etiquetas : []
+                });
+              }
+              (conv.mensajes || []).forEach(m => {
+                mensajesAll.push({
+                  _id: m._id,
+                  conversacionId: conv._id,
+                  remitente: m.remitente,
+                  contenido: m.contenido,
+                  fecha: new Date(m.fecha || m.createdAt),
+                  estado: m.estado || 'enviado',
+                  fechaEstado: m.fechaEstado ? new Date(m.fechaEstado) : null,
+                  tipo: m.tipo || 'texto',
+                  urlArchivo: m.urlArchivo || ''
+                });
+              });
+              return {
+                _id: conv._id,
+                empresaId: conv.empresaId,
+                contactoId: cId,
+                lineaReceptora: conv.lineaReceptora || '',
+                numeroReceptor: conv.numeroReceptor || '',
+                botActivo: conv.botActivo === false || conv.botActivo === 'false' ? false : true,
+                estado: conv.estado || 'Abierto',
+                ultimoMensaje: conv.ultimoMensaje || '',
+                ultimaFecha: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
+                cancelacionReciente: false,
+                tieneMas: false,
+                carrito: conv.carrito || [],
+                carritoTotal: conv.carritoTotal || 0
+              };
+            });
+            CONTACTOS = Array.from(contactosMap.values());
+            CONVERSACIONES = conversacionesLocal;
+            MENSAJES = mensajesAll;
+            renderTodo();
+          } catch (error) {
+            console.error('Error al buscar mensajes:', error);
+            renderListaChats();
+          }
+        }, 300);
+      } else {
+        if (texto.length === 0) {
+          cargarConversaciones();
+        } else {
+          renderListaChats();
+        }
+      }
     });
   }
 

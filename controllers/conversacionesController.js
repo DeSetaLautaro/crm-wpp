@@ -187,7 +187,72 @@ const obtenerMensajesConversacion = async (req, res) => {
   }
 };
 
+const buscarMensajes = async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q) {
+      return res.status(400).json({ error: 'Falta el parámetro q' });
+    }
+
+    const empresas = req.empresas && req.empresas.length > 0 ? req.empresas : [];
+    if (!empresas.length) {
+      return res.status(400).json({ error: 'No se pudo identificar la empresa' });
+    }
+
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const conversaciones = await Conversacion.aggregate([
+      { $match: { empresaId: { $in: empresas } } },
+      {
+        $lookup: {
+          from: 'mensajes',
+          let: { convId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$conversacionId', '$$convId'] } } },
+            { $match: { contenido: { $regex: escaped, $options: 'i' } } },
+            { $sort: { _id: -1 } },
+            { $limit: 5 },
+            { $project: { _id: 1, remitente: 1, contenido: 1, createdAt: 1, tipo: 1, urlArchivo: 1, estado: 1 } }
+          ],
+          as: 'mensajesMatch'
+        }
+      },
+      { $match: { 'mensajesMatch.0': { $exists: true } } },
+      {
+        $lookup: {
+          from: 'clientes',
+          localField: 'contactoId',
+          foreignField: '_id',
+          as: 'contacto'
+        }
+      },
+      { $unwind: { path: '$contacto', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          empresaId: 1,
+          contactoId: 1,
+          lineaReceptora: 1,
+          numeroReceptor: 1,
+          botActivo: 1,
+          estado: 1,
+          ultimoMensaje: 1,
+          updatedAt: 1,
+          contacto: { _id: 1, nombre: 1, telefono: 1, etiquetas: 1 },
+          mensajes: '$mensajesMatch'
+        }
+      }
+    ]);
+
+    return res.json({ ok: true, conversaciones });
+  } catch (error) {
+    console.error('Error al buscar mensajes:', error);
+    return res.status(500).json({ error: 'Error interno al buscar mensajes' });
+  }
+};
+
 module.exports = {
   obtenerConversaciones,
-  obtenerMensajesConversacion
+  obtenerMensajesConversacion,
+  buscarMensajes
 };

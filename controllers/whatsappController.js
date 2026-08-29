@@ -714,7 +714,7 @@ const recibirMensaje = async (req, res) => {
               console.error('❌ Error al descargar el archivo de Meta:', fileResp.status, await fileResp.text());
             } else {
               fileBuffer = Buffer.from(await fileResp.arrayBuffer());
-              if (!fileBuffer || fileBuffer.length < 1000) {
+              if (!fileBuffer || fileBuffer.length < 500) {
                 console.error('⚠️ Archivo descargado vacío o muy chico, se descarta');
                 fileBuffer = Buffer.alloc(0);
               }

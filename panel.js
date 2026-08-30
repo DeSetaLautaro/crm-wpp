@@ -4194,6 +4194,26 @@ async function init() {
     });
   }
 
+  // Menú móvil (tres puntitos arriba)
+  const btnMenuMovil = document.getElementById('btn-mobile-menu');
+  const appMenuMovil = document.getElementById('app');
+  if (btnMenuMovil && appMenuMovil) {
+    btnMenuMovil.addEventListener('click', (e) => {
+      e.stopPropagation();
+      appMenuMovil.classList.toggle('menu-movil-abierto');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#slim-sidebar')) {
+        appMenuMovil.classList.remove('menu-movil-abierto');
+      }
+    });
+
+    document.querySelectorAll('#slim-sidebar .sidebar-buttons .sidebar-btn').forEach(btn => {
+      btn.addEventListener('click', () => appMenuMovil.classList.remove('menu-movil-abierto'));
+    });
+  }
+
   // Configuración del Bot
   initConfigSidebar();
 

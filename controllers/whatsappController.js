@@ -1087,11 +1087,6 @@ JSON:`;
           const jsonStr = rawText.substring(startIdx, endIdx + 1);
           const data = JSON.parse(jsonStr);
           const cambiosContacto = {};
-          if (data && data.direccion && typeof data.direccion === 'string') {
-            await Cliente.findByIdAndUpdate(contacto._id, { $set: { direccion: data.direccion } });
-            contacto.direccion = data.direccion;
-            cambiosContacto.direccion = data.direccion;
-          }
           if (data && data.pisoDepto && typeof data.pisoDepto === 'string') {
             await Cliente.findByIdAndUpdate(contacto._id, { $set: { pisoDepto: data.pisoDepto } });
             contacto.pisoDepto = data.pisoDepto;
@@ -1325,7 +1320,33 @@ JSON:`;
       // ===== Guardar pedido automáticamente si ya están todos los datos =====
       try {
         const carritoActual = conversacion.carrito || [];
-        const tieneDireccionCompleta = contacto.direccion && contacto.direccion.trim() !== '';
+        const ultimosMsgsDir = await Mensaje.find({ conversacionId: conversacion._id })
+          .sort({ createdAt: -1 })
+          .limit(20)
+          .lean();
+        const textoReciente = ultimosMsgsDir
+          .filter(m => m.remitente === 'cliente')
+          .map(m => m.contenido)
+          .join(' ');
+
+        let direccionEntrega = '';
+        if (process.env.GEMINI_API_KEY && textoReciente.trim()) {
+          try {
+            const promptDir = `Analizá el siguiente texto de un cliente y extraé SOLO su dirección de entrega completa (calle, número, piso, depto, localidad, etc.). Si no hay dirección, respondé exactamente "SIN DIRECCION". Texto: "${textoReciente}". Dirección:`;
+            const respDir = await generarTexto(promptDir);
+            const dirLimpia = (respDir || '').trim().replace(/^"|"$/g, '');
+            if (dirLimpia && dirLimpia !== 'SIN DIRECCION') {
+              direccionEntrega = dirLimpia;
+            }
+          } catch (e) {
+            console.warn('⚠️ No se pudo extraer dirección con IA:', e.message);
+          }
+        }
+        if (!direccionEntrega) {
+          const match = textoReciente.match(/([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ ]+ \d+)/);
+          if (match) direccionEntrega = match[1].trim();
+        }
+        const tieneDireccionCompleta = direccionEntrega.trim() !== '';
         if (carritoActual.length > 0 && tieneDireccionCompleta) {
           const totalCarrito = (conversacion.carritoTotal || 0) ||
             carritoActual.reduce((sum, it) => sum + (it.cantidad * it.precioUnitario), 0);
@@ -1359,7 +1380,7 @@ JSON:`;
             total: totalCarrito,
             metodoPago,
             estado: 'confirmado',
-            direccionEntrega: contacto.direccion || '',
+            direccionEntrega,
             notas: '',
             fechaTurno: '',
             fecha: new Date(),
@@ -2759,11 +2780,23 @@ JSON:`;
 
     const total = items.reduce((sum, it) => sum + (it.cantidad * it.precioUnitario), 0);
 
-    let direccion = contacto.direccion || '';
+    let direccion = '';
+    const texto = mensajes.map(m => m.contenido).join(' ');
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const promptDir = `Analizá el siguiente texto de una conversación y extraé SOLO la dirección de entrega del cliente (calle, número, piso, depto, localidad, etc.). Si no hay dirección, respondé exactamente "SIN DIRECCION". Texto: "${texto}". Dirección:`;
+        const respDir = await generarTexto(promptDir);
+        const dirLimpia = (respDir || '').trim().replace(/^"|"$/g, '');
+        if (dirLimpia && dirLimpia !== 'SIN DIRECCION') {
+          direccion = dirLimpia;
+        }
+      } catch (e) {
+        console.warn('⚠️ No se pudo extraer dirección del texto:', e.message);
+      }
+    }
     if (!direccion) {
-      const texto = mensajes.map(m => m.contenido).join(' ');
       const match = texto.match(/([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ ]+ \d+)/);
-      if (match) direccion = match[1];
+      if (match) direccion = match[1].trim();
     }
 
     const pedido = await guardarPedidoConfirmado({

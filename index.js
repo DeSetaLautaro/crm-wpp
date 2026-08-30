@@ -75,12 +75,16 @@ app.get('/style.css', (req, res) => res.sendFile(path.join(__dirname, 'style.css
 app.use('/views', express.static(path.join(__dirname, 'views')));
 
 // Endpoint protegido para servidores de archivos subidos (fotos de perfil, etc.)
-app.get('/uploads/:filename', auth, (req, res) => {
-  const filename = req.params.filename;
+app.get('/uploads/:empresaId/:filename', auth, (req, res) => {
+  const { empresaId, filename } = req.params;
+  const empresasPermitidas = req.empresas || [];
+  if (!empresasPermitidas.some(e => String(e) === String(empresaId))) {
+    return res.status(403).json({ error: 'No tienes acceso a este archivo' });
+  }
   if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
     return res.status(400).json({ error: 'Nombre de archivo inválido' });
   }
-  const filePath = path.join(__dirname, 'uploads', filename);
+  const filePath = path.join(__dirname, 'uploads', String(empresaId), filename);
   res.sendFile(filePath);
 });
 

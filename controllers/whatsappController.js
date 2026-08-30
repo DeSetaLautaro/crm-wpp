@@ -365,8 +365,11 @@ function verificarFirmaMeta(req, res, next) {
     console.error('⚠️ Falta WHATSAPP_APP_SECRET en variables de entorno');
     return res.sendStatus(401);
   }
-  const hash = 'sha256=' + crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex');
-  if (hash !== firma) {
+  const hash = crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex');
+  const expected = 'sha256=' + hash;
+  const firmaBuffer = Buffer.from(firma);
+  const expectedBuffer = Buffer.from(expected);
+  if (firmaBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(firmaBuffer, expectedBuffer)) {
     console.error('❌ Firma HMAC inválida');
     return res.sendStatus(401);
   }
@@ -1823,13 +1826,13 @@ const enviarMensaje = async (req, res) => {
       return res.status(200).json({
         ok: true,
         fallido: true,
-        error: resultado.error,
+        error: 'No se pudo enviar el mensaje',
         mensaje: {
           _id: mensajeFallido._id,
           remitente: 'empresa',
           contenido: mensaje,
           estado: 'fallido',
-          errorDetalle: resultado.error,
+          errorDetalle: 'Error interno',
           fecha: mensajeFallido.createdAt
         }
       });
@@ -3045,7 +3048,7 @@ async function reenviarMensaje(req, res) {
       return res.status(200).json({
         ok: true,
         fallido: true,
-        error: resultado.error,
+        error: 'No se pudo reenviar el mensaje',
         mensajeId
       });
     }

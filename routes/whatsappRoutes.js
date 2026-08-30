@@ -10,7 +10,10 @@ if (!fs.existsSync(uploadDir)) {
 }
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    cb(null, uploadDir);
+    const empresaId = String(req.empresaId || 'sin-empresa');
+    const dir = path.join(uploadDir, empresaId);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
   },
   filename: function(req, file, cb) {
     const ext = path.extname(file.originalname);

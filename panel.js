@@ -185,10 +185,18 @@ function autoAjustarTextarea(textarea) {
 
 function urlFotoConToken(url) {
   if (!url) return '';
+
+  // Si la URL es del tipo /uploads/archivo (sin empresaId), la completamos
+  let urlRectificada = url;
+  const match = url.match(/^\/uploads\/([^/]+)$/);
+  if (match && miEmpresaId) {
+    urlRectificada = `/uploads/${miEmpresaId}/${match[1]}`;
+  }
+
   const token = localStorage.getItem('token') || '';
-  if (!token) return url;
-  const sep = url.includes('?') ? '&' : '?';
-  return `${url}${sep}token=${encodeURIComponent(token)}`;
+  if (!token) return urlRectificada;
+  const sep = urlRectificada.includes('?') ? '&' : '?';
+  return `${urlRectificada}${sep}token=${encodeURIComponent(token)}`;
 }
 
 function mostrarToast(mensaje, tipo = 'info') {
@@ -2705,6 +2713,7 @@ async function cargarConversaciones() {
     // Obtener empresas del usuario para armar el selector
     const empresasInfo = data.empresas || [];
     EMPRESAS_INFO = empresasInfo;
+    miEmpresaId = empresasInfo[0]?._id || null;
     if (empresasInfo.length > 0) {
       poblarSelectorWhatsApp(empresasInfo);
     } else {
@@ -2843,6 +2852,7 @@ async function cargarMasMensajes() {
 async function cargarDatosUsuario() {
   if (USAR_MOCK_DATA) {
     const usuario = MOCK_USUARIO;
+    miEmpresaId = usuario._id;
     poblarSelectorWhatsApp(usuario.telefonosWhatsApp);
     if (usuario.telefonosWhatsApp.length > 0) {
       whatsappSeleccionado = usuario.telefonosWhatsApp[0];
@@ -3187,34 +3197,36 @@ async function enviarMensajeDesdePanel() {
   }
 }
 
+async function subirArchivoAlServidor(url, formData, method = 'POST') {
+  const token = localStorage.getItem('token') || '';
+  const res = await fetch(url, {
+    method,
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(data.error || `HTTP ${res.status}`);
+    error.data = data;
+    throw error;
+  }
+  return data;
+}
+
 async function enviarMediaDesdePanel(file) {
   if (!chatActivoId) return false;
 
-  const token = localStorage.getItem('token') || '';
   const formData = new FormData();
   formData.append('conversacionId', chatActivoId);
   formData.append('archivo', file);
 
   try {
-    const res = await fetch('/api/whatsapp/enviar-media', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      body: formData
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      console.error('Error al enviar multimedia:', data.error || data);
-      mostrarToast(data.error || 'Error al enviar multimedia', 'error');
-      return false;
-    }
-
+    await subirArchivoAlServidor('/api/whatsapp/enviar-media', formData);
     // No agregamos mensaje localmente; llega por socket 'mensaje-nuevo'
     return true;
   } catch (error) {
-    console.error('Error de red al enviar multimedia:', error);
-    mostrarToast('Error de red al enviar multimedia', 'error');
+    console.error('Error al enviar multimedia:', error);
+    mostrarToast(error.message || 'Error al enviar multimedia', 'error');
     return false;
   }
 }

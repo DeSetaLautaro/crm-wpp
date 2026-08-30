@@ -1,5 +1,13 @@
 require('dotenv').config();
 
+// Verificar variables críticas antes de arrancar
+const variablesObligatorias = ['JWT_SECRET', 'WHATSAPP_APP_SECRET', 'WHATSAPP_WEBHOOK_VERIFY_TOKEN'];
+const faltantes = variablesObligatorias.filter(v => !process.env[v]);
+if (faltantes.length > 0) {
+  console.error(`❌ Faltan variables de entorno: ${faltantes.join(', ')}`);
+  process.exit(1);
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const http = require('http');

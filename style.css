@@ -1732,7 +1732,8 @@ body.modo-login #app {
     display: block;
     position: fixed;
     top: 60px;
-    right: 10px;
+    right: 6px;
+    width: min(180px, calc(100vw - 20px));
     background: white;
     border: 1px solid #E5E7EB;
     border-radius: 12px;
@@ -1740,6 +1741,7 @@ body.modo-login #app {
     min-width: 180px;
     z-index: 60;
     padding: 6px 0;
+    box-sizing: border-box;
   }
 
   .menu-movil-item {
@@ -1817,6 +1819,21 @@ body.modo-login #app {
     margin-right: 8px;
     padding: 4px;
     color: #2563EB;
+  }
+
+  #empty-state {
+    left: 0;
+    width: 100%;
+  }
+
+  #difusion-view {
+    padding: 16px;
+  }
+
+  .atajos-tabla {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 }
 

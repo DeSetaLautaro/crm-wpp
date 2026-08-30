@@ -1617,6 +1617,45 @@ const enviarMensajeMedia = async (req, res) => {
 };
 
 // ===== Enviar mensaje desde el dashboard =====
+
+async function enviarMensajeMeta(empresa, telefonoCliente, mensaje) {
+  const whatsappPhoneId = empresa?.whatsappPhoneId;
+  const accessToken = empresa?.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+
+  if (!whatsappPhoneId || !telefonoCliente || !accessToken) {
+    return { ok: false, error: 'Faltan datos de empresa, contacto o token para enviar el mensaje' };
+  }
+
+  try {
+    const url = `https://graph.facebook.com/v19.0/${whatsappPhoneId}/messages`;
+    const payload = {
+      messaging_product: 'whatsapp',
+      to: telefonoCliente,
+      type: 'text',
+      text: { body: mensaje }
+    };
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      return { ok: false, error: data?.error?.message || `HTTP ${resp.status}` };
+    }
+
+    return { ok: true, data, msgId: data?.messages?.[0]?.id || '' };
+  } catch (error) {
+    return { ok: false, error: error.message || 'Error de red al comunicarse con WhatsApp' };
+  }
+}
+
 const enviarMensaje = async (req, res) => {
   try {
     const { conversacionId, mensaje: mensajeBruto } = req.body || {};
@@ -1676,42 +1715,57 @@ const enviarMensaje = async (req, res) => {
     }
     // ====================================================================
 
-    let enviado = false;
-    let respuestaWhatsApp = null;
-    if (accessToken) {
-      const url = `https://graph.facebook.com/v19.0/${whatsappPhoneId}/messages`;
-      const payload = {
-        messaging_product: 'whatsapp',
-        to: telefonoCliente,
-        type: 'text',
-        text: { body: mensaje }
-      };
-      try {
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-        respuestaWhatsApp = await resp.json();
-        if (resp.ok) {
-          enviado = true;
-        } else {
-          console.error('Error al enviar a WhatsApp:', respuestaWhatsApp);
-        }
-      } catch (error) {
-        console.error('Error de red enviando a la Graph API:', error);
-        return res.status(502).json({ error: 'No se pudo comunicar con WhatsApp' });
-      }
-    } else {
-      console.error('❌ No hay tokenMeta ni WHATSAPP_ACCESS_TOKEN, no se puede enviar el mensaje');
-      return res.status(502).json({ error: 'No se pudo enviar el mensaje: falta token de WhatsApp configurado.' });
-    }
+    const resultado = await enviarMensajeMeta(empresa, telefonoCliente, mensaje);
+    const enviado = resultado.ok;
+    const respuestaWhatsApp = resultado.ok ? resultado.data : null;
 
     if (!enviado) {
-      return res.status(502).json({ error: 'El envío a WhatsApp falló', detalle: respuestaWhatsApp });
+      const mensajeFallido = await Mensaje.create({
+        conversacionId: conversacion._id,
+        remitente: 'empresa',
+        contenido: mensaje,
+        estado: 'fallido',
+        errorDetalle: resultado.error || 'Error desconocido de Meta'
+      });
+
+      await Conversacion.findByIdAndUpdate(conversacion._id, {
+        ultimoMensaje: mensaje,
+        estado: 'Abierto'
+      });
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(empresaIdStr).emit('mensaje-nuevo', {
+          conversacionId: conversacion._id,
+          mensaje: {
+            _id: mensajeFallido._id,
+            remitente: 'empresa',
+            contenido: mensaje,
+            estado: 'fallido',
+            errorDetalle: resultado.error || 'Error desconocido de Meta',
+            fecha: new Date()
+          },
+          conversacion: {
+            _id: conversacion._id,
+            ultimoMensaje: mensaje,
+            updatedAt: new Date()
+          }
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        fallido: true,
+        error: resultado.error,
+        mensaje: {
+          _id: mensajeFallido._id,
+          remitente: 'empresa',
+          contenido: mensaje,
+          estado: 'fallido',
+          errorDetalle: resultado.error,
+          fecha: mensajeFallido.createdAt
+        }
+      });
     }
 
     // Si Meta confirma que esta conversación fue iniciada por el negocio, sumar al contador
@@ -2838,12 +2892,99 @@ JSON:`;
   }
 }
 
+async function reenviarMensaje(req, res) {
+  try {
+    const { mensajeId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(mensajeId)) {
+      return res.status(400).json({ error: 'ID de mensaje inválido' });
+    }
+
+    const mensaje = await Mensaje.findById(mensajeId);
+    if (!mensaje) {
+      return res.status(404).json({ error: 'Mensaje no encontrado' });
+    }
+
+    const conversacion = await Conversacion.findById(mensaje.conversacionId)
+      .populate('empresaId')
+      .populate('contactoId');
+    if (!conversacion) {
+      return res.status(404).json({ error: 'Conversación no encontrada' });
+    }
+
+    const empresaIdStr = conversacion.empresaId?._id?.toString() || conversacion.empresaId.toString();
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+
+    const empresa = conversacion.empresaId;
+    const contacto = conversacion.contactoId;
+    const telefonoCliente = contacto?.telefono;
+    const textoMensaje = mensaje.contenido;
+
+    const resultado = await enviarMensajeMeta(empresa, telefonoCliente, textoMensaje);
+
+    if (!resultado.ok) {
+      await Mensaje.findByIdAndUpdate(mensajeId, {
+        $set: {
+          estado: 'fallido',
+          errorDetalle: resultado.error || 'Error desconocido de Meta'
+        }
+      });
+
+      const io = req.app.get('io');
+      if (io) {
+        io.to(empresaIdStr).emit('mensaje-estado', {
+          mensajeId: mensajeId,
+          conversacionId: mensaje.conversacionId,
+          estado: 'fallido',
+          errorDetalle: resultado.error,
+          fechaEstado: new Date()
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        fallido: true,
+        error: resultado.error,
+        mensajeId
+      });
+    }
+
+    await Mensaje.findByIdAndUpdate(mensajeId, {
+      $set: {
+        estado: 'enviado',
+        errorDetalle: '',
+        whatsappMsgId: resultado.msgId,
+        fechaEstado: new Date()
+      }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresaIdStr).emit('mensaje-estado', {
+        mensajeId: mensajeId,
+        conversacionId: mensaje.conversacionId,
+        estado: 'enviado',
+        fechaEstado: new Date()
+      });
+    }
+
+    return res.json({ ok: true, mensajeId, estado: 'enviado', whatsappMsgId: resultado.msgId });
+  } catch (error) {
+    console.error('Error al reenviar mensaje:', error);
+    return res.status(500).json({ error: 'Error interno al reenviar mensaje' });
+  }
+}
+
 module.exports = {
   verificarFirmaMeta,
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
   enviarMensajeMedia,
+  reenviarMensaje,
   actualizarBotActivo,
   actualizarBotActivoConversacion,
   actualizarContacto,

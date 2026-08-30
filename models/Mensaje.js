@@ -33,8 +33,12 @@ const MensajeSchema = new Schema(
     },
     estado: {
       type: String,
-      enum: ['enviado', 'entregado', 'leido'],
+      enum: ['enviado', 'entregado', 'leido', 'fallido'],
       default: 'enviado'
+    },
+    errorDetalle: {
+      type: String,
+      default: ''
     },
     fechaEstado: {
       type: Date,

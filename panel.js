@@ -677,11 +677,16 @@ function renderChatActivo() {
     }
     let indicador = '';
     if (['bot','humano','ia','empresa'].includes(msg.remitente)) {
-      const estado = msg.estado || 'enviado';
-      const simbolo = estado === 'leido' ? '✓✓' : (estado === 'entregado' ? '✓✓' : '✓');
-      const color = estado === 'leido' ? '#34b7f1' : '#ffffff';
-      const titulo = estado === 'leido' ? 'Leído' : (estado === 'entregado' ? 'Entregado' : 'Enviado');
-      indicador = `<span class="mensaje-estado" title="${titulo}" style="font-size:13px; font-weight:bold; color:${color}; margin-left:6px; line-height:1;">${simbolo}</span>`;
+      if (msg.estado === 'fallido') {
+        const tituloError = msg.errorDetalle ? escaparHTML(msg.errorDetalle) : 'Error al enviar. Hacé clic para reintentar.';
+        indicador = `<span class="mensaje-reintentar" data-reintentar="${msg._id}" title="${tituloError}" style="font-size:16px; color:#ef4444; margin-left:6px; cursor:pointer; line-height:1;">🔄</span>`;
+      } else {
+        const estado = msg.estado || 'enviado';
+        const simbolo = estado === 'leido' ? '✓✓' : (estado === 'entregado' ? '✓✓' : '✓');
+        const color = estado === 'leido' ? '#34b7f1' : '#ffffff';
+        const titulo = estado === 'leido' ? 'Leído' : (estado === 'entregado' ? 'Entregado' : 'Enviado');
+        indicador = `<span class="mensaje-estado" title="${titulo}" style="font-size:13px; font-weight:bold; color:${color}; margin-left:6px; line-height:1;">${simbolo}</span>`;
+      }
     }
     const estiloMedia = ((msg.tipo === 'imagen' || msg.tipo === 'audio' || msg.tipo === 'video') && msg.urlArchivo) ? ' style="background:transparent; padding:0; box-shadow:none; border:none;"' : '';
     return `<div class="bubble ${claseBurbuja}"${estiloMedia}>${contenidoFinal}${indicador}</div>`;
@@ -2470,6 +2475,7 @@ async function cargarConversaciones() {
             fecha: m.fecha ? new Date(m.fecha) : new Date(),
             estado: m.estado || 'enviado',
             fechaEstado: m.fechaEstado ? new Date(m.fechaEstado) : null,
+            errorDetalle: m.errorDetalle || '',
             tipo: m.tipo || 'texto',
             urlArchivo: m.urlArchivo || '',
             duracionSegundos: m.duracionSegundos || null
@@ -2598,11 +2604,16 @@ async function cargarMasMensajes() {
       }
       let indicador = '';
       if (['bot','humano','ia','empresa'].includes(msg.remitente)) {
-        const estado = msg.estado || 'enviado';
-        const simbolo = estado === 'leido' ? '✓✓' : (estado === 'entregado' ? '✓✓' : '✓');
-        const color = estado === 'leido' ? '#34b7f1' : '#ffffff';
-        const titulo = estado === 'leido' ? 'Leído' : (estado === 'entregado' ? 'Entregado' : 'Enviado');
-        indicador = `<span class="mensaje-estado" title="${titulo}" style="font-size:13px; font-weight:bold; color:${color}; margin-left:6px; line-height:1;">${simbolo}</span>`;
+        if (msg.estado === 'fallido') {
+          const tituloError = msg.errorDetalle ? escaparHTML(msg.errorDetalle) : 'Error al enviar. Hacé clic para reintentar.';
+          indicador = `<span class="mensaje-reintentar" data-reintentar="${msg._id}" title="${tituloError}" style="font-size:16px; color:#ef4444; margin-left:6px; cursor:pointer; line-height:1;">🔄</span>`;
+        } else {
+          const estado = msg.estado || 'enviado';
+          const simbolo = estado === 'leido' ? '✓✓' : (estado === 'entregado' ? '✓✓' : '✓');
+          const color = estado === 'leido' ? '#34b7f1' : '#ffffff';
+          const titulo = estado === 'leido' ? 'Leído' : (estado === 'entregado' ? 'Entregado' : 'Enviado');
+          indicador = `<span class="mensaje-estado" title="${titulo}" style="font-size:13px; font-weight:bold; color:${color}; margin-left:6px; line-height:1;">${simbolo}</span>`;
+        }
       }
       const estiloMedia = ((msg.tipo === 'imagen' || msg.tipo === 'audio' || msg.tipo === 'video') && msg.urlArchivo) ? ' style="background:transparent; padding:0; box-shadow:none; border:none;"' : '';
       return `<div class="bubble ${claseBurbuja}"${estiloMedia}>${contenidoFinal}${indicador}</div>`;
@@ -2729,6 +2740,7 @@ function setupSocketListeners() {
       msgExistente.estado = mensaje.estado || msgExistente.estado;
       msgExistente.fechaEstado = mensaje.fechaEstado ? new Date(mensaje.fechaEstado) : msgExistente.fechaEstado;
       msgExistente.duracionSegundos = mensaje.duracionSegundos || msgExistente.duracionSegundos;
+      msgExistente.errorDetalle = mensaje.errorDetalle || msgExistente.errorDetalle;
 
       // Actualizar la conversación local
       const convLocal = CONVERSACIONES.find(c => c._id === conversacionId);
@@ -2756,6 +2768,7 @@ function setupSocketListeners() {
       fecha: new Date(mensaje.fecha),
       estado: mensaje.estado || 'enviado',
       fechaEstado: mensaje.fechaEstado ? new Date(mensaje.fechaEstado) : null,
+      errorDetalle: mensaje.errorDetalle || '',
       tipo: mensaje.tipo || 'texto',
       urlArchivo: mensaje.urlArchivo || '',
       duracionSegundos: mensaje.duracionSegundos || null
@@ -2871,6 +2884,7 @@ function setupSocketListeners() {
     if (msg) {
       msg.estado = payload.estado;
       msg.fechaEstado = payload.fechaEstado ? new Date(payload.fechaEstado) : null;
+      if (payload.errorDetalle) msg.errorDetalle = payload.errorDetalle;
       if (chatActivoId === payload.conversacionId) {
         renderChatActivo();
         const area = document.getElementById('area-mensajes');
@@ -4320,6 +4334,46 @@ async function init() {
   // Eventos de gestión de agentes
   const btnGuardarAgente = document.getElementById('agente-guardar');
   if (btnGuardarAgente) btnGuardarAgente.addEventListener('click', crearAgenteDesdeUI);
+
+  // Delegación para reintentar mensajes fallidos
+  document.addEventListener('click', async (e) => {
+    const btnReintentar = e.target.closest('.mensaje-reintentar');
+    if (!btnReintentar) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const mensajeId = btnReintentar.dataset.reintentar;
+    const token = localStorage.getItem('token') || '';
+
+    const originalHTML = btnReintentar.outerHTML;
+    btnReintentar.textContent = '⏳';
+
+    try {
+      const res = await fetch(`/api/whatsapp/reenviar/${mensajeId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        mostrarToast(data.error || 'Error al reenviar mensaje', 'error');
+        btnReintentar.outerHTML = originalHTML;
+        return;
+      }
+
+      if (data.fallido) {
+        mostrarToast(`El reenvío falló: ${data.error || 'Error desconocido'}`, 'error');
+        btnReintentar.outerHTML = originalHTML;
+      } else {
+        mostrarToast('Mensaje reenviado correctamente', 'info');
+        // El evento 'mensaje-estado' del socket actualizará el estado visual
+      }
+    } catch (error) {
+      console.error('Error al reenviar mensaje:', error);
+      mostrarToast('Error de red al reenviar mensaje', 'error');
+      btnReintentar.outerHTML = originalHTML;
+    }
+  });
 }
 
 function ocultarBotonLlamarEnEscritorio() {

@@ -2732,6 +2732,12 @@ const obtenerMonedero = async (req, res) => {
 
 const cargarSaldoMonedero = async (req, res) => {
   try {
+    // ===== NUEVO: solo el admin puede cargar saldo =====
+    if (req.usuario.rol !== 'admin') {
+      return res.status(403).json({ error: 'Solo el admin puede cargar saldo' });
+    }
+    // ===== FIN NUEVO =====
+
     const { montoUsd, usuariodId } = req.body || {};
     const usuarioId = usuariodId || req.usuario.id;
     const monto = parseFloat(montoUsd);

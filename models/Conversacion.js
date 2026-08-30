@@ -49,6 +49,10 @@ const ConversacionSchema = new Schema(
       type: Number,
       default: 0
     },
+    carritoActualizadoAt: {
+      type: Date,
+      default: null
+    },
     latitud: {
       type: Number,
       default: null

@@ -68,7 +68,7 @@ const PROMPT_IA_DEFAULT_REGLAS = `- SIEMPRE pedí la dirección de entrega compl
 - No seas insistente con agregar productos. Si el cliente ya pidió o dijo que no quiere nada más, no vuelvas a ofrecerle más cosas.
 - Si no encontrás la información en el catálogo, ofrecé contactar a un humano.
 - Si el local está CERRADO, podés pasar el menú pero aclará de forma amable que no se están tomando pedidos hasta que abran. Igual podés registrar el pedido para cuando abran.
-- IMPORTANTE: Si el carrito actual tiene items y ya tenés la dirección de entrega del cliente, confirmá el pedido automáticamente, informá el total, preguntá cómo quiere pagar (si no lo dijo) y despedite amablemente. No esperes a que el cliente diga "confirmo".`;
+- IMPORTANTE: Si el carrito actual tiene items y ya tenés la dirección de entrega, preguntá al cliente si confirma el pedido (ej: "¿Confirmamos el pedido por $X?"). Solo confirmá automáticamente cuando el cliente responda afirmativamente o muestre clara intención de avanzar (ej: "sí", "dale", "confirmo", "pago"). No confirmes ni avances con el pedido si el cliente solo envía un saludo o un mensaje que no hace referencia al pedido.`;
 
 // Convierte los horarios estructurados en texto legible para la IA
 function formatearHorarios(horarios) {
@@ -1088,7 +1088,8 @@ JSON:`;
       await Conversacion.findByIdAndUpdate(conversacion._id, {
         $set: {
           carrito: carritoProcesado.items,
-          carritoTotal: carritoProcesado.total
+          carritoTotal: carritoProcesado.total,
+          carritoActualizadoAt: new Date()
         }
       });
       const ioCarrito = req.app.get('io');
@@ -1099,6 +1100,26 @@ JSON:`;
           total: carritoProcesado.total
         });
       }
+    }
+
+    // ===== Protección contra confirmación de pedidos viejos =====
+    const carritoVigente = Array.isArray(conversacion.carrito) && conversacion.carrito.length > 0;
+    if (carritoVigente && conversacion.carritoActualizadoAt) {
+      const msDesdeCarrito = Date.now() - new Date(conversacion.carritoActualizadoAt).getTime();
+      if (msDesdeCarrito > 24 * 60 * 60 * 1000) {
+        // El carrito tiene más de 24 horas: se descarta
+        await Conversacion.findByIdAndUpdate(conversacion._id, {
+          $set: { carrito: [], carritoTotal: 0, carritoActualizadoAt: null }
+        });
+        conversacion.carrito = [];
+        conversacion.carritoTotal = 0;
+      }
+    }
+
+    const esSaludo = /^(hola|buenas|buen[ao]s?|que tal|hey|hi|hello|saludos)\b/i.test(textoMensaje.trim());
+    let avisoAntiFalsoConfirm = '';
+    if ((conversacion.carrito || []).length > 0 && esSaludo && !carritoProcesado) {
+      avisoAntiFalsoConfirm = '\n\nIMPORTANTE: El cliente acaba de enviar un saludo. No confirmes ni avances con el pedido anterior. Preguntale si desea retomar el pedido anterior o si quiere hacer uno nuevo.';
     }
 
     // ===== Extracción automática de datos del cliente con IA =====
@@ -1290,6 +1311,8 @@ JSON:`;
           .replaceAll('{mensajeCliente}', textoMensaje)
           .replaceAll('{horarios}', horariosTexto)
           .replaceAll('{atajos}', atajosTexto);
+
+        prompt += avisoAntiFalsoConfirm;
 
         respuestaIA = await generarTexto(prompt);
       } catch (err) {

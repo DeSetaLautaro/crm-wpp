@@ -2762,6 +2762,7 @@ function setupSocketListeners() {
 
     // Agregar mensaje a la colección local
     MENSAJES.push({
+      _id: mensaje._id,
       conversacionId: conversacionId,
       remitente: mensaje.remitente,
       contenido: mensaje.contenido,

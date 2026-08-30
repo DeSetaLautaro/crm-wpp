@@ -120,6 +120,9 @@ let mostrarTodasDifusiones = false;
 let archivosPendientes = [];
 let enviandoMensaje = false;
 let cargandoMensajes = false;
+let ventanaAbiertaGlobal = true;
+let PLANTILLAS_META = [];
+let modalPlantillaAbierto = false;
 let EMPRESAS_INFO = [];
 let AGENTES_GLOBAL = [];
 let agenteEditandoId = null;
@@ -727,6 +730,7 @@ function renderChatActivo() {
 
   // Mostrar carrito en vivo o último pedido confirmado
   renderPanelPedido(conv, contacto);
+  actualizarAvisoVentana();
 }
 
 function renderPerfil(contacto) {
@@ -840,6 +844,7 @@ function renderPerfil(contacto) {
 function renderTodo() {
   renderListaChats();
   renderChatActivo();
+  actualizarAvisoVentana();
   updateVisibilidad();
 
   const appEl = document.getElementById('app');
@@ -1197,11 +1202,121 @@ async function cargarPlantillasDesdeMeta() {
     });
     const data = await res.json();
     if (res.ok && data.plantillas && data.plantillas.length > 0) {
+      PLANTILLAS_META = data.plantillas;
       MOCK_PLANTILLAS = data.plantillas;
       poblarSelectPlantillas();
     }
   } catch (error) {
     console.error('Error al cargar plantillas desde Meta:', error);
+  }
+}
+
+function actualizarAvisoVentana() {
+  const aviso = document.getElementById('aviso-ventana-cerrada');
+  if (!aviso) return;
+  const conv = getConversacionPorId(chatActivoId);
+  if (conv && conv.ventanaAbierta === false) {
+    aviso.classList.remove('hidden');
+  } else {
+    aviso.classList.add('hidden');
+  }
+}
+
+async function abrirModalPlantillaChat() {
+  const select = document.getElementById('plantilla-select-chat');
+  const modal = document.getElementById('modal-plantilla-ventana');
+  if (!select || !modal) return;
+
+  select.innerHTML = '';
+  if (PLANTILLAS_META.length === 0) {
+    await cargarPlantillasDesdeMeta();
+  }
+
+  PLANTILLAS_META.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.nombre;
+    select.appendChild(opt);
+  });
+
+  if (PLANTILLAS_META.length > 0) {
+    select.value = PLANTILLAS_META[0].id;
+    actualizarVariablesPlantillaChat();
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function actualizarVariablesPlantillaChat() {
+  const select = document.getElementById('plantilla-select-chat');
+  const contenedor = document.getElementById('plantilla-variables-chat');
+  if (!select || !contenedor) return;
+
+  const plantilla = PLANTILLAS_META.find(p => p.id === select.value);
+  contenedor.innerHTML = '';
+  if (!plantilla) return;
+
+  const matches = plantilla.texto.match(/\{\{[0-9]+\}\}/g) || [];
+  const unicas = [...new Set(matches)];
+
+  unicas.forEach(match => {
+    const num = match.replace(/[{}]/g, '');
+    const conv = getConversacionPorId(chatActivoId);
+    const contacto = getContactoPorId(conv?.contactoId);
+    let valor = '';
+    if (num === '1' && contacto?.nombre) valor = contacto.nombre;
+
+    const div = document.createElement('div');
+    div.style.marginBottom = '8px';
+    div.innerHTML = `
+      <label style="font-size:13px; font-weight:bold;">{{${num}}}</label>
+      <input type="text" class="plantilla-variable-input" data-var="${num}" value="${escaparHTML(valor)}" style="width:100%; padding:6px; border:1px solid #d1d5db; border-radius:6px; margin-top:4px;" />
+    `;
+    contenedor.appendChild(div);
+  });
+
+  const preview = document.createElement('div');
+  preview.style.marginTop = '10px';
+  preview.style.padding = '10px';
+  preview.style.background = '#f3f4f6';
+  preview.style.borderRadius = '6px';
+  preview.style.fontSize = '13px';
+  preview.innerHTML = `<strong>Preview:</strong><br><span id="plantilla-preview-texto">${escaparHTML(plantilla.texto.replace(/\{\{[0-9]+\}\}/g, '...'))}</span>`;
+  contenedor.appendChild(preview);
+}
+
+async function enviarPlantillaDesdeChat() {
+  const select = document.getElementById('plantilla-select-chat');
+  const plantillaId = select?.value;
+  if (!plantillaId || !chatActivoId) return;
+
+  const variables = [];
+  document.querySelectorAll('.plantilla-variable-input').forEach(input => {
+    const num = parseInt(input.dataset.var);
+    variables[num - 1] = input.value.trim();
+  });
+  const variablesFiltradas = variables.map(v => v || '');
+
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/whatsapp/enviar-plantilla', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ conversacionId: chatActivoId, plantillaId, variables: variablesFiltradas })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      mostrarToast(data.error || 'Error al enviar plantilla', 'error');
+      return;
+    }
+    const conv = getConversacionPorId(chatActivoId);
+    if (conv) conv.ventanaAbierta = true;
+    document.getElementById('modal-plantilla-ventana').classList.add('hidden');
+    await cargarConversaciones();
+    mostrarToast('Plantilla enviada correctamente', 'info');
+  } catch (error) {
+    console.error('Error enviando plantilla:', error);
+    mostrarToast('Error de red al enviar plantilla', 'error');
   }
 }
 
@@ -2494,6 +2609,7 @@ async function cargarConversaciones() {
         ultimoMensaje: conv.ultimoMensaje || '',
         ultimaFecha: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
         cancelacionReciente: conv.tieneCancelacionReciente === true,
+        ventanaAbierta: conv.ventanaAbierta !== false,
         tieneMas: conv.mensajes && conv.mensajes.length === 50,
         carrito: conv.carrito || [],
         carritoTotal: conv.carritoTotal || 0
@@ -2964,6 +3080,11 @@ async function enviarMensajeDesdePanel() {
         body: JSON.stringify({ conversacionId: chatActivoId, mensaje })
       });
       const data = await res.json();
+      if (data.ventanaCerrada) {
+        mostrarToast('La ventana de 24h cerró. Para responder usá una plantilla aprobada.', 'error');
+        abrirModalPlantillaChat();
+        return;
+      }
       if (!res.ok) {
         console.error('Error al enviar mensaje:', data.error || data);
         return;
@@ -4330,7 +4451,29 @@ async function init() {
   // Botón para cerrar la columna derecha en móvil
   armarBotonCerrarPerfilMovil();
 
+  // Eventos de ventana cerrada y modal de plantillas
+  const btnElegirPlantilla = document.getElementById('btn-elegir-plantilla-ventana');
+  if (btnElegirPlantilla) {
+    btnElegirPlantilla.addEventListener('click', abrirModalPlantillaChat);
+  }
+  const btnCancelarPlantilla = document.getElementById('plantilla-cancelar-chat');
+  if (btnCancelarPlantilla) {
+    btnCancelarPlantilla.addEventListener('click', () => {
+      const modal = document.getElementById('modal-plantilla-ventana');
+      if (modal) modal.classList.add('hidden');
+    });
+  }
+  const btnEnviarPlantilla = document.getElementById('plantilla-enviar-chat');
+  if (btnEnviarPlantilla) {
+    btnEnviarPlantilla.addEventListener('click', enviarPlantillaDesdeChat);
+  }
+  const selectPlantillaChat = document.getElementById('plantilla-select-chat');
+  if (selectPlantillaChat) {
+    selectPlantillaChat.addEventListener('change', actualizarVariablesPlantillaChat);
+  }
+
   ajustarVisibilidadSegunRol();
+  cargarPlantillasDesdeMeta();
 
   // Eventos de gestión de agentes
   const btnGuardarAgente = document.getElementById('agente-guardar');

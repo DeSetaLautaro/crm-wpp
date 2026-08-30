@@ -69,6 +69,21 @@ const obtenerConversaciones = async (req, res) => {
           { $project: { mensajes: { $slice: ['$mensajes', 51] } } }
         ])
       : [];
+
+    // Calcular ventana de 24h para cada conversación
+    const ultimoMensajeCliente = idsConversaciones.length > 0
+      ? await Mensaje.aggregate([
+          { $match: { conversacionId: { $in: idsConversaciones }, remitente: 'cliente' } },
+          { $sort: { createdAt: -1 } },
+          { $group: { _id: '$conversacionId', ultimaFecha: { $first: '$createdAt' } } }
+        ])
+      : [];
+    const mapaVentana = new Map();
+    const ahoraVentana = Date.now();
+    ultimoMensajeCliente.forEach(item => {
+      const abierta = (ahoraVentana - new Date(item.ultimaFecha).getTime()) < 24 * 60 * 60 * 1000;
+      mapaVentana.set(String(item._id), abierta);
+    });
     const mapaMensajes = new Map(mensajesPorConversacion.map(g => [String(g._id), g.mensajes]));
 
     const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -123,6 +138,7 @@ const obtenerConversaciones = async (req, res) => {
         ultimoMensaje: conv.ultimoMensaje,
         updatedAt: conv.updatedAt,
         tieneCancelacionReciente: canceladosPorConv.has(conv._id.toString()),
+        ventanaAbierta: mapaVentana.get(String(conv._id)) ?? true,
         tieneMas,
         mensajes: mensajesAsc.map(m => ({
           _id: m._id,
@@ -175,6 +191,16 @@ const obtenerMensajesConversacion = async (req, res) => {
       return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
     }
 
+    let ventanaAbierta = true;
+    const ultimoCliente = await Mensaje.findOne({
+      conversacionId: id,
+      remitente: 'cliente'
+    }).sort({ createdAt: -1 }).lean();
+    if (ultimoCliente) {
+      const limite = new Date(ultimoCliente.createdAt).getTime() + 24 * 60 * 60 * 1000;
+      ventanaAbierta = Date.now() < limite;
+    }
+
     const filtro = { conversacionId: id };
     if (before) {
       if (!mongoose.Types.ObjectId.isValid(before)) {
@@ -203,6 +229,7 @@ const obtenerMensajesConversacion = async (req, res) => {
 
     return res.json({
       ok: true,
+      ventanaAbierta,
       mensajes: mensajes.map(m => ({
         _id: m._id,
         remitente: m.remitente,

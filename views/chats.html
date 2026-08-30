@@ -95,6 +95,16 @@
         <span id="estado-bot">Bot Activo</span>
       </div>
     </div>
+    <div id="aviso-ventana-cerrada" class="hidden" style="background:#fef3c7; border:1px solid #f59e0b; color:#92400e; padding:10px 14px; border-radius:8px; margin:8px 12px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <div>
+        <strong>⚠️ Ventana de 24h cerrada</strong>
+        <br>
+        <span style="font-size:13px;">Para responder a este cliente necesitás usar una plantilla aprobada.</span>
+      </div>
+      <button id="btn-elegir-plantilla-ventana" style="background:#f59e0b; color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; white-space:nowrap;">
+        Elegir plantilla
+      </button>
+    </div>
     <div id="area-mensajes" class="area-mensajes">
       <!-- Mensajes -->
     </div>
@@ -205,4 +215,18 @@
     <input type="hidden" id="perfil-nombre" value="">
     <input type="hidden" id="perfil-telefono" value="">
   </aside>
+
+  <!-- Modal para elegir plantilla cuando la ventana está cerrada -->
+  <div id="modal-plantilla-ventana" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:10000;">
+    <div style="background:#fff; padding:24px; border-radius:12px; max-width:500px; width:90%;">
+      <h3 style="margin-top:0;">Enviar plantilla</h3>
+      <label style="font-weight:bold; font-size:14px;">Plantilla aprobada</label>
+      <select id="plantilla-select-chat" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; margin:6px 0 14px;"></select>
+      <div id="plantilla-variables-chat" style="margin-bottom:14px;"></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button id="plantilla-cancelar-chat" style="padding:8px 16px; background:#e5e7eb; border:none; border-radius:6px; cursor:pointer;">Cancelar</button>
+        <button id="plantilla-enviar-chat" style="padding:8px 16px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer;">Enviar</button>
+      </div>
+    </div>
+  </div>
 </div>

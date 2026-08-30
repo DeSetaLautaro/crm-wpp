@@ -250,6 +250,16 @@ function detectarCancelacionPedido(texto) {
   return expresiones.some(re => re.test(lower));
 }
 
+async function verificarVentana(conversacionId) {
+  const ultimoCliente = await Mensaje.findOne({
+    conversacionId,
+    remitente: 'cliente'
+  }).sort({ createdAt: -1 }).lean();
+  if (!ultimoCliente) return true;
+  const limite = new Date(ultimoCliente.createdAt).getTime() + 24 * 60 * 60 * 1000;
+  return Date.now() < limite;
+}
+
 async function incrementarContadorConversaciones(empresaId, conversacionId) {
   const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const existeMensajeSaliente = await Mensaje.findOne({
@@ -1719,6 +1729,15 @@ const enviarMensaje = async (req, res) => {
       return res.status(500).json({ error: 'Faltan datos de empresa o contacto para enviar el mensaje' });
     }
 
+    const ventana = await verificarVentana(conversacion._id);
+    if (!ventana) {
+      return res.status(200).json({
+        ok: false,
+        ventanaCerrada: true,
+        error: 'La ventana de 24h cerró. Usá una plantilla aprobada.'
+      });
+    }
+
     // ===== Control de monedero: si está bloqueado, no se pueden iniciar conversaciones nuevas =====
     try {
       const usuarioMonederoEnvio = await Usuario.findById(empresa.usuarioAppId).lean();
@@ -3004,12 +3023,141 @@ async function reenviarMensaje(req, res) {
   }
 }
 
+async function enviarPlantilla(req, res) {
+  try {
+    const { conversacionId, plantillaId, variables = [] } = req.body || {};
+    if (!conversacionId || !plantillaId) {
+      return res.status(400).json({ error: 'Faltan conversacionId y plantillaId' });
+    }
+
+    const conversacion = await Conversacion.findById(conversacionId)
+      .populate('empresaId')
+      .populate('contactoId');
+    if (!conversacion) return res.status(404).json({ error: 'Conversación no encontrada' });
+
+    const empresa = conversacion.empresaId;
+    const contacto = conversacion.contactoId;
+
+    const telefonoCliente = contacto?.telefono;
+    const whatsappPhoneId = empresa?.whatsappPhoneId;
+    const wabaId = empresa?.wabaId;
+    const accessToken = empresa?.tokenMeta || process.env.WHATSAPP_ACCESS_TOKEN;
+    if (!whatsappPhoneId || !telefonoCliente || !accessToken || !wabaId) {
+      return res.status(500).json({ error: 'Faltan credenciales de la empresa (wabaId, token, etc.)' });
+    }
+
+    // Obtener plantillas desde Meta para encontrar la solicitada
+    const urlPlantillas = `https://graph.facebook.com/v19.0/${wabaId}/message_templates`;
+    const respPlantillas = await fetch(urlPlantillas, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    const dataPlantillas = await respPlantillas.json();
+    if (!respPlantillas.ok) {
+      return res.status(502).json({ error: dataPlantillas?.error?.message || 'Error al obtener plantillas' });
+    }
+    const plantilla = (dataPlantillas.data || []).find(t => String(t.id) === String(plantillaId));
+    if (!plantilla) {
+      return res.status(404).json({ error: 'Plantilla no encontrada o no aprobada' });
+    }
+
+    const bodyComponent = plantilla.components?.find(c => c.type === 'BODY');
+    if (!bodyComponent || !bodyComponent.text) {
+      return res.status(400).json({ error: 'La plantilla no tiene componente BODY' });
+    }
+
+    // Armar parámetros a partir de las variables
+    const cantidadVariables = (bodyComponent.text.match(/\{\{[0-9]+\}\}/g) || []).length;
+    const parameters = [];
+    for (let i = 0; i < cantidadVariables; i++) {
+      parameters.push({
+        type: 'text',
+        text: variables[i] || ''
+      });
+    }
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      to: telefonoCliente,
+      type: 'template',
+      template: {
+        name: plantilla.name,
+        language: { code: plantilla.language },
+        components: [
+          {
+            type: 'body',
+            parameters
+          }
+        ]
+      }
+    };
+
+    const respEnvio = await fetch(`https://graph.facebook.com/v19.0/${whatsappPhoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const bodyEnvio = await respEnvio.json();
+    if (!respEnvio.ok) {
+      return res.status(502).json({ error: bodyEnvio?.error?.message || 'Error al enviar plantilla' });
+    }
+
+    // Armar texto final reemplazando variables
+    let textoFinal = bodyComponent.text;
+    variables.forEach((v, i) => {
+      textoFinal = textoFinal.replace(new RegExp(`\\{\\{${i + 1}\\}\\}`, 'g'), v);
+    });
+
+    const nuevoMensaje = await Mensaje.create({
+      conversacionId: conversacion._id,
+      remitente: 'empresa',
+      contenido: textoFinal,
+      whatsappMsgId: bodyEnvio?.messages?.[0]?.id || '',
+      estado: 'enviado'
+    });
+
+    await Conversacion.findByIdAndUpdate(conversacion._id, {
+      $set: {
+        ultimoMensaje: textoFinal,
+        estado: 'Abierto'
+      }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresa._id.toString()).emit('mensaje-nuevo', {
+        conversacionId: conversacion._id,
+        mensaje: {
+          _id: nuevoMensaje._id,
+          remitente: 'empresa',
+          contenido: textoFinal,
+          estado: 'enviado',
+          fecha: new Date()
+        },
+        conversacion: {
+          _id: conversacion._id,
+          ultimoMensaje: textoFinal,
+          updatedAt: new Date()
+        }
+      });
+    }
+
+    return res.json({ ok: true, mensaje: nuevoMensaje });
+  } catch (error) {
+    console.error('Error al enviar plantilla:', error);
+    return res.status(500).json({ error: 'Error interno al enviar plantilla' });
+  }
+}
+
 module.exports = {
   verificarFirmaMeta,
   verificarWebhook,
   recibirMensaje,
   enviarMensaje,
   enviarMensajeMedia,
+  enviarPlantilla,
   reenviarMensaje,
   actualizarBotActivo,
   actualizarBotActivoConversacion,

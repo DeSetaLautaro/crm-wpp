@@ -60,6 +60,7 @@ const {
   recibirMensaje,
   enviarMensaje,
   enviarMensajeMedia,
+  enviarPlantilla,
   reenviarMensaje,
   actualizarBotActivo,
   actualizarBotActivoConversacion,
@@ -105,6 +106,7 @@ router.post('/enviar', auth, enviarMensaje);
 
 // Envío de multimedia desde el dashboard (POST)
 router.post('/enviar-media', auth, upload.single('archivo'), enviarMensajeMedia);
+router.post('/enviar-plantilla', auth, enviarPlantilla);
 
 // Reenviar mensaje fallido (POST)
 router.post('/reenviar/:mensajeId', auth, reenviarMensaje);

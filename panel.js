@@ -4200,17 +4200,17 @@ async function init() {
   if (btnMenuMovil && appMenuMovil) {
     btnMenuMovil.addEventListener('click', (e) => {
       e.stopPropagation();
-      appMenuMovil.classList.toggle('menu-movil-abierto');
+      appMenuMovil.classList.toggle('menu-abierto');
     });
 
     document.addEventListener('click', (e) => {
       if (!e.target.closest('#slim-sidebar')) {
-        appMenuMovil.classList.remove('menu-movil-abierto');
+        appMenuMovil.classList.remove('menu-abierto');
       }
     });
 
     document.querySelectorAll('#slim-sidebar .sidebar-buttons .sidebar-btn').forEach(btn => {
-      btn.addEventListener('click', () => appMenuMovil.classList.remove('menu-movil-abierto'));
+      btn.addEventListener('click', () => appMenuMovil.classList.remove('menu-abierto'));
     });
   }
 

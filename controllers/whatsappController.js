@@ -3094,6 +3094,14 @@ async function enviarPlantilla(req, res) {
       .populate('contactoId');
     if (!conversacion) return res.status(404).json({ error: 'Conversación no encontrada' });
 
+    const empresaId = conversacion.empresaId?._id || conversacion.empresaId;
+    const empresaIdStr = empresaId ? empresaId.toString() : '';
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === empresaIdStr);
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
+    }
+
     const empresa = conversacion.empresaId;
     const contacto = conversacion.contactoId;
 

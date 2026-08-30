@@ -51,3 +51,32 @@
   <br><br>
   <button class="btn-guardar-config" id="btn-guardar-audios">Guardar Audios</button>
 </div>
+
+<div class="config-card" id="admin-agentes-wrapper" style="display:none;">
+  <h3>Agentes del panel</h3>
+  <p>Creá usuarios con acceso limitado al panel. Cada agente ve solo las líneas que le asignes.</p>
+  <div class="atajo-form" style="flex-wrap:wrap; gap:8px;">
+    <div class="atajo-input-group">
+      <input type="text" id="agente-nombre" placeholder="Nombre del agente">
+    </div>
+    <div class="atajo-input-group">
+      <input type="text" id="agente-telefono" placeholder="Teléfono (solo números)">
+    </div>
+    <div class="atajo-input-group">
+      <input type="password" id="agente-pin" placeholder="PIN de acceso">
+    </div>
+    <div class="atajo-input-group" style="flex:1; min-width:200px;">
+      <select id="agente-empresas" multiple size="3" style="width:100%; padding:6px; border:1px solid #d1d5db; border-radius:6px;">
+        <!-- opciones llenadas dinámicamente -->
+      </select>
+      <span style="font-size:12px; color:#6b7280;">Mantené Ctrl/Cmd para elegir varias líneas.</span>
+    </div>
+    <button id="agente-guardar" type="button" style="padding:8px 16px; background:#2563eb; color:#fff; border:none; border-radius:6px; cursor:pointer;">Crear agente</button>
+  </div>
+  <table class="atajos-tabla" style="margin-top:12px;">
+    <thead>
+      <tr><th>Nombre</th><th>Teléfono</th><th>Líneas</th><th>Activo</th><th></th></tr>
+    </thead>
+    <tbody id="agentes-body"></tbody>
+  </table>
+</div>

@@ -85,6 +85,12 @@ const usuarioSchema = new mongoose.Schema({
     // 👇 ¡LO NUEVO! La lista de grupos de toppings
     gruposToppings: [grupoToppingSchema],
 
+    // ===== Roles / Agentes =====
+    rol: { type: String, enum: ['admin', 'agente'], default: 'admin' },
+    adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', default: null },
+    empresasAcceso: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Empresa', default: [] }],
+    activo: { type: Boolean, default: true },
+
     // ===== Monedero / Sistema de pagos =====
     saldoUsd: { type: Number, default: 0 },
     deudaToleradaUsd: { type: Number, default: 5 },

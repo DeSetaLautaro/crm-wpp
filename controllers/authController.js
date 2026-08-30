@@ -29,11 +29,24 @@ const loginConPin = async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // 3. Buscar TODAS las empresas (líneas de WhatsApp) del usuario
-    const empresas = await Empresa.find({ usuarioAppId: usuario._id.toString() }).lean();
-    const empresasIds = empresas.map(e => e._id.toString());
-    if (empresasIds.length === 0) {
-      return res.status(404).json({ error: 'El usuario no tiene líneas de WhatsApp asociadas' });
+    // 3. Buscar TODAS las empresas (líneas de WhatsApp) del usuario según su rol
+    let empresasIds = [];
+    if (usuario.rol === 'agente') {
+      if (usuario.activo === false) {
+        return res.status(403).json({ error: 'Usuario desactivado' });
+      }
+      const acceso = usuario.empresasAcceso || [];
+      const empresasAcceso = await Empresa.find({ _id: { $in: acceso } }).lean();
+      empresasIds = empresasAcceso.map(e => e._id.toString());
+      if (empresasIds.length === 0) {
+        return res.status(403).json({ error: 'No tenés líneas asignadas' });
+      }
+    } else {
+      const empresas = await Empresa.find({ usuarioAppId: usuario._id.toString() }).lean();
+      empresasIds = empresas.map(e => e._id.toString());
+      if (empresasIds.length === 0) {
+        return res.status(404).json({ error: 'El usuario no tiene líneas de WhatsApp asociadas' });
+      }
     }
 
     // 4. Generar token con los datos necesarios
@@ -42,7 +55,9 @@ const loginConPin = async (req, res) => {
         userId: usuario._id.toString(),
         empresaId: empresasIds[0],
         empresas: empresasIds,
-        email: usuario.email
+        email: usuario.email,
+        rol: usuario.rol,
+        adminId: usuario.adminId ? usuario.adminId.toString() : null
       },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
@@ -56,7 +71,10 @@ const loginConPin = async (req, res) => {
         nombre: usuario.nombre,
         email: usuario.email,
         nombreDelLocal: usuario.nombreDelLocal,
-        rubro: usuario.rubro || ''
+        rubro: usuario.rubro || '',
+        rol: usuario.rol,
+        adminId: usuario.adminId ? usuario.adminId.toString() : null,
+        empresasAcceso: (usuario.empresasAcceso || []).map(e => e.toString())
       }
     });
   } catch (error) {

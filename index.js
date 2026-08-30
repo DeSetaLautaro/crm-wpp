@@ -12,6 +12,7 @@ const rateLimit = require('express-rate-limit');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const pedidosRoutes = require('./routes/pedidosRoutes');
 const difusionRoutes = require('./routes/difusionRoutes');
+const agentesRoutes = require('./routes/agentesRoutes');
 const auth = require('./middlewares/auth');
 const cron = require('node-cron');
 const { iniciarCronHorarios } = require('./services/horariosCron');
@@ -83,6 +84,7 @@ app.get('/api/mensajes/buscar', auth, buscarMensajes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/difusiones', difusionRoutes);
+app.use('/api/admin/agentes', auth, agentesRoutes);
 
 // ===== Manejo de errores global =====
 app.use((err, req, res, next) => {

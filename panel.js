@@ -120,6 +120,9 @@ let mostrarTodasDifusiones = false;
 let archivosPendientes = [];
 let enviandoMensaje = false;
 let cargandoMensajes = false;
+let EMPRESAS_INFO = [];
+let AGENTES_GLOBAL = [];
+let agenteEditandoId = null;
 
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
@@ -845,6 +848,18 @@ function renderTodo() {
 }
 
 // ===== Alternancia de vistas (Sidebar) =====
+function ajustarVisibilidadSegunRol() {
+  const esAgente = usuarioActual && usuarioActual.rol === 'agente';
+  const ids = ['btn-config', 'btn-pagos', 'btn-difusion', 'admin-agentes-wrapper'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = esAgente ? 'none' : '';
+  });
+  if (!esAgente) {
+    cargarAgentes();
+  }
+}
+
 function showView(vista) {
   const inboxView = document.getElementById('inbox-view');
   const configView = document.getElementById('config-view');
@@ -2488,6 +2503,7 @@ async function cargarConversaciones() {
 
     // Obtener empresas del usuario para armar el selector
     const empresasInfo = data.empresas || [];
+    EMPRESAS_INFO = empresasInfo;
     if (empresasInfo.length > 0) {
       poblarSelectorWhatsApp(empresasInfo);
     } else {
@@ -3740,6 +3756,7 @@ async function manejarLogin() {
     localStorage.setItem('token', data.token);
     usuarioActual = data.usuario || null;
     ocultarModalLogin();
+    ajustarVisibilidadSegunRol();
 
     // Arrancamos el CRM recién después de autenticar
     await cargarDatosUsuario();
@@ -4298,6 +4315,11 @@ async function init() {
   // Botón para cerrar la columna derecha en móvil
   armarBotonCerrarPerfilMovil();
 
+  ajustarVisibilidadSegunRol();
+
+  // Eventos de gestión de agentes
+  const btnGuardarAgente = document.getElementById('agente-guardar');
+  if (btnGuardarAgente) btnGuardarAgente.addEventListener('click', crearAgenteDesdeUI);
 }
 
 function ocultarBotonLlamarEnEscritorio() {
@@ -4339,6 +4361,171 @@ function ocultarBotonLlamarEnEscritorio() {
   `;
   document.head.appendChild(style);
 })();
+
+async function cargarAgentes() {
+  if (!usuarioActual || usuarioActual.rol === 'agente') return;
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/admin/agentes', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al cargar agentes');
+    AGENTES_GLOBAL = data.agentes || [];
+    renderAgentes(AGENTES_GLOBAL);
+    rellenarSelectEmpresasParaAgentes();
+  } catch (error) {
+    console.error('Error cargando agentes:', error);
+  }
+}
+
+function renderAgentes(agentes) {
+  const tbody = document.getElementById('agentes-body');
+  const wrapper = document.getElementById('admin-agentes-wrapper');
+  if (tbody) tbody.innerHTML = '';
+  if (wrapper) wrapper.style.display = '';
+  if (!tbody) return;
+  if (agentes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#9CA3AF; padding:12px;">Sin agentes creados</td></tr>';
+    return;
+  }
+  tbody.innerHTML = agentes.map(a => {
+    const lineas = (a.empresasAcceso || []).length;
+    const activoLabel = a.activo ? '✅' : '❌';
+    return `
+      <tr>
+        <td>${escaparHTML(a.nombre || '')}</td>
+        <td>${escaparHTML(a.telefono || '')}</td>
+        <td>${lineas}</td>
+        <td>${activoLabel}</td>
+        <td>
+          <button type="button" class="agente-editar" data-id="${a._id}" style="background:transparent;border:none;cursor:pointer;color:#2563eb;font-size:12px;">✏️</button>
+          <button type="button" class="agente-toggle" data-id="${a._id}" data-activo="${a.activo}" style="background:transparent;border:none;cursor:pointer;color:#ef4444;font-size:12px;">${a.activo ? '🔒' : '🔓'}</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('.agente-editar').forEach(btn => {
+    btn.addEventListener('click', () => editarAgenteDesdeUI(btn.dataset.id));
+  });
+  tbody.querySelectorAll('.agente-toggle').forEach(btn => {
+    btn.addEventListener('click', () => toggleAgenteDesdeUI(btn.dataset.id, btn.dataset.activo === 'true'));
+  });
+}
+
+function rellenarSelectEmpresasParaAgentes() {
+  const select = document.getElementById('agente-empresas');
+  if (!select) return;
+  select.innerHTML = '';
+  if (EMPRESAS_INFO.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No hay líneas disponibles';
+    opt.disabled = true;
+    select.appendChild(opt);
+    return;
+  }
+  EMPRESAS_INFO.forEach(e => {
+    const opt = document.createElement('option');
+    opt.value = e._id;
+    opt.textContent = `${e.nombre} (${e.whatsappPhoneId})`;
+    select.appendChild(opt);
+  });
+}
+
+function limpiarFormularioAgente() {
+  agenteEditandoId = null;
+  const nombre = document.getElementById('agente-nombre');
+  const telefono = document.getElementById('agente-telefono');
+  const pin = document.getElementById('agente-pin');
+  const select = document.getElementById('agente-empresas');
+  const btn = document.getElementById('agente-guardar');
+  if (nombre) nombre.value = '';
+  if (telefono) telefono.value = '';
+  if (pin) pin.value = '';
+  if (select) select.selectedIndex = -1;
+  if (btn) btn.textContent = 'Crear agente';
+}
+
+function editarAgenteDesdeUI(id) {
+  const agente = AGENTES_GLOBAL.find(a => String(a._id) === String(id));
+  if (!agente) return;
+  agenteEditandoId = id;
+  const nombre = document.getElementById('agente-nombre');
+  const telefono = document.getElementById('agente-telefono');
+  const pin = document.getElementById('agente-pin');
+  const select = document.getElementById('agente-empresas');
+  const btn = document.getElementById('agente-guardar');
+  if (nombre) nombre.value = agente.nombre || '';
+  if (telefono) telefono.value = agente.telefono || '';
+  if (pin) pin.value = '';
+  if (select) {
+    const idsAcceso = (agente.empresasAcceso || []).map(e => String(e));
+    Array.from(select.options).forEach(opt => {
+      opt.selected = idsAcceso.includes(opt.value);
+    });
+  }
+  if (btn) btn.textContent = 'Guardar cambios';
+}
+
+async function crearAgenteDesdeUI() {
+  const nombre = (document.getElementById('agente-nombre') || {}).value?.trim() || '';
+  const telefono = (document.getElementById('agente-telefono') || {}).value?.trim() || '';
+  const pin = (document.getElementById('agente-pin') || {}).value?.trim() || '';
+  const select = document.getElementById('agente-empresas');
+  const empresasAcceso = select ? Array.from(select.selectedOptions).map(o => o.value) : [];
+
+  if (!nombre || !telefono || !pin) {
+    mostrarToast('Completá nombre, teléfono y PIN', 'error');
+    return;
+  }
+  if (empresasAcceso.length === 0) {
+    mostrarToast('Seleccioná al menos una línea', 'error');
+    return;
+  }
+
+  const token = localStorage.getItem('token') || '';
+  const url = agenteEditandoId ? `/api/admin/agentes/${agenteEditandoId}` : '/api/admin/agentes';
+  const method = agenteEditandoId ? 'PUT' : 'POST';
+  const payload = { nombre, telefono, pin, empresasAcceso };
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      mostrarToast(data.error || 'Error al guardar agente', 'error');
+      return;
+    }
+    mostrarToast(agenteEditandoId ? 'Agente actualizado' : 'Agente creado', 'info');
+    limpiarFormularioAgente();
+    cargarAgentes();
+  } catch (error) {
+    console.error('Error guardando agente:', error);
+    mostrarToast('Error de red al guardar agente', 'error');
+  }
+}
+
+async function toggleAgenteDesdeUI(id, activoActual) {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/admin/agentes/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ activo: !activoActual })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al actualizar agente');
+    cargarAgentes();
+  } catch (error) {
+    console.error('Error al cambiar estado del agente:', error);
+    mostrarToast('Error al cambiar estado del agente', 'error');
+  }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   await precargarVistas();

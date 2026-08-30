@@ -4298,14 +4298,6 @@ async function init() {
   // Botón para cerrar la columna derecha en móvil
   armarBotonCerrarPerfilMovil();
 
-  // Refrescar pedido activo cada 30 segundos (por si el socket no llegó)
-  setInterval(() => {
-    if (!chatActivoId) return;
-    const conv = getConversacionPorId(chatActivoId);
-    if (!conv || (conv.carrito && conv.carrito.length > 0)) return;
-    const contacto = getContactoPorId(conv.contactoId);
-    cargarPedidoActivo(chatActivoId, contacto?.telefono, contacto?._id);
-  }, 30000);
 }
 
 function ocultarBotonLlamarEnEscritorio() {

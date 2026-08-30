@@ -2619,7 +2619,16 @@ const crearContactoManual = async (req, res) => {
       telefono: telefonoLimpio,
       nombre: nombre || 'Cliente',
       direccion: direccion || '',
-      etiquetas: Array.isArray(etiquetas) ? etiquetas.filter(e => typeof e === 'string' && e.trim() !== '') : []
+      etiquetas: Array.isArray(etiquetas)
+        ? etiquetas
+            .filter(e => typeof e === 'string' && e.trim() !== '')
+            .map(nombreEtiqueta => ({
+              nombre: nombreEtiqueta.trim(),
+              aplicadaPor: 'manual',
+              fecha: new Date(),
+              sucursal: ''
+            }))
+        : []
     });
 
     let conversacion = await Conversacion.findOne({ empresaId, contactoId: contacto._id })

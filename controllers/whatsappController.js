@@ -784,6 +784,9 @@ const recibirMensaje = async (req, res) => {
             // 2b. Guardar el audio en /uploads y actualizar el mensaje del cliente
             if (esArchivoAudio && fileBuffer.length > 0) {
               try {
+                const empresaFolder = String(empresa._id);
+                const uploadDirEmpresa = path.join(__dirname, '..', 'uploads', empresaFolder);
+                fs.mkdirSync(uploadDirEmpresa, { recursive: true });
                 const extMap = {
                   'audio/mpeg': '.mp3',
                   'audio/mp3': '.mp3',
@@ -797,11 +800,11 @@ const recibirMensaje = async (req, res) => {
                 };
                 const ext = extMap[mimeType] || '.ogg';
                 const nombreBase = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-                const archivoTemp = path.join(__dirname, '..', 'uploads', `${nombreBase}${ext}`);
+                const archivoTemp = path.join(uploadDirEmpresa, `${nombreBase}${ext}`);
                 fs.writeFileSync(archivoTemp, fileBuffer);
 
                 // Intentar conversion a MP3 para máxima compatibilidad (Chrome, Safari, Firefox, Edge)
-                const archivoFinal = path.join(__dirname, '..', 'uploads', `${nombreBase}.mp3`);
+                const archivoFinal = path.join(uploadDirEmpresa, `${nombreBase}.mp3`);
                 let archivoGuardado = archivoTemp;
                 let extensionFinal = ext;
                 try {
@@ -833,7 +836,7 @@ const recibirMensaje = async (req, res) => {
                 await Mensaje.findByIdAndUpdate(mensajeClienteDb._id, {
                   $set: {
                     tipo: 'audio',
-                    urlArchivo: `/uploads/${filename}`,
+                    urlArchivo: `/uploads/${empresaFolder}/${filename}`,
                     contenido: '📎 [Audio]',
                     duracionSegundos
                   }
@@ -849,7 +852,7 @@ const recibirMensaje = async (req, res) => {
                       remitente: 'cliente',
                       contenido: '📎 [Audio]',
                       tipo: 'audio',
-                      urlArchivo: `/uploads/${filename}`,
+                      urlArchivo: `/uploads/${empresaFolder}/${filename}`,
                       duracionSegundos,
                       fecha: new Date()
                     },
@@ -1625,7 +1628,7 @@ const enviarMensajeMedia = async (req, res) => {
     }
 
     // Guardar mensaje en la base de datos
-    const urlArchivoLocal = `/uploads/${archivo.filename}`;
+    const urlArchivoLocal = `/uploads/${empresaIdStr}/${archivo.filename}`;
     const nuevoMensaje = await Mensaje.create({
       conversacionId: conversacion._id,
       remitente: 'empresa',
@@ -2164,7 +2167,7 @@ const actualizarConfig = async (req, res) => {
     }
 
     if (req.file) {
-      updates.fotoPerfil = `/uploads/${req.file.filename}`;
+      updates.fotoPerfil = `/uploads/${String(empresaId)}/${req.file.filename}`;
     }
 
     const estadoNuevo = (typeof req.body.estado === 'string') ? req.body.estado.trim() : null;

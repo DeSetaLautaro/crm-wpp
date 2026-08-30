@@ -138,7 +138,7 @@ const obtenerConversaciones = async (req, res) => {
         ultimoMensaje: conv.ultimoMensaje,
         updatedAt: conv.updatedAt,
         tieneCancelacionReciente: canceladosPorConv.has(conv._id.toString()),
-        ventanaAbierta: mapaVentana.get(String(conv._id)) ?? true,
+        ventanaAbierta: mapaVentana.get(String(conv._id)) ?? false,
         tieneMas,
         mensajes: mensajesAsc.map(m => ({
           _id: m._id,
@@ -191,7 +191,7 @@ const obtenerMensajesConversacion = async (req, res) => {
       return res.status(403).json({ error: 'No tienes acceso a esta conversación' });
     }
 
-    let ventanaAbierta = true;
+    let ventanaAbierta = false;
     const ultimoCliente = await Mensaje.findOne({
       conversacionId: id,
       remitente: 'cliente'

@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const Empresa = require('../models/Empresa');
 const Usuario = require('../models/usuario');
+const { registrarAuditoria } = require('../services/auditoriaService');
 
 const loginConPin = async (req, res) => {
   try {
@@ -62,6 +63,8 @@ const loginConPin = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    await registrarAuditoria(req, empresasIds[0] || null, 'login_pin', `Login con PIN del usuario ${usuario.nombre}`, { usuarioId: usuario._id.toString(), rol: usuario.rol, empresas: empresasIds });
 
     return res.json({
       ok: true,

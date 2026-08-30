@@ -4,6 +4,7 @@ const Conversacion = require('../models/Conversacion');
 const Mensaje = require('../models/Mensaje');
 const Difusion = require('../models/Difusion');
 const { Types } = require('mongoose');
+const { registrarAuditoria } = require('../services/auditoriaService');
 
 const CONCURRENCIA_ENVIO = 10;
 
@@ -226,6 +227,7 @@ async function crearDifusion(req, res) {
       fechaProgramacion,
       destinatariosTotal: contactos.length
     });
+    await registrarAuditoria(req, empresaId, 'difusion_creada', `Se creó una difusión para ${contactos.length} contactos`, { difusionId: difusion._id, mensaje: difusion.mensaje, destinatarios: contactos.length });
     return res.status(201).json({ ok: true, difusion });
   } catch (error) {
     console.error('Error creando difusión:', error);

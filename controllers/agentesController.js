@@ -1,5 +1,6 @@
 const Usuario = require('../models/usuario');
 const Empresa = require('../models/Empresa');
+const { registrarAuditoria } = require('../services/auditoriaService');
 
 // GET /api/admin/agentes
 async function listarAgentes(req, res) {
@@ -66,6 +67,7 @@ async function crearAgente(req, res) {
       activo: true
     });
     await agente.save();
+    await registrarAuditoria(req, req.usuario.id, 'agente_creado', `Se creó el agente ${nombre}`, { agenteId: agente._id, telefono: agente.telefono, empresasAcceso: idsValidos });
 
     return res.status(201).json({
       ok: true,
@@ -110,6 +112,7 @@ async function actualizarAgente(req, res) {
     }
     if (typeof activo === 'boolean') agente.activo = activo;
     await agente.save();
+    await registrarAuditoria(req, req.usuario.id, 'agente_actualizado', `Se actualizó el agente ${agente.nombre}`, { agenteId: agente._id, cambios: req.body });
 
     return res.json({
       ok: true,
@@ -141,6 +144,7 @@ async function desactivarAgente(req, res) {
     }
     agente.activo = false;
     await agente.save();
+    await registrarAuditoria(req, req.usuario.id, 'agente_desactivado', `Se desactivó el agente ${agente.nombre}`, { agenteId: agente._id });
     return res.json({ ok: true, desactivado: true });
   } catch (error) {
     console.error('Error desactivando agente:', error);

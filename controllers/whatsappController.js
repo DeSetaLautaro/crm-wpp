@@ -16,6 +16,7 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 const { actualizarCostosEmpresa } = require('../services/metaAnalyticsService');
+const { registrarAuditoria } = require('../services/auditoriaService');
 
 // Lee la duración real de un archivo de audio/video usando ffprobe
 async function obtenerDuracionArchivo(ruta) {
@@ -1924,6 +1925,8 @@ const actualizarBotActivo = async (req, res) => {
       { $set: { botActivo } }
     );
 
+    await registrarAuditoria(req, idsEmpresas[0], 'cambio_bot_global', `Se actualizó el estado del bot a ${botActivo ? 'activo' : 'inactivo'}`, { botActivo, empresasAfectadas: idsEmpresas.length });
+
     return res.json({ ok: true, botActivo });
   } catch (error) {
     console.error('Error al actualizar botActivo:', error);
@@ -1953,6 +1956,8 @@ const actualizarBotActivoConversacion = async (req, res) => {
     }
 
     await Conversacion.findByIdAndUpdate(id, { $set: { botActivo } });
+
+    await registrarAuditoria(req, empresaIdStr, 'cambio_bot_conversacion', `Bot de la conversación ${id} ${botActivo ? 'activado' : 'desactivado'}`, { conversacionId: id, botActivo });
 
     // Emitir evento para actualizar el panel en tiempo real
     const io = req.app.get('io');
@@ -2300,6 +2305,7 @@ const actualizarContacto = async (req, res) => {
       { $set: updates },
       { new: true }
     );
+    await registrarAuditoria(req, contactoExistente.empresaId, 'contacto_actualizado', `Se actualizaron los datos del contacto ${contactoExistente.telefono}`, { contactoId, updates });
 
     return res.json({ ok: true, contacto });
   } catch (error) {
@@ -2426,6 +2432,7 @@ const agregarEtiqueta = async (req, res) => {
       const updated = await Cliente.findByIdAndUpdate(contactoId, {
         $set: { etiquetas: actualizadas }
       }, { new: true });
+      await registrarAuditoria(req, contacto.empresaId, 'etiqueta_agregada', `Se agregó la etiqueta "${nueva}" al contacto ${contacto.telefono}`, { contactoId, etiqueta: nueva, aplicadaPor });
       return res.json({ ok: true, etiquetas: updated.etiquetas });
     }
 
@@ -2460,6 +2467,7 @@ const eliminarEtiqueta = async (req, res) => {
     const actuales = Array.isArray(contacto.etiquetas) ? contacto.etiquetas : [];
     const filtradas = actuales.filter(e => (e.nombre || e) !== etiqueta);
     await Cliente.findByIdAndUpdate(contactoId, { $set: { etiquetas: filtradas } }, { new: true });
+    await registrarAuditoria(req, contacto.empresaId, 'etiqueta_eliminada', `Se eliminó la etiqueta "${etiqueta}" del contacto ${contacto.telefono}`, { contactoId, etiqueta });
 
     return res.json({ ok: true, etiquetas: filtradas });
   } catch (error) {
@@ -2503,6 +2511,7 @@ const eliminarNota = async (req, res) => {
     }
 
     await Mensaje.findByIdAndDelete(mensajeId);
+    await registrarAuditoria(req, contacto.empresaId, 'nota_eliminada', `Se eliminó una nota interna del contacto ${contacto.telefono}`, { contactoId, mensajeId });
 
     return res.json({ ok: true });
   } catch (error) {
@@ -2557,6 +2566,7 @@ const agregarNota = async (req, res) => {
       remitente: 'nota_interna',
       contenido: nota.trim()
     });
+    await registrarAuditoria(req, contacto.empresaId, 'nota_agregada', `Se agregó una nota interna al contacto ${contacto.telefono}`, { contactoId, mensajeId: nuevoMensaje._id, conversacionId: conversacion._id, nota: nota.trim() });
 
     return res.status(201).json({ ok: true, mensaje: nuevoMensaje });
   } catch (error) {
@@ -2585,6 +2595,7 @@ const bloquearCliente = async (req, res) => {
       { $set: { bloqueado: true } },
       { new: true }
     );
+    await registrarAuditoria(req, contactoExistente.empresaId, 'cliente_bloqueado', `Se bloqueó al cliente ${contactoExistente.telefono}`, { contactoId, telefono: contactoExistente.telefono });
     return res.json({ ok: true, bloqueado: true, contacto });
   } catch (error) {
     console.error('Error al bloquear cliente:', error);
@@ -2612,6 +2623,7 @@ const desbloquearCliente = async (req, res) => {
       { $set: { bloqueado: false } },
       { new: true }
     );
+    await registrarAuditoria(req, contactoExistente.empresaId, 'cliente_desbloqueado', `Se desbloqueó al cliente ${contactoExistente.telefono}`, { contactoId, telefono: contactoExistente.telefono });
     return res.json({ ok: true, bloqueado: false, contacto });
   } catch (error) {
     console.error('Error al desbloquear cliente:', error);
@@ -2677,6 +2689,7 @@ const crearContactoManual = async (req, res) => {
         conversacionId: conversacion._id
       });
     }
+    await registrarAuditoria(req, empresaId, 'contacto_creado', `Se creó el contacto ${telefonoLimpio}`, { contactoId: contacto._id, telefono: telefonoLimpio, nombre: contacto.nombre });
 
     return res.status(201).json({ ok: true, contacto, conversacionId: conversacion._id });
   } catch (error) {

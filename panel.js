@@ -2597,7 +2597,7 @@ async function cargarConversaciones() {
     CONVERSACIONES = [...MOCK_CONVERSACIONES];
     CONTACTOS = [...MOCK_CONTACTOS];
     MENSAJES = [...MOCK_MENSAJES];
-    if (!chatActivoId && CONVERSACIONES.length > 0) {
+    if (!chatActivoId && CONVERSACIONES.length > 0 && window.innerWidth > 768) {
       chatActivoId = CONVERSACIONES[0]._id;
     }
     renderTodo();
@@ -2708,7 +2708,7 @@ async function cargarConversaciones() {
       }
     }
 
-    if (!chatActivoId && CONVERSACIONES.length > 0) {
+    if (!chatActivoId && CONVERSACIONES.length > 0 && window.innerWidth > 768) {
       chatActivoId = CONVERSACIONES[0]._id;
     }
 
@@ -4544,7 +4544,8 @@ async function init() {
     backBtn.textContent = '←';
     backBtn.title = 'Volver a la lista';
     backBtn.addEventListener('click', () => {
-      document.getElementById('app').classList.remove('chat-abierto');
+      chatActivoId = null;
+      renderTodo();
     });
     chatHeader.insertBefore(backBtn, chatHeader.firstChild);
   }

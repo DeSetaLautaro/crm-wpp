@@ -536,7 +536,7 @@ const recibirMensaje = async (req, res) => {
           });
           if (resp.ok) {
             console.log('✅ Mensaje de bienvenida enviado al nuevo cliente', telefonoCliente);
-            await Mensaje.create({
+            const mensajeBienvenidaDb = await Mensaje.create({
               conversacionId: conversacion._id,
               remitente: 'ia',
               contenido: empresa.bienvenida.trim()
@@ -544,6 +544,24 @@ const recibirMensaje = async (req, res) => {
             await Conversacion.findByIdAndUpdate(conversacion._id, {
               $set: { ultimoMensaje: empresa.bienvenida.trim() }
             });
+            const iob = req.app.get('io');
+            if (iob) {
+              iob.to(empresa._id.toString()).emit('mensaje-nuevo', {
+                conversacionId: conversacion._id,
+                mensaje: {
+                  _id: mensajeBienvenidaDb._id,
+                  remitente: 'ia',
+                  contenido: empresa.bienvenida.trim(),
+                  estado: 'enviado',
+                  fecha: new Date()
+                },
+                conversacion: {
+                  _id: conversacion._id,
+                  ultimoMensaje: empresa.bienvenida.trim(),
+                  updatedAt: new Date()
+                }
+              });
+            }
           } else {
             const respBody = await resp.json().catch(() => ({}));
             console.error('❌ Error al enviar bienvenida:', resp.status, respBody);
@@ -1000,7 +1018,7 @@ JSON:`;
         }
       }
 
-      await Mensaje.create({
+      const mensajeCancelacionDb = await Mensaje.create({
         conversacionId: conversacion._id,
         remitente: 'ia',
         contenido: respuestaCancelacion
@@ -1014,8 +1032,10 @@ JSON:`;
         ioc.to(empresa._id.toString()).emit('mensaje-nuevo', {
           conversacionId: conversacion._id,
           mensaje: {
+            _id: mensajeCancelacionDb._id,
             remitente: 'ia',
             contenido: respuestaCancelacion,
+            estado: 'enviado',
             fecha: new Date()
           },
           conversacion: {
@@ -1162,7 +1182,7 @@ JSON:`;
       }
 
       // Guardar mensaje del sistema en BD
-      await Mensaje.create({
+      const mensajeHandoffDb = await Mensaje.create({
         conversacionId: conversacion._id,
         remitente: 'ia',
         contenido: textoDerivacion
@@ -1177,8 +1197,10 @@ JSON:`;
         ioHandoff.to(empresa._id.toString()).emit('mensaje-nuevo', {
           conversacionId: conversacion._id,
           mensaje: {
+            _id: mensajeHandoffDb._id,
             remitente: 'ia',
             contenido: textoDerivacion,
+            estado: 'enviado',
             fecha: new Date()
           },
           conversacion: {
@@ -1308,7 +1330,7 @@ JSON:`;
       }
 
       // Guardar mensaje en la base de datos
-      await Mensaje.create({
+      const mensajeIADb = await Mensaje.create({
         conversacionId: conversacion._id,
         remitente: 'ia',
         contenido: respuestaIA,
@@ -1420,8 +1442,10 @@ JSON:`;
         io.to(empresa._id.toString()).emit('mensaje-nuevo', {
           conversacionId: conversacion._id,
           mensaje: {
+            _id: mensajeIADb._id,
             remitente: 'ia',
             contenido: respuestaIA,
+            estado: 'enviado',
             fecha: new Date()
           },
           conversacion: {
@@ -1800,8 +1824,10 @@ const enviarMensaje = async (req, res) => {
       io.to(empresaIdStr).emit('mensaje-nuevo', {
         conversacionId: conversacion._id,
         mensaje: {
+          _id: nuevoMensaje._id,
           remitente: 'empresa',
           contenido: mensaje,
+          estado: 'enviado',
           fecha: new Date()
         },
         conversacion: {

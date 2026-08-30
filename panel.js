@@ -2780,13 +2780,19 @@ function setupSocketListeners() {
 
   socket.on('pedido-actualizado', (payload) => {
     if (!payload || !payload.conversacionId) return;
-    if (payload.conversacionId === chatActivoId) {
-      setTimeout(() => {
-        const conv = getConversacionPorId(payload.conversacionId);
-        if (!conv) return;
-        const contacto = getContactoPorId(conv.contactoId);
-        cargarPedidoActivo(payload.conversacionId, contacto?.telefono, contacto?._id);
-      }, 2000);
+    if (payload.conversacionId !== chatActivoId) return;
+
+    const conv = getConversacionPorId(payload.conversacionId);
+    if (!conv) return;
+    const contacto = getContactoPorId(conv.contactoId);
+    const contenedor = document.getElementById('pedido-info');
+
+    if (payload.pedido) {
+      // Render directo con el pedido que manda el backend
+      if (contenedor) contenedor.innerHTML = renderPedido(contenedor, payload.pedido);
+    } else {
+      // Fallback: buscar de nuevo
+      cargarPedidoActivo(payload.conversacionId, contacto?.telefono, contacto?._id);
     }
   });
 
@@ -3383,8 +3389,30 @@ function renderPedido(contenedor, pedido) {
   }
   const total = (pedido.total || 0).toFixed(2);
   const direccion = pedido.direccionEntrega || pedido.direccion || 'No especificada';
-  const estado = pedido.estado || 'Pendiente';
-  const colorEstado = estado === 'Cancelado' ? '#ef4444' : estado === 'Entregado' ? '#10b981' : '#f59e0b';
+  const estadoRaw = String(pedido.estado || 'Pendiente').toLowerCase();
+  const estadosLabels = {
+    'borrador': 'Borrador',
+    'pendiente': 'Pendiente',
+    'confirmado': 'Confirmado',
+    'en_preparacion': 'En preparación',
+    'en_preparación': 'En preparación',
+    'en_camino': 'En camino',
+    'entregado': 'Entregado',
+    'cancelado': 'Cancelado'
+  };
+  const estado = estadosLabels[estadoRaw] || pedido.estado || 'Pendiente';
+  const colorEstado = estado === 'Cancelado' ? '#ef4444' : (estado === 'Entregado' ? '#10b981' : '#f59e0b');
+
+  // Fecha del pedido
+  const fechaPedido = pedido.fecha || pedido.createdAt || pedido.updatedAt || null;
+  let htmlFecha = '';
+  if (fechaPedido) {
+    const fechaObj = new Date(fechaPedido);
+    const fechaTexto = fechaObj.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' });
+    htmlFecha = `<div class="pedido-fecha" style="font-size:12px; color:#6b7280; margin-bottom:4px;">Pedido del ${fechaTexto}</div>`;
+  }
+
+  html += htmlFecha;
   html += `<div class="pedido-total">Total: $${total}</div>`;
   html += `<div class="pedido-direccion">Entrega: ${direccion}</div>`;
   html += `<div class="pedido-estado"><span style="background:${colorEstado}; color:#fff; padding:3px 12px; border-radius:12px; font-weight:bold; font-size:11px;">${estado}</span></div>`;
@@ -4269,6 +4297,15 @@ async function init() {
 
   // Botón para cerrar la columna derecha en móvil
   armarBotonCerrarPerfilMovil();
+
+  // Refrescar pedido activo cada 30 segundos (por si el socket no llegó)
+  setInterval(() => {
+    if (!chatActivoId) return;
+    const conv = getConversacionPorId(chatActivoId);
+    if (!conv || (conv.carrito && conv.carrito.length > 0)) return;
+    const contacto = getContactoPorId(conv.contactoId);
+    cargarPedidoActivo(chatActivoId, contacto?.telefono, contacto?._id);
+  }, 30000);
 }
 
 function ocultarBotonLlamarEnEscritorio() {

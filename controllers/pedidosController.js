@@ -1,4 +1,5 @@
 const Pedido = require('../models/Pedido');
+const Conversacion = require('../models/Conversacion');
 
 // Crear pedido confirmado (usada internamente cuando el bot confirma)
 async function guardarPedidoConfirmado(datos) {
@@ -89,8 +90,57 @@ async function obtenerPedidosPorTelefono(req, res) {
   }
 }
 
+async function actualizarEstadoPedido(req, res) {
+  try {
+    const { id } = req.params;
+    const { estado } = req.body || {};
+
+    const estadosPermitidos = ['confirmado', 'en_preparacion', 'en_camino', 'entregado', 'cancelado'];
+    if (!estadosPermitidos.includes(estado)) {
+      return res.status(400).json({ error: 'Estado inválido. Permitidos: confirmado, en_preparacion, en_camino, entregado, cancelado' });
+    }
+
+    const pedido = await Pedido.findById(id);
+    if (!pedido) {
+      return res.status(404).json({ error: 'Pedido no encontrado' });
+    }
+
+    pedido.estado = estado;
+    pedido.fechaEstado = new Date();
+    if (estado === 'entregado') pedido.fechaEntrega = new Date();
+    await pedido.save();
+
+    // Emitir evento en tiempo real
+    const io = req.app.get('io');
+    if (io) {
+      let conversacionId = pedido.conversacionId;
+      if (!conversacionId && pedido.empresaId && pedido.contactoId) {
+        const conv = await Conversacion.findOne({
+          empresaId: pedido.empresaId,
+          contactoId: pedido.contactoId
+        }).sort({ createdAt: -1 }).lean();
+        conversacionId = conv?._id;
+      }
+      if (conversacionId) {
+        io.to(pedido.empresaId.toString()).emit('pedido-actualizado', {
+          conversacionId: conversacionId.toString(),
+          pedidoId: pedido._id,
+          estado,
+          pedido: pedido.toObject()
+        });
+      }
+    }
+
+    return res.json({ ok: true, pedido });
+  } catch (error) {
+    console.error('Error al actualizar estado del pedido:', error);
+    return res.status(500).json({ error: 'Error interno al actualizar estado' });
+  }
+}
+
 module.exports = {
   guardarPedidoConfirmado,
   confirmarPedido,
-  obtenerPedidosPorTelefono
+  obtenerPedidosPorTelefono,
+  actualizarEstadoPedido
 };

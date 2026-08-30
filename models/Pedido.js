@@ -73,8 +73,16 @@ const PedidoSchema = new Schema(
     },
     estado: {
       type: String,
-      enum: ['Borrador', 'Pendiente', 'confirmado', 'En preparación', 'Entregado', 'Cancelado'],
+      enum: ['Borrador', 'Pendiente', 'confirmado', 'en_preparacion', 'en_camino', 'Entregado', 'Cancelado', 'entregado', 'cancelado'],
       default: 'Borrador'
+    },
+    fechaEstado: {
+      type: Date,
+      default: null
+    },
+    fechaEntrega: {
+      type: Date,
+      default: null
     },
     direccion: {
       type: String,

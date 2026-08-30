@@ -744,7 +744,7 @@ const recibirMensaje = async (req, res) => {
 
       // Si la empresa activó el procesamiento de audios, intentamos transcribirlo con Gemini
       // Pero SIEMPRE descargamos y guardamos el audio para que el operador lo escuche en el panel
-      const mediaIdMultimedia = mensaje.audio?.id || mensaje.voice?.id || mensaje.document?.id;
+      const mediaIdMultimedia = mensaje.audio?.id || mensaje.voice?.id || mensaje.image?.id || mensaje.document?.id;
       if (mediaIdMultimedia && accessToken) {
         try {
           // 1. Obtener la URL de descarga
@@ -756,11 +756,12 @@ const recibirMensaje = async (req, res) => {
           if (!mediaResp.ok) {
             console.error('❌ Error al obtener media de Meta:', mediaResp.status, mediaJson);
           }
-          const mimeTypeDetectado = mediaJson.mime_type || (mensaje.type === 'voice' || mensaje.type === 'audio' ? 'audio/ogg' : (mensaje.type === 'document' ? 'application/octet-stream' : ''));
+          const mimeTypeDetectado = mediaJson.mime_type || (mensaje.type === 'voice' || mensaje.type === 'audio' ? 'audio/ogg' : (mensaje.type === 'image' ? 'image/jpeg' : (mensaje.type === 'document' ? 'application/octet-stream' : '')));
           const esArchivoAudio = mensaje.type === 'voice' || mensaje.type === 'audio' || mimeTypeDetectado.startsWith('audio/');
           const esDocumento = mensaje.type === 'document';
+          const esImagen = mensaje.type === 'image' || mimeTypeDetectado.startsWith('image/');
 
-          if (mediaJson.url && (esArchivoAudio || esDocumento)) {
+          if (mediaJson.url && (esArchivoAudio || esDocumento || esImagen)) {
             // 2. Descargar el archivo binario con header; si falla reintenta con query param
             let fileResp = await fetch(mediaJson.url, {
               headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -865,6 +866,55 @@ const recibirMensaje = async (req, res) => {
                 }
               } catch (err) {
                 console.error('❌ Error al guardar audio:', err);
+              }
+            } else if (esImagen && fileBuffer.length > 0) {
+              try {
+                const empresaFolder = String(empresa._id);
+                const uploadDirEmpresa = path.join(__dirname, '..', 'uploads', empresaFolder);
+                fs.mkdirSync(uploadDirEmpresa, { recursive: true });
+                const extMap = {
+                  'image/jpeg': '.jpg',
+                  'image/jpg': '.jpg',
+                  'image/png': '.png',
+                  'image/webp': '.webp',
+                  'image/gif': '.gif'
+                };
+                const ext = extMap[mimeType] || '.jpg';
+                const nombreBase = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+                const archivoFinal = path.join(uploadDirEmpresa, `${nombreBase}${ext}`);
+                fs.writeFileSync(archivoFinal, fileBuffer);
+                const filename = path.basename(archivoFinal);
+                // Actualizar el mensaje del cliente con tipo y urlArchivo
+                await Mensaje.findByIdAndUpdate(mensajeClienteDb._id, {
+                  $set: {
+                    tipo: 'imagen',
+                    urlArchivo: `/uploads/${empresaFolder}/${filename}`,
+                    contenido: '📎 [Imagen]'
+                  }
+                });
+
+                // Emitir la actualización al panel
+                const ioImg = req.app.get('io');
+                if (ioImg) {
+                  ioImg.to(empresa._id.toString()).emit('mensaje-nuevo', {
+                    conversacionId: conversacion._id,
+                    mensaje: {
+                      _id: mensajeClienteDb._id,
+                      remitente: 'cliente',
+                      contenido: '📎 [Imagen]',
+                      tipo: 'imagen',
+                      urlArchivo: `/uploads/${empresaFolder}/${filename}`,
+                      fecha: new Date()
+                    },
+                    conversacion: {
+                      _id: conversacion._id,
+                      ultimoMensaje: contenidoEntrada,
+                      updatedAt: new Date()
+                    }
+                  });
+                }
+              } catch (err) {
+                console.error('❌ Error al guardar imagen:', err);
               }
             }
 

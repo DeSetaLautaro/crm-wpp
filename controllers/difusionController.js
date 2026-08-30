@@ -328,6 +328,7 @@ async function enviarDifusion(req, res) {
     if (io) {
       io.to(String(difusion.empresaId)).emit('difusion-completada', { difusionId: difusion._id });
     }
+    await registrarAuditoria(req, difusion.empresaId, 'difusion_enviada', `Se envió la difusión ${difusion._id} a ${difusionProcesada.destinatariosEnviados || 0} contactos`, { difusionId: difusion._id, enviados: difusionProcesada.destinatariosEnviados || 0, total: difusionProcesada.destinatariosTotal || 0, errores: (difusionProcesada.errores || []).length });
     if (difusionProcesada.estado === 'error') {
       return res.status(502).json({
         ok: false,

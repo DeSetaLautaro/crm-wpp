@@ -127,6 +127,10 @@ let EMPRESAS_INFO = [];
 let AGENTES_GLOBAL = [];
 let agenteEditandoId = null;
 
+// ===== Notificaciones internas =====
+let mensajesNoLeidos = 0;
+let tituloOriginal = document.title;
+
 // Variables para el recorte de foto de perfil
 let fotoCropFile = null;
 let fotoCropArrastrando = false;
@@ -235,6 +239,71 @@ function reproducirSonidoNotificacion() {
     osc.onended = () => ctx.close();
   } catch (e) {
     console.warn('No se pudo reproducir sonido:', e);
+  }
+}
+
+function actualizarBadgeTitulo() {
+  document.title = mensajesNoLeidos > 0
+    ? `(${mensajesNoLeidos}) ${tituloOriginal}`
+    : tituloOriginal;
+}
+
+function marcarMensajesLeidos() {
+  mensajesNoLeidos = 0;
+  actualizarBadgeTitulo();
+}
+
+function solicitarPermisoNotificaciones() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().catch(err =>
+      console.warn('⚠️ No se pudo solicitar permiso de notificaciones:', err)
+    );
+  }
+}
+
+function notificarMensajeNuevo(payload) {
+  if (!payload || !payload.mensaje) return;
+
+  // Solo notificar mensajes entrantes de clientes
+  if (payload.mensaje.remitente !== 'cliente') return;
+
+  const conversacionId = payload.conversacionId;
+  const esChatActivo = conversacionId === chatActivoId;
+  const esVisible = !document.hidden;
+
+  // Si el usuario está viendo el chat activo y la pestaña está enfocada, no notificar
+  if (esChatActivo && esVisible) return;
+
+  // 🔊 Sonido
+  reproducirSonidoNotificacion();
+
+  // 🔔 Badge en el título
+  mensajesNoLeidos++;
+  actualizarBadgeTitulo();
+
+  // 💬 Notificación del sistema
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const conv = getConversacionPorId(conversacionId);
+    const contacto = conv ? getContactoPorId(conv.contactoId) : null;
+    const nombre = (contacto && contacto.nombre) ? contacto.nombre : 'Cliente';
+    const cuerpo = (payload.mensaje.contenido || '').slice(0, 120);
+
+    const notificacion = new Notification(`Nuevo mensaje de ${nombre}`, {
+      body: cuerpo,
+      tag: 'chat-' + conversacionId,
+      icon: '/favicon.ico' // Cambiá si tenés otro ícono
+    });
+
+    notificacion.onclick = () => {
+      window.focus();
+      if (conversacionId) {
+        chatActivoId = conversacionId;
+        renderTodo();
+        marcarMensajesLeidos();
+      }
+      notificacion.close();
+    };
   }
 }
 
@@ -435,6 +504,7 @@ function renderListaChats() {
       item.addEventListener('click', (e) => {
         if (e.target.closest('.chat-item-accion') || e.target.closest('.chat-chip-etiqueta')) return;
         chatActivoId = item.dataset.convId;
+        marcarMensajesLeidos();
         renderTodo();
       });
     });
@@ -455,6 +525,7 @@ function renderListaChats() {
     item.addEventListener('click', (e) => {
       if (e.target.closest('.chat-item-accion') || e.target.closest('.chat-chip-etiqueta')) return;
       chatActivoId = item.dataset.convId;
+      marcarMensajesLeidos();
       renderTodo();
     });
   });
@@ -2891,6 +2962,9 @@ function setupSocketListeners() {
       duracionSegundos: mensaje.duracionSegundos || null
     });
 
+    // 🔔 Notificación interna (sonido, badge y Notificación del sistema)
+    notificarMensajeNuevo(payload);
+
     // Actualizar la conversación local
     const convLocal = CONVERSACIONES.find(c => c._id === conversacionId);
     if (convLocal) {
@@ -3936,6 +4010,13 @@ function precargarVistas() {
 
 async function init() {
   await precargarVistas();
+
+  // Solicitar permiso de notificaciones del sistema al primer clic
+  document.addEventListener('click', function solicitarPermiso() {
+    solicitarPermisoNotificaciones();
+    document.removeEventListener('click', solicitarPermiso);
+  });
+
   // Pestañas
   document.querySelectorAll('.pestana').forEach(btn => {
     btn.addEventListener('click', () => {

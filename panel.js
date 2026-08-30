@@ -4686,6 +4686,19 @@ function ocultarBotonLlamarEnEscritorio() {
   document.head.appendChild(style);
 })();
 
+// En celulares, al abrir un chat se debe ocultar el sidebar
+(function() {
+  const style = document.createElement('style');
+  style.textContent = `
+    @media (max-width: 768px) {
+      #app.chat-abierto #slim-sidebar {
+        display: none !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
 async function cargarAgentes() {
   if (!usuarioActual || usuarioActual.rol === 'agente') return;
   const token = localStorage.getItem('token') || '';

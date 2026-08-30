@@ -2590,6 +2590,14 @@ function updateVisibilidad() {
   }
 }
 
+// ===== Vista móvil: mostrar bandeja al colapsar pantalla =====
+function ajustarVistaMovil() {
+  if (window.innerWidth <= 768 && chatActivoId) {
+    chatActivoId = null;
+    renderTodo();
+  }
+}
+
 // ===== Carga de conversaciones desde API =====
 async function cargarConversaciones() {
   if (USAR_MOCK_DATA) {
@@ -4010,6 +4018,10 @@ function precargarVistas() {
 
 async function init() {
   await precargarVistas();
+
+  // Forzar vista de bandeja en móviles al redimensionar
+  ajustarVistaMovil();
+  window.addEventListener('resize', () => ajustarVistaMovil());
 
   // Solicitar permiso de notificaciones del sistema al primer clic
   document.addEventListener('click', function solicitarPermiso() {

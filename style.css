@@ -1873,6 +1873,10 @@ body.modo-login #app {
     width: 100%;
   }
 
+  #app.sin-chat #empty-state {
+    display: none;
+  }
+
   #difusion-view {
     padding: 16px;
   }

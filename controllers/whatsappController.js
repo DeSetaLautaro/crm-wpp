@@ -2102,8 +2102,9 @@ const actualizarConfig = async (req, res) => {
     if (typeof req.body.promptIA === 'string') {
       const promptIA = req.body.promptIA.trim();
       if (req.body.aplicarATodasPrompt === true) {
+        const idsEmpresas = req.empresas && req.empresas.length ? req.empresas : [empresaId];
         await Empresa.updateMany(
-          { usuarioAppId: req.usuario.id },
+          { _id: { $in: idsEmpresas }, usuarioAppId: req.usuario.id },
           { $set: { promptIA } }
         );
       } else {
@@ -2138,8 +2139,9 @@ const actualizarConfig = async (req, res) => {
 
     if (req.body.aplicarATodasAtajos === true) {
       if (atajos) {
+        const idsEmpresas = req.empresas && req.empresas.length ? req.empresas : [empresaId];
         await Empresa.updateMany(
-          { usuarioAppId: req.usuario.id },
+          { _id: { $in: idsEmpresas }, usuarioAppId: req.usuario.id },
           { $set: { atajos } }
         );
       }

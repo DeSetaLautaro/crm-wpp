@@ -251,6 +251,24 @@ function detectarCancelacionPedido(texto) {
   return expresiones.some(re => re.test(lower));
 }
 
+async function obtenerOCrearConversacion({ empresaId, contactoId, ...datos }) {
+  let conversacion = await Conversacion.findOne({ empresaId, contactoId }).sort({ createdAt: -1 });
+  if (conversacion) return conversacion;
+
+  try {
+    conversacion = await Conversacion.create({ empresaId, contactoId, ...datos });
+  } catch (error) {
+    if (error.code === 11000) {
+      conversacion = await Conversacion.findOne({ empresaId, contactoId }).sort({ createdAt: -1 });
+      if (!conversacion) throw error;
+    } else {
+      throw error;
+    }
+  }
+
+  return conversacion;
+}
+
 async function verificarVentana(conversacionId) {
   const ultimoCliente = await Mensaje.findOne({
     conversacionId,
@@ -506,20 +524,16 @@ const recibirMensaje = async (req, res) => {
       return;
     }
 
-    let conversacion = await Conversacion.findOne({ empresaId: empresa._id, contactoId: contacto._id })
-      .sort({ createdAt: -1 });
-    if (!conversacion) {
-      console.log("💬 [8] Creando nueva conversación...");
-      conversacion = await Conversacion.create({
-        empresaId: empresa._id,
-        contactoId: contacto._id,
-        lineaReceptora: whatsappPhoneId,
-        numeroReceptor: displayPhoneNumber,
-        botActivo: empresa.botActivo !== false,
-        estado: 'Abierto',
-        ultimoMensaje: textoMensaje
-      });
-    } else if (conversacion.estado !== 'Abierto') {
+    let conversacion = await obtenerOCrearConversacion({
+      empresaId: empresa._id,
+      contactoId: contacto._id,
+      lineaReceptora: whatsappPhoneId,
+      numeroReceptor: displayPhoneNumber,
+      botActivo: empresa.botActivo !== false,
+      estado: 'Abierto',
+      ultimoMensaje: textoMensaje
+    });
+    if (conversacion.estado !== 'Abierto') {
       conversacion.estado = 'Abierto';
       await conversacion.save();
     }
@@ -587,12 +601,21 @@ const recibirMensaje = async (req, res) => {
     }
 
     console.log("📝 [9] Guardando mensaje...");
-    const mensajeClienteDb = await Mensaje.create({
-      conversacionId: conversacion._id,
-      remitente: 'cliente',
-      contenido: contenidoEntrada,
-      whatsappMsgId
-    });
+    let mensajeClienteDb;
+    try {
+      mensajeClienteDb = await Mensaje.create({
+        conversacionId: conversacion._id,
+        remitente: 'cliente',
+        contenido: contenidoEntrada,
+        whatsappMsgId
+      });
+    } catch (error) {
+      if (error.code === 11000 && whatsappMsgId) {
+        console.log(`🔁 [DEDUP] Mensaje ${whatsappMsgId} ya procesado, ignorado.`);
+        return;
+      }
+      throw error;
+    }
 
     await Conversacion.findByIdAndUpdate(conversacion._id, {
       $set: {
@@ -2608,7 +2631,7 @@ const agregarNota = async (req, res) => {
     if (!conversacion) {
       // Si no existe, crear una conversación vacía
       const empresa = await Empresa.findById(contacto.empresaId);
-      conversacion = await Conversacion.create({
+      conversacion = await obtenerOCrearConversacion({
         empresaId: contacto.empresaId,
         contactoId,
         lineaReceptora: empresa?.whatsappPhoneId || '',
@@ -2724,21 +2747,16 @@ const crearContactoManual = async (req, res) => {
         : []
     });
 
-    let conversacion = await Conversacion.findOne({ empresaId, contactoId: contacto._id })
-      .sort({ createdAt: -1 });
-
-    if (!conversacion) {
-      const empresa = await Empresa.findById(empresaId);
-      conversacion = await Conversacion.create({
-        empresaId,
-        contactoId: contacto._id,
-        lineaReceptora: empresa?.whatsappPhoneId || '',
-        numeroReceptor: empresa?.whatsappPhoneId || '',
-        botActivo: empresa?.botActivo !== false,
-        estado: 'Abierto',
-        ultimoMensaje: ''
-      });
-    }
+    const empresa = await Empresa.findById(empresaId);
+    let conversacion = await obtenerOCrearConversacion({
+      empresaId,
+      contactoId: contacto._id,
+      lineaReceptora: empresa?.whatsappPhoneId || '',
+      numeroReceptor: empresa?.whatsappPhoneId || '',
+      botActivo: empresa?.botActivo !== false,
+      estado: 'Abierto',
+      ultimoMensaje: ''
+    });
 
     const io = req.app.get('io');
     if (io) {

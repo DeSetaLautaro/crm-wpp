@@ -48,4 +48,7 @@ const ContactoSchema = new Schema(
   { timestamps: true }
 );
 
+ContactoSchema.index({ empresaId: 1, telefono: 1 }, { unique: true });
+ContactoSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('Contacto', ContactoSchema);

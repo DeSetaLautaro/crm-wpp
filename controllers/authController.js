@@ -11,8 +11,14 @@ const loginConPin = async (req, res) => {
     if (!telefono || typeof telefono !== 'string' || telefono.trim() === '') {
       return res.status(400).json({ error: 'El teléfono de WhatsApp es obligatorio' });
     }
+    if (telefono.length > 30) {
+      return res.status(400).json({ error: 'El teléfono no puede superar los 30 caracteres' });
+    }
     if (!pin || typeof pin !== 'string' || pin.trim() === '') {
       return res.status(400).json({ error: 'El PIN es obligatorio' });
+    }
+    if (pin.length > 20) {
+      return res.status(400).json({ error: 'El PIN no puede superar los 20 caracteres' });
     }
 
     // 1. Buscar el Usuario por su número de WhatsApp (teléfono)
@@ -61,7 +67,7 @@ const loginConPin = async (req, res) => {
         adminId: usuario.adminId ? usuario.adminId.toString() : null
       },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '12h' }
     );
 
     await registrarAuditoria(req, empresasIds[0] || null, 'login_pin', `Login con PIN del usuario ${usuario.nombre}`, { usuarioId: usuario._id.toString(), rol: usuario.rol, empresas: empresasIds });

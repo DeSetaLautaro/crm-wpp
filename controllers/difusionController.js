@@ -165,6 +165,7 @@ async function crearDifusion(req, res) {
     }
     const mensaje = (req.body.mensaje || '').trim();
     if (!mensaje) return res.status(400).json({ error: 'El mensaje es obligatorio' });
+    if (mensaje.length > 4000) return res.status(400).json({ error: 'El mensaje no puede superar los 4000 caracteres' });
 
     let tipos = req.body.tipoDestinatario || 'etiqueta';
     if (!Array.isArray(tipos)) {
@@ -193,12 +194,18 @@ async function crearDifusion(req, res) {
     if (tipos.includes('etiqueta')) {
       const etiqueta = String(req.body.etiqueta || '').trim();
       if (!etiqueta) return res.status(400).json({ error: 'Elegí una etiqueta' });
+      if (etiqueta.length > 50) return res.status(400).json({ error: 'La etiqueta no puede superar los 50 caracteres' });
       const clientes = await Cliente.find({ empresaId, 'etiquetas.nombre': etiqueta }).lean();
       clientes.forEach(agregarContacto);
     }
     if (tipos.includes('manual')) {
-      const ids = Array.isArray(req.body.contactosIds) ? req.body.contactosIds : [];
-      if (ids.length === 0) return res.status(400).json({ error: 'No se seleccionaron contactos' });
+      if (!Array.isArray(req.body.contactosIds) || req.body.contactosIds.length === 0) {
+        return res.status(400).json({ error: 'No se seleccionaron contactos' });
+      }
+      const ids = req.body.contactosIds;
+      if (ids.some(id => typeof id !== 'string' || !Types.ObjectId.isValid(id))) {
+        return res.status(400).json({ error: 'IDs de contactos inválidos' });
+      }
       const idsValidos = ids.filter(id => Types.ObjectId.isValid(id));
       const clientes = await Cliente.find({ _id: { $in: idsValidos }, empresaId }).lean();
       clientes.forEach(agregarContacto);

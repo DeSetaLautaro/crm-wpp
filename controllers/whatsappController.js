@@ -497,15 +497,15 @@ const recibirMensaje = async (req, res) => {
       }
     }
 
-    // Responder inmediatamente a Meta para evitar reintentos
-    res.sendStatus(200);
+    // ⚠️ No respondemos aún: primero hay que persistir el mensaje.
+    // Si algo falla antes de guardar, respondemos 500 y Meta reintentará.
 
     console.log(`⚙️ [5] Buscando empresa en MongoDB con whatsappPhoneId: '${whatsappPhoneId}'`);
     const empresa = await Empresa.findOne({ whatsappPhoneId: whatsappPhoneId });
     
     if (!empresa) {
-        console.log("❌ [ERROR GRAVE] La base de datos no encontró ninguna empresa con ese número de ID.");
-        return;
+        logger.error("❌ [ERROR GRAVE] La base de datos no encontró ninguna empresa con ese número de ID.");
+        return res.status(500).json({ error: 'Empresa no encontrada' });
     }
     console.log(`🏢 [6] ¡Empresa encontrada!: ${empresa.nombre}`);
     const localAbierto = empresa.abierto !== false;
@@ -646,6 +646,12 @@ const recibirMensaje = async (req, res) => {
           updatedAt: new Date()
         }
       });
+    }
+
+    // ⚡ Recién acá avisamos a Meta que el mensaje se procesó correctamente.
+    // Si algo falla antes de este punto, respondemos 500 y Meta reintentará.
+    if (!res.headersSent) {
+      res.sendStatus(200);
     }
 
     // ===== Manejo de mensajes multimedia (imagen, audio, video, etc.) =====
@@ -1579,6 +1585,10 @@ JSON:`;
     return;
   } catch (error) {
     logger.error('🔥 [ERROR CATASTRÓFICO] Explotó el código en el Try/Catch:', error);
+    // Si no se envió respuesta aún, responder 500 para que Meta reintente el mensaje.
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Error interno al procesar el mensaje' });
+    }
     return;
   }
 };
@@ -1810,6 +1820,9 @@ const enviarMensaje = async (req, res) => {
     const mensaje = mensajeLimpio;
     if (!conversacionId || !mensaje || typeof mensaje !== 'string' || mensaje.length === 0) {
       return res.status(400).json({ error: 'Faltan datos: conversacionId y mensaje son requeridos' });
+    }
+    if (mensaje.length > 4000) {
+      return res.status(400).json({ error: 'El mensaje no puede superar los 4000 caracteres' });
     }
 
     const conversacion = await Conversacion.findById(conversacionId)
@@ -2365,10 +2378,24 @@ const actualizarContacto = async (req, res) => {
     const { contactoId } = req.params;
     const { direccion, pisoDepto, codigoPostal, nombre } = req.body || {};
 
+    // Validar tipos y longitudes
+    if (direccion !== undefined && (typeof direccion !== 'string' || direccion.trim().length > 200)) {
+      return res.status(400).json({ error: 'direccion debe ser un string de máximo 200 caracteres' });
+    }
+    if (pisoDepto !== undefined && (typeof pisoDepto !== 'string' || pisoDepto.trim().length > 100)) {
+      return res.status(400).json({ error: 'pisoDepto debe ser un string de máximo 100 caracteres' });
+    }
+    if (codigoPostal !== undefined && (typeof codigoPostal !== 'string' || codigoPostal.trim().length > 100)) {
+      return res.status(400).json({ error: 'codigoPostal debe ser un string de máximo 100 caracteres' });
+    }
+    if (nombre !== undefined && (typeof nombre !== 'string' || nombre.trim() === '' || nombre.trim().length > 100)) {
+      return res.status(400).json({ error: 'nombre debe ser un string no vacío de máximo 100 caracteres' });
+    }
+
     const updates = {};
-    if (typeof direccion === 'string') updates.direccion = direccion;
-    if (typeof pisoDepto === 'string') updates.pisoDepto = pisoDepto;
-    if (typeof codigoPostal === 'string') updates.codigoPostal = codigoPostal;
+    if (typeof direccion === 'string') updates.direccion = direccion.trim();
+    if (typeof pisoDepto === 'string') updates.pisoDepto = pisoDepto.trim();
+    if (typeof codigoPostal === 'string') updates.codigoPostal = codigoPostal.trim();
     if (typeof nombre === 'string' && nombre.trim() !== '') updates.nombre = nombre.trim();
 
     if (Object.keys(updates).length === 0) {
@@ -2493,6 +2520,9 @@ const agregarEtiqueta = async (req, res) => {
     if (!etiqueta || typeof etiqueta !== 'string' || etiqueta.trim() === '') {
       return res.status(400).json({ error: 'Etiqueta inválida' });
     }
+    if (etiqueta.trim().length > 50) {
+      return res.status(400).json({ error: 'La etiqueta no puede superar los 50 caracteres' });
+    }
 
     const contacto = await Cliente.findById(contactoId);
     if (!contacto) {
@@ -2616,6 +2646,9 @@ const agregarNota = async (req, res) => {
     if (!nota || typeof nota !== 'string' || nota.trim() === '') {
       return res.status(400).json({ error: 'Nota inválida' });
     }
+    if (nota.length > 1000) {
+      return res.status(400).json({ error: 'La nota no puede superar los 1000 caracteres' });
+    }
 
     const contacto = await Cliente.findById(contactoId);
     if (!contacto) {
@@ -2726,6 +2759,20 @@ const crearContactoManual = async (req, res) => {
     }
 
     const { nombre = '', telefono = '', direccion = '', etiquetas = [] } = req.body || {};
+
+    if (typeof nombre !== 'string' || nombre.length > 100) {
+      return res.status(400).json({ error: 'El nombre debe ser un string de máximo 100 caracteres' });
+    }
+    if (telefono === undefined || telefono === null || String(telefono).trim() === '') {
+      return res.status(400).json({ error: 'Teléfono inválido' });
+    }
+    if (typeof direccion !== 'string' || direccion.length > 200) {
+      return res.status(400).json({ error: 'La dirección debe ser un string de máximo 200 caracteres' });
+    }
+    if (!Array.isArray(etiquetas) || etiquetas.some(e => typeof e !== 'string' || e.length > 50)) {
+      return res.status(400).json({ error: 'Las etiquetas deben ser un array de strings de máximo 50 caracteres' });
+    }
+
     const telefonoLimpio = String(telefono || '').replace(/\D/g, '');
     if (!telefonoLimpio || telefonoLimpio.length < 6) {
       return res.status(400).json({ error: 'Teléfono inválido' });

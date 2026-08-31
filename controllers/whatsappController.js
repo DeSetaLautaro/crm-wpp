@@ -19,7 +19,9 @@ const { actualizarCostosEmpresa } = require('../services/metaAnalyticsService');
 const { registrarAuditoria } = require('../services/auditoriaService');
 const logger = require('../logger');
 const CircuitBreaker = require('../services/circuitBreaker');
+const { colaIA } = require('../services/iaQueue');
 const breakerMeta = new CircuitBreaker({ errorThreshold: 5, resetTimeout: 30000 });
+const generarTextoCola = (prompt) => colaIA.ejecutar(() => generarTexto(prompt));
 
 // Lee la duración real de un archivo de audio/video usando ffprobe
 async function obtenerDuracionArchivo(ruta) {

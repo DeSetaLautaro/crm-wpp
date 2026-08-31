@@ -40,4 +40,8 @@ const AuditLogSchema = new Schema(
   { timestamps: true }
 );
 
+AuditLogSchema.index({ empresaId: 1, createdAt: -1 });
+AuditLogSchema.index({ accion: 1 });
+AuditLogSchema.index({ usuarioId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('AuditLog', AuditLogSchema);

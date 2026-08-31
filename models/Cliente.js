@@ -72,4 +72,8 @@ const ClienteSchema = new Schema(
   { timestamps: true }
 );
 
+ClienteSchema.index({ empresaId: 1, telefono: 1 }, { unique: true });
+ClienteSchema.index({ localId: 1 });
+ClienteSchema.index({ bloqueado: 1 });
+
 module.exports = mongoose.model('Cliente', ClienteSchema, 'clientes');

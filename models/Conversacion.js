@@ -65,4 +65,8 @@ const ConversacionSchema = new Schema(
   { timestamps: true }
 );
 
+ConversacionSchema.index({ empresaId: 1, updatedAt: -1 });
+ConversacionSchema.index({ empresaId: 1, contactoId: 1 });
+ConversacionSchema.index({ empresaId: 1, botActivo: 1, estado: 1 });
+
 module.exports = mongoose.model('Conversacion', ConversacionSchema, 'conversaciones');

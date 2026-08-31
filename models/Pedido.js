@@ -140,4 +140,8 @@ const PedidoSchema = new Schema(
   { timestamps: true }
 );
 
+PedidoSchema.index({ empresaId: 1, contactoId: 1, createdAt: -1 });
+PedidoSchema.index({ conversacionId: 1, estado: 1 });
+PedidoSchema.index({ telefonoCliente: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Pedido', PedidoSchema);

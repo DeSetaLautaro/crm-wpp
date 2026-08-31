@@ -110,4 +110,8 @@ const EmpresaSchema = new Schema(
 
 // Podes seguir llamándolo 'Empresa' o 'BotCRM', para Mongoose es lo mismo
 
+EmpresaSchema.index({ whatsappPhoneId: 1 }, { unique: true });
+EmpresaSchema.index({ usuarioAppId: 1 });
+EmpresaSchema.index({ botActivo: 1 });
+
 module.exports = mongoose.model('Empresa', EmpresaSchema);

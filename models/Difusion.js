@@ -28,4 +28,7 @@ const DifusionSchema = new Schema(
   { timestamps: true }
 );
 
+DifusionSchema.index({ empresaId: 1, createdAt: -1 });
+DifusionSchema.index({ estado: 1, fechaProgramacion: 1 });
+
 module.exports = mongoose.model('Difusion', DifusionSchema);

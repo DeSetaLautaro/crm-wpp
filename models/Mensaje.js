@@ -48,4 +48,8 @@ const MensajeSchema = new Schema(
   { timestamps: true }
 );
 
+MensajeSchema.index({ conversacionId: 1, createdAt: -1 });
+MensajeSchema.index({ whatsappMsgId: 1 }, { unique: true, sparse: true });
+MensajeSchema.index({ conversacionId: 1, remitente: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Mensaje', MensajeSchema);

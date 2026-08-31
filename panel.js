@@ -950,6 +950,7 @@ function ajustarVisibilidadSegunRol() {
 }
 
 function showView(vista) {
+  actualizarTituloSidebar(vista);
   const inboxView = document.getElementById('inbox-view');
   const configView = document.getElementById('config-view');
   const perfilView = document.getElementById('perfil-view');
@@ -4033,6 +4034,7 @@ async function init() {
 
   // Forzar vista de bandeja en móviles al redimensionar
   ajustarVistaMovil();
+  actualizarTituloSidebar('inbox');
   window.addEventListener('resize', () => ajustarVistaMovil());
 
   // Solicitar permiso de notificaciones del sistema al primer clic

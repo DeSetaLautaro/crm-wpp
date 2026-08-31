@@ -954,7 +954,6 @@ function renderPerfil(contacto) {
       perfilMenu.classList.add('hidden');
       window.location.href = `tel:${contacto.telefono || ''}`;
     };
-  }
 }
 
 function renderTodo() {

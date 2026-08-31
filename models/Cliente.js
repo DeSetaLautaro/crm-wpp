@@ -33,6 +33,10 @@ const ClienteSchema = new Schema(
       type: String,
       default: ''
     },
+    fotoPerfil: {
+      type: String,
+      default: ''
+    },
     etiquetas: {
       type: [
         {

@@ -68,6 +68,7 @@ const {
   actualizarBotActivo,
   actualizarBotActivoConversacion,
   actualizarContacto,
+  subirFotoContacto,
   obtenerPedidoActivo,
   marcarAtendido,
   reabrirConversacion,
@@ -120,6 +121,7 @@ router.put('/conversacion/:id/bot-activo', auth, actualizarBotActivoConversacion
 
 // Actualización de datos manuales de un cliente (PUT)
 router.put('/contacto/:contactoId', auth, actualizarContacto);
+router.put('/contacto/:contactoId/foto', auth, upload.single('foto'), subirFotoContacto);
 
 // Obtener pedido en curso / último pedido de una conversación (GET)
 router.get('/conversacion/:conversacionId/pedido-activo', auth, obtenerPedidoActivo);

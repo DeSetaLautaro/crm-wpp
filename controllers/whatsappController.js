@@ -3268,7 +3268,45 @@ async function enviarPlantilla(req, res) {
   }
 }
 
+
+const subirFotoContacto = async (req, res) => {
+  try {
+    const { contactoId } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se recibió ningún archivo' });
+    }
+    const contactoExistente = await Cliente.findById(contactoId);
+    if (!contactoExistente) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+    const empresasPermitidas = req.empresas || [];
+    const tieneAcceso = empresasPermitidas.some(e => String(e) === String(contactoExistente.empresaId));
+    if (!tieneAcceso) {
+      return res.status(403).json({ error: 'No tienes acceso a este contacto' });
+    }
+    const empresaId = contactoExistente.empresaId.toString();
+    const uploadDir = path.join(__dirname, '..', 'uploads', empresaId, 'contactos');
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const nombreArchivo = `${contactoId}.jpg`;
+    const rutaArchivo = path.join(uploadDir, nombreArchivo);
+    // Copiar el archivo subido
+    fs.copyFileSync(req.file.path, rutaArchivo);
+    fs.unlinkSync(req.file.path);
+    const urlArchivo = `/uploads/${empresaId}/contactos/${nombreArchivo}`;
+    await Cliente.findByIdAndUpdate(contactoId, { $set: { fotoPerfil: urlArchivo } });
+    const io = req.app.get('io');
+    if (io) {
+      io.to(empresaId).emit('contacto-foto-actualizada', { contactoId, fotoPerfil: urlArchivo });
+    }
+    return res.json({ ok: true, fotoPerfil: urlArchivo });
+  } catch (error) {
+    console.error('Error al subir foto de contacto:', error);
+    return res.status(500).json({ error: 'Error interno al subir foto' });
+  }
+};
+
 module.exports = {
+  subirFotoContacto,
   verificarFirmaMeta,
   verificarWebhook,
   recibirMensaje,

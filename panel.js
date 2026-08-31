@@ -407,7 +407,10 @@ function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indic
   const nombreSeguro = escaparHTML(normalizarNombreLocal(contacto.nombre || ''));
   const telefonoSeguro = escaparHTML(contacto.telefono || '');
   const ultimoSeguro = escaparHTML(conv.ultimoMensaje || '');
-  const inicialReal = obtenerAvatar(contacto.nombre || '?');
+  const fotoPerfil = contacto.fotoPerfil || '';
+  const inicialReal = fotoPerfil
+    ? `<img src="${urlFotoConToken(fotoPerfil)}" alt="Avatar" class="chat-avatar-img" />`
+    : obtenerAvatar(contacto.nombre || '?');
   const etiquetasSeguras = (contacto.etiquetas || []).map(et => {
     const nombre = et.nombre || et;
     return `<span class="chat-chip-etiqueta" data-etiqueta="${escaparHTML(nombre)}">${escaparHTML(nombre)}</span>`;
@@ -848,7 +851,13 @@ function renderPerfil(contacto) {
   const telefonoTexto = document.getElementById('perfil-telefono-texto');
   if (telefonoTexto) telefonoTexto.textContent = telefono;
   const avatar = document.getElementById('perfil-avatar');
-  if (avatar) avatar.textContent = obtenerAvatar(nombre);
+  if (avatar) {
+    if (contacto.fotoPerfil) {
+      avatar.innerHTML = `<img src="${urlFotoConToken(contacto.fotoPerfil)}" class="avatar-foto-img" alt="avatar">`;
+    } else {
+      avatar.textContent = obtenerAvatar(nombre);
+    }
+  }
 
   const contEtiquetas = document.getElementById('lista-etiquetas');
   if (contEtiquetas) {
@@ -3123,6 +3132,20 @@ function setupSocketListeners() {
     }
   });
 
+  socket.on('contacto-foto-actualizada', (payload) => {
+    if (!payload || !payload.contactoId) return;
+    const contacto = CONTACTOS.find(c => String(c._id) === String(payload.contactoId));
+    if (!contacto) return;
+    contacto.fotoPerfil = payload.fotoPerfil || '';
+    if (chatActivoId) {
+      const conv = getConversacionPorId(chatActivoId);
+      if (conv && String(conv.contactoId) === String(payload.contactoId)) {
+        renderChatActivo();
+      }
+    }
+    renderListaChats();
+  });
+
   socket.on('bot-actualizado', (payload) => {
     if (!payload || !payload.conversacionId) return;
     const conv = CONVERSACIONES.find(c => c._id === payload.conversacionId);
@@ -3457,6 +3480,52 @@ function abrirDetallesModal() {
   document.getElementById('modal-direccion').value = contacto.direccion || '';
   document.getElementById('modal-pisodpto').value = contacto.pisoDepto || '';
   document.getElementById('modal-codigopostal').value = contacto.codigoPostal || '';
+
+  const fotoModal = document.getElementById('modal-contacto-foto');
+  if (fotoModal) {
+    if (contacto.fotoPerfil) {
+      fotoModal.src = urlFotoConToken(contacto.fotoPerfil);
+      fotoModal.style.display = 'block';
+    } else {
+      fotoModal.style.display = 'none';
+    }
+  }
+  const btnCambiarFoto = document.getElementById('btn-cambiar-foto-contacto');
+  const inputFoto = document.getElementById('input-foto-contacto');
+  if (btnCambiarFoto && !btnCambiarFoto.dataset.listener) {
+    btnCambiarFoto.dataset.listener = 'true';
+    btnCambiarFoto.addEventListener('click', (e) => {
+      e.preventDefault();
+      inputFoto?.click();
+    });
+    inputFoto?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file || !contacto._id) return;
+      const formData = new FormData();
+      formData.append('foto', file);
+      const token = localStorage.getItem('token') || '';
+      try {
+        const res = await fetch(`/api/whatsapp/contacto/${contacto._id}/foto`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al subir foto');
+        contacto.fotoPerfil = data.fotoPerfil;
+        if (fotoModal) {
+          fotoModal.src = urlFotoConToken(data.fotoPerfil);
+          fotoModal.style.display = 'block';
+        }
+        renderListaChats();
+        if (chatActivoId) renderChatActivo();
+      } catch (error) {
+        console.error('Error al subir foto:', error);
+        mostrarToast('No se pudo subir la foto', 'error');
+      }
+      e.target.value = '';
+    });
+  }
 
   const menu = document.getElementById('perfil-menu');
   if (menu) menu.classList.add('hidden');

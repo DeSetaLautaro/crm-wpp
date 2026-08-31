@@ -176,7 +176,8 @@ function escaparHTML(texto) {
 
 function normalizarNombreLocal(texto) {
   return (texto || '')
-    .normalize('NFD')
+    .normalize('NFKC')          // convierte letras especiales a su forma normal
+    .normalize('NFD')           // separa tildes
     .replace(/[\u0300-\u036f]/g, '') // quita tildes y diéresis
     .toLowerCase()
     .replace(/\b\w/g, c => c.toUpperCase());

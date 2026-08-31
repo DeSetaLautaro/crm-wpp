@@ -352,6 +352,14 @@ async function enviarDifusionesProgramadas() {
   cronEjecutandose = true;
   try {
     const ahora = new Date();
+    const hayProgramadas = await Difusion.countDocuments({
+      estado: 'programada',
+      fechaProgramacion: { $lte: ahora }
+    });
+    if (hayProgramadas === 0) {
+      console.log('⏭️ Sin difusiones programadas pendientes, se omite.');
+      return;
+    }
     const difusiones = await Difusion.find({
       estado: 'programada',
       fechaProgramacion: { $lte: ahora }

@@ -189,7 +189,7 @@ async function procesarCarrito(empresa, conversacion, texto, productos) {
       Si el mensaje no hace referencia a ningún ítem, devolvé null.
       Catálogo:\n${menu}
       Respuesta JSON:`;
-    const raw = (await generarTexto(prompt) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
+    const raw = (await generarTextoCola(prompt) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
     if (start === -1 || end === -1) return null;
@@ -1050,7 +1050,7 @@ Ejemplos:
 
 JSON:`;
 
-      const rawCancel = (await generarTexto(promptCancelacion) || '').trim()
+      const rawCancel = (await generarTextoCola(promptCancelacion) || '').trim()
         .replace(/```json/g, '').replace(/```/g, '').trim();
       const startC = rawCancel.indexOf('{');
       const endC = rawCancel.lastIndexOf('}');
@@ -1214,7 +1214,7 @@ Mensaje: "${textoMensaje}"
 
 JSON:`;
 
-        const rawText = (await generarTexto(promptExtract) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
+        const rawText = (await generarTextoCola(promptExtract) || '').trim().replace(/```json/g, '').replace(/```/g, '').trim();
         const startIdx = rawText.indexOf('{');
         const endIdx = rawText.lastIndexOf('}');
         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
@@ -1397,7 +1397,7 @@ JSON:`;
 
         prompt += avisoAntiFalsoConfirm;
 
-        respuestaIA = await generarTexto(prompt);
+        respuestaIA = await generarTextoCola(prompt);
       } catch (err) {
         console.error("❌ Error al generar respuesta con Gemini:", err);
       }
@@ -1471,7 +1471,7 @@ JSON:`;
         if (process.env.GEMINI_API_KEY && textoReciente.trim()) {
           try {
             const promptDir = `Analizá el siguiente texto de un cliente y extraé SOLO su dirección de entrega completa (calle, número, piso, depto, localidad, etc.). Si no hay dirección, respondé exactamente "SIN DIRECCION". Texto: "${textoReciente}". Dirección:`;
-            const respDir = await generarTexto(promptDir);
+            const respDir = await generarTextoCola(promptDir);
             const dirLimpia = (respDir || '').trim().replace(/^"|"$/g, '');
             if (dirLimpia && dirLimpia !== 'SIN DIRECCION') {
               direccionEntrega = dirLimpia;
@@ -2975,7 +2975,7 @@ ${menuTexto}
 
 JSON:`;
 
-    const raw = (await generarTexto(prompt) || '').trim()
+    const raw = (await generarTextoCola(prompt) || '').trim()
       .replace(/```json/g, '').replace(/```/g, '').trim();
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
@@ -3015,7 +3015,7 @@ JSON:`;
     if (process.env.GEMINI_API_KEY) {
       try {
         const promptDir = `Analizá el siguiente texto de una conversación y extraé SOLO la dirección de entrega del cliente (calle, número, piso, depto, localidad, etc.). Si no hay dirección, respondé exactamente "SIN DIRECCION". Texto: "${texto}". Dirección:`;
-        const respDir = await generarTexto(promptDir);
+        const respDir = await generarTextoCola(promptDir);
         const dirLimpia = (respDir || '').trim().replace(/^"|"$/g, '');
         if (dirLimpia && dirLimpia !== 'SIN DIRECCION') {
           direccion = dirLimpia;

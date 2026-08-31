@@ -11,6 +11,7 @@
 // ============================================================
 
 const CircuitBreaker = require('./circuitBreaker');
+const { colaIA } = require('./iaQueue');
 const breakerGemini = new CircuitBreaker({ errorThreshold: 5, resetTimeout: 30000 });
 
 const MODELOS_POR_DEFECTO = [
@@ -47,7 +48,7 @@ async function generarTextoGemini(prompt) {
     try {
       console.log(`🤖 Probando modelo Gemini: ${modelo}`);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-      const resp = await breakerGemini.execute(() => fetch(url, {
+      const resp = await colaIA.ejecutar(() => breakerGemini.execute(() => fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -55,7 +56,7 @@ async function generarTextoGemini(prompt) {
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }]
         })
-      }));
+      })));
 
       const data = await resp.json();
 
@@ -105,7 +106,7 @@ async function generarTextoConArchivo(prompt, mimeType, base64, tipo = 'archivo'
     try {
       console.log(`🤖 Probando modelo Gemini con ${tipo}: ${modelo}`);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-      const resp = await breakerGemini.execute(() => fetch(url, {
+      const resp = await colaIA.ejecutar(() => breakerGemini.execute(() => fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -118,7 +119,7 @@ async function generarTextoConArchivo(prompt, mimeType, base64, tipo = 'archivo'
             ]
           }]
         })
-      }));
+      })));
 
       const data = await resp.json();
 

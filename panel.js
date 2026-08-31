@@ -127,6 +127,22 @@ let EMPRESAS_INFO = [];
 let AGENTES_GLOBAL = [];
 let agenteEditandoId = null;
 
+// ===== Interceptor global de fetch: maneja 401 automáticamente =====
+const fetchOriginal = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const res = await fetchOriginal(...args);
+  if (res.status === 401) {
+    const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+    if (!url.includes('/login-pin') && !url.includes('/webhook')) {
+      localStorage.removeItem('token');
+      if (!document.body?.classList.contains('modo-login')) {
+        mostrarModalLogin();
+      }
+    }
+  }
+  return res;
+};
+
 // ===== Notificaciones internas =====
 let mensajesNoLeidos = 0;
 let tituloOriginal = document.title;
@@ -885,10 +901,14 @@ function renderPerfil(contacto) {
     }
   }
 
-  // Eliminar el botón original "Detalles" para que no compita con los ítems nuevos
+  // Mantener el botón original "Detalles" funcionando (no eliminar, evita fragilidad)
   const btnOriginalDetalles = document.getElementById('btn-detalles-modal');
-  if (btnOriginalDetalles && btnOriginalDetalles.parentNode) {
-    btnOriginalDetalles.parentNode.removeChild(btnOriginalDetalles);
+  if (btnOriginalDetalles) {
+    btnOriginalDetalles.onclick = () => {
+      const perfilMenu = document.getElementById('perfil-menu');
+      if (perfilMenu) perfilMenu.classList.add('hidden');
+      abrirDetallesDesdeMenu();
+    };
   }
 
   // Opción de bloqueo dentro del menú del perfil (tres puntos)
@@ -906,19 +926,8 @@ function renderPerfil(contacto) {
       perfilMenu.classList.add('hidden');
       confirmarBloqueoCliente();
     };
-
-    let itemDetalles = document.getElementById('menu-item-detalles');
-    if (!itemDetalles) {
-      itemDetalles = document.createElement('div');
-      itemDetalles.id = 'menu-item-detalles';
-      itemDetalles.className = 'perfil-menu-item';
-      perfilMenu.appendChild(itemDetalles);
-    }
-    itemDetalles.textContent = '👁 Ver detalles';
-    itemDetalles.onclick = () => {
-      perfilMenu.classList.add('hidden');
-      abrirDetallesDesdeMenu();
-    };
+    // No se crea itemDetalles porque el botón original ya abre el modal
+  }
 
     let itemArchivos = document.getElementById('menu-item-archivos');
     if (!itemArchivos) {
@@ -2695,8 +2704,6 @@ async function cargarConversaciones() {
     });
 
     if (res.status === 401) {
-      localStorage.removeItem('token');
-      mostrarModalLogin();
       return;
     }
 
@@ -2797,7 +2804,12 @@ async function cargarConversaciones() {
 
     // Conectar a Socket.io si aún no estamos conectados
     if (typeof io !== 'undefined' && !socket) {
-      socket = io();
+      socket = io({
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000
+      });
       setupSocketListeners();
     }
 
@@ -2992,6 +3004,17 @@ async function actualizarUsoConversaciones() {
 
 function setupSocketListeners() {
   if (!socket) return;
+
+  socket.on('disconnect', () => {
+    mostrarToast('Se perdió la conexión en tiempo real. Reconectando...', 'error');
+  });
+
+  socket.on('reconnect', () => {
+    mostrarToast('Conexión restablecida', 'info');
+    const salas = [...new Set(CONVERSACIONES.map(c => c.empresaId).filter(Boolean))];
+    salas.forEach(sala => socket.emit('join', sala));
+    cargarConversaciones();
+  });
 
   socket.on('connect', () => {
     const salas = [...new Set(CONVERSACIONES.map(c => c.empresaId).filter(Boolean))];

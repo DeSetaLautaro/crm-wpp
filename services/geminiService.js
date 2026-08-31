@@ -10,6 +10,9 @@
 // GEMINI_MODELOS=gemini-2.5-flash-preview-09-2025,gemini-2.0-flash,gemini-1.5-flash
 // ============================================================
 
+const CircuitBreaker = require('./circuitBreaker');
+const breakerGemini = new CircuitBreaker({ errorThreshold: 5, resetTimeout: 30000 });
+
 const MODELOS_POR_DEFECTO = [
   'gemini-3.6-flash',
   'gemini-3.1-pro-preview',
@@ -44,7 +47,7 @@ async function generarTextoGemini(prompt) {
     try {
       console.log(`🤖 Probando modelo Gemini: ${modelo}`);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-      const resp = await fetch(url, {
+      const resp = await breakerGemini.execute(() => fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -52,7 +55,7 @@ async function generarTextoGemini(prompt) {
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }]
         })
-      });
+      }));
 
       const data = await resp.json();
 
@@ -102,7 +105,7 @@ async function generarTextoConArchivo(prompt, mimeType, base64, tipo = 'archivo'
     try {
       console.log(`🤖 Probando modelo Gemini con ${tipo}: ${modelo}`);
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-      const resp = await fetch(url, {
+      const resp = await breakerGemini.execute(() => fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -115,7 +118,7 @@ async function generarTextoConArchivo(prompt, mimeType, base64, tipo = 'archivo'
             ]
           }]
         })
-      });
+      }));
 
       const data = await resp.json();
 

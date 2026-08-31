@@ -1,10 +1,11 @@
 require('dotenv').config();
+const logger = require('./logger');
 
 // Verificar variables críticas antes de arrancar
 const variablesObligatorias = ['JWT_SECRET', 'WHATSAPP_APP_SECRET', 'WHATSAPP_WEBHOOK_VERIFY_TOKEN'];
 const faltantes = variablesObligatorias.filter(v => !process.env[v]);
 if (faltantes.length > 0) {
-  console.error(`❌ Faltan variables de entorno: ${faltantes.join(', ')}`);
+  logger.error(`❌ Faltan variables de entorno: ${faltantes.join(', ')}`);
   process.exit(1);
 }
 
@@ -32,6 +33,19 @@ const app = express();
 
 // Helmet bloquea cabeceras HTTP vulnerables de forma automática
 app.use(helmet());
+
+// Endpoint de salud (sin autenticación) para monitoreo
+app.get('/health', (req, res) => {
+  const mongoState = mongoose.connection.readyState;
+  const mongoLabels = ['desconectado', 'conectado', 'conectando', 'desconectando'];
+  const ok = mongoState === 1;
+  res.status(ok ? 200 : 503).json({
+    ok,
+    uptime: process.uptime(),
+    mongo: mongoLabels[mongoState] || 'desconocido',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // CORS define explícitamente quién puede consumir la API.
 // En producción podés setear CORS_ORIGIN = https://tu-dominio.com (separado por comas)
@@ -116,7 +130,7 @@ app.use('/api/admin/agentes', auth, agentesRoutes);
 
 // ===== Manejo de errores global =====
 app.use((err, req, res, next) => {
-  console.error('Error global:', err);
+  logger.error('Error global:', err);
   const status = err.status || 500;
   const mensaje = status === 500 ? 'Error interno del servidor' : err.message;
   res.status(status).json({ error: mensaje });
@@ -141,18 +155,18 @@ io.on('connection', (socket) => {
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
-    console.log('MongoDB conectado correctamente');
+    logger.info('MongoDB conectado correctamente');
     server.listen(PORT, () => {
-      console.log(`Servidor escuchando en el puerto ${PORT}`);
+      logger.info(`Servidor escuchando en el puerto ${PORT}`);
     });
     // Actualizar costos de Meta al iniciar
-    actualizarCostosDeTodasLasEmpresas(io).catch(err => console.error('Error al actualizar costos al inicio:', err));
+    actualizarCostosDeTodasLasEmpresas(io).catch(err => logger.error('Error al actualizar costos al inicio:', err));
     iniciarCronHorarios();
     cron.schedule('* * * * *', () => {
-      enviarDifusionesProgramadas().catch(err => console.error('Error en cron de difusiones programadas:', err));
+      enviarDifusionesProgramadas().catch(err => logger.error('Error en cron de difusiones programadas:', err));
     });
     cron.schedule('0 */2 * * *', () => {
-      actualizarCostosDeTodasLasEmpresas(io).catch(err => console.error('Error en cron de costos Meta:', err));
+      actualizarCostosDeTodasLasEmpresas(io).catch(err => logger.error('Error en cron de costos Meta:', err));
     });
   })
   .catch((err) => {

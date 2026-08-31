@@ -17,6 +17,9 @@ const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 const { actualizarCostosEmpresa } = require('../services/metaAnalyticsService');
 const { registrarAuditoria } = require('../services/auditoriaService');
+const logger = require('../logger');
+const CircuitBreaker = require('../services/circuitBreaker');
+const breakerMeta = new CircuitBreaker({ errorThreshold: 5, resetTimeout: 30000 });
 
 // Lee la duración real de un archivo de audio/video usando ffprobe
 async function obtenerDuracionArchivo(ruta) {
@@ -408,7 +411,7 @@ const verificarWebhook = (req, res) => {
 
 const recibirMensaje = async (req, res) => {
   try {
-    console.log("🔔 [1] ¡DING DONG! Facebook mandó algo al webhook");
+    logger.info("🔔 [1] ¡DING DONG! Facebook mandó algo al webhook");
 
     const entry = req.body?.entry?.[0];
     const change = entry?.changes?.[0];
@@ -1573,7 +1576,7 @@ JSON:`;
     console.log("✅ [10] ¡ÉXITO! Mensaje guardado perfectamente en MongoDB.");
     return;
   } catch (error) {
-    console.error('🔥 [ERROR CATASTRÓFICO] Explotó el código en el Try/Catch:', error);
+    logger.error('🔥 [ERROR CATASTRÓFICO] Explotó el código en el Try/Catch:', error);
     return;
   }
 };
@@ -1772,14 +1775,14 @@ async function enviarMensajeMeta(empresa, telefonoCliente, mensaje) {
       text: { body: mensaje }
     };
 
-    const resp = await fetch(url, {
+    const resp = await breakerMeta.execute(() => fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
-    });
+    }));
 
     const data = await resp.json();
 
@@ -1795,6 +1798,7 @@ async function enviarMensajeMeta(empresa, telefonoCliente, mensaje) {
 
 const enviarMensaje = async (req, res) => {
   try {
+    logger.info('Enviar mensaje desde dashboard:', { conversacionId: req.body?.conversacionId });
     const { conversacionId, mensaje: mensajeBruto } = req.body || {};
     const mensajeLimpio = (mensajeBruto || '')
       .replace(/<br\s*[\/]?>/gi, '\n')
@@ -1970,7 +1974,7 @@ const enviarMensaje = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error al enviar mensaje:', error);
+    logger.error('Error al enviar mensaje:', error);
     return res.status(500).json({ error: 'Error interno al enviar mensaje' });
   }
 };

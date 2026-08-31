@@ -949,6 +949,29 @@ function ajustarVisibilidadSegunRol() {
   }
 }
 
+function actualizarTituloSidebar(vista) {
+  let tituloMovil = document.getElementById('titulo-movil');
+  if (!tituloMovil) {
+    tituloMovil = document.createElement('div');
+    tituloMovil.id = 'titulo-movil';
+    const slimSidebar = document.getElementById('slim-sidebar');
+    if (slimSidebar && slimSidebar.parentNode) {
+      slimSidebar.parentNode.insertBefore(tituloMovil, slimSidebar);
+    } else {
+      document.body.appendChild(tituloMovil);
+    }
+  }
+
+  const titulos = {
+    inbox: 'Chats',
+    config: 'Configuración',
+    perfil: 'Perfil',
+    pagos: 'Pagos',
+    difusion: 'Difusión'
+  };
+  tituloMovil.textContent = titulos[vista] || '';
+}
+
 function showView(vista) {
   actualizarTituloSidebar(vista);
   const inboxView = document.getElementById('inbox-view');

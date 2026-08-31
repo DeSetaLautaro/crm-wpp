@@ -806,6 +806,41 @@ body {
   padding: 8px 0;
 }
 
+/* Título móvil que aparece sobre el sidebar en celulares */
+#titulo-movil {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  #titulo-movil {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    line-height: 48px;
+    padding: 0 16px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 22px;
+    font-weight: bold;
+    text-align: left;
+    z-index: 320;
+  }
+
+  #slim-sidebar {
+    top: 48px !important;
+  }
+
+  #config-view h2,
+  #difusion-view h2,
+  #pagos-view h2,
+  #perfil-view h2 {
+    display: none !important;
+  }
+}
+
 .sidebar-buttons {
   display: flex;
   flex-direction: column;

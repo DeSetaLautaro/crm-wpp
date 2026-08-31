@@ -962,6 +962,20 @@ function actualizarTituloSidebar(vista) {
     }
   }
 
+  // Mover el botón de menú (3 puntitos) dentro del título móvil
+  const btnMenu = document.getElementById('btn-mobile-menu');
+  if (btnMenu && tituloMovil && btnMenu.parentNode !== tituloMovil) {
+    tituloMovil.appendChild(btnMenu);
+  }
+
+  // Asegurar un span para el texto del título
+  let spanTitulo = tituloMovil.querySelector('.titulo-movil-texto');
+  if (!spanTitulo) {
+    spanTitulo = document.createElement('span');
+    spanTitulo.className = 'titulo-movil-texto';
+    tituloMovil.insertBefore(spanTitulo, tituloMovil.firstChild);
+  }
+
   const titulos = {
     inbox: 'Chats',
     config: 'Configuración',
@@ -969,7 +983,7 @@ function actualizarTituloSidebar(vista) {
     pagos: 'Pagos',
     difusion: 'Difusión'
   };
-  tituloMovil.textContent = titulos[vista] || '';
+  spanTitulo.textContent = titulos[vista] || '';
 }
 
 function showView(vista) {

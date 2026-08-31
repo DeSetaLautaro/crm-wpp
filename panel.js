@@ -174,6 +174,23 @@ function escaparHTML(texto) {
   return div.innerHTML;
 }
 
+function normalizarNombreLocal(texto) {
+  return (texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // quita tildes y diéresis
+    .toLowerCase()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function obtenerAvatar(nombre) {
+  if (!nombre) return '?';
+  const letras = nombre.match(/[A-Za-z0-9]/);
+  if (letras) return letras[0].toUpperCase();
+  const emojis = nombre.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
+  if (emojis) return emojis[0];
+  return '?';
+}
+
 function autoAjustarTextarea(textarea) {
   if (!textarea) return;
   textarea.style.height = 'auto';
@@ -386,16 +403,17 @@ function colorFromString(str) {
 }
 
 function buildChatItemHTML(conv, contacto, inicial, requiereAtencionClase, indicadorClase, activaClase) {
-  const nombreSeguro = escaparHTML(contacto.nombre || '');
+  const nombreSeguro = escaparHTML(normalizarNombreLocal(contacto.nombre || ''));
   const telefonoSeguro = escaparHTML(contacto.telefono || '');
   const ultimoSeguro = escaparHTML(conv.ultimoMensaje || '');
+  const inicialReal = obtenerAvatar(contacto.nombre || '?');
   const etiquetasSeguras = (contacto.etiquetas || []).map(et => {
     const nombre = et.nombre || et;
     return `<span class="chat-chip-etiqueta" data-etiqueta="${escaparHTML(nombre)}">${escaparHTML(nombre)}</span>`;
   }).join('');
   return `
           <div class="chat-item ${activaClase} ${requiereAtencionClase}" data-conv-id="${conv._id}">
-            <div class="chat-item-avatar">${inicial}</div>
+            <div class="chat-item-avatar">${inicialReal}</div>
             <div class="chat-item-contenido">
               <div class="chat-item-titulo">
                 <span class="chat-item-nombre">${nombreSeguro}</span>
@@ -556,7 +574,7 @@ function armarHeaderMovil(contacto, conv) {
       chatHeader.insertBefore(avatar, chatHeader.firstChild?.nextSibling || chatHeader.firstChild);
     }
   }
-  avatar.textContent = (contacto.nombre || '?').charAt(0).toUpperCase();
+  avatar.textContent = obtenerAvatar(contacto.nombre || '?');
 
  /* // Botón teléfono (solo visible en celular)
   let btnTel = document.getElementById('btn-llamar-movil');
@@ -675,7 +693,7 @@ function renderChatActivo() {
 
   armarHeaderMovil(contacto, conv);
 
-  document.getElementById('chat-nombre').textContent = contacto.nombre;
+  document.getElementById('chat-nombre').textContent = normalizarNombreLocal(contacto.nombre || '');
   document.getElementById('chat-linea').textContent = contacto.telefono;
 
   // Mostrar etiquetas del contacto en el header del chat
@@ -813,7 +831,7 @@ function renderChatActivo() {
 }
 
 function renderPerfil(contacto) {
-  const nombre = contacto.nombre || '';
+  const nombre = normalizarNombreLocal(contacto.nombre || '');
   const telefono = contacto.telefono || '';
 
   document.getElementById('perfil-nombre').value = nombre;
@@ -829,7 +847,7 @@ function renderPerfil(contacto) {
   const telefonoTexto = document.getElementById('perfil-telefono-texto');
   if (telefonoTexto) telefonoTexto.textContent = telefono;
   const avatar = document.getElementById('perfil-avatar');
-  if (avatar) avatar.textContent = (nombre || '?').charAt(0).toUpperCase();
+  if (avatar) avatar.textContent = obtenerAvatar(nombre);
 
   const contEtiquetas = document.getElementById('lista-etiquetas');
   if (contEtiquetas) {
@@ -1080,7 +1098,7 @@ async function cargarConfiguracion() {
     if (prompt) prompt.value = config.promptIA || '';
 
     const nombreDisplay = document.getElementById('perfil-nombre-display');
-    if (nombreDisplay && config.nombre) nombreDisplay.textContent = config.nombre;
+    if (nombreDisplay && config.nombre) nombreDisplay.textContent = normalizarNombreLocal(config.nombre);
 
     const fotoGrande = document.getElementById('perfil-foto-grande');
     if (fotoGrande && config.fotoPerfil) {
@@ -2379,7 +2397,7 @@ async function guardarNombreDesdePerfil() {
 
   const input = document.getElementById('perfil-nombre-input');
   const display = document.getElementById('perfil-nombre-display');
-  const valorNuevo = (input?.value || '').trim();
+  const valorNuevo = normalizarNombreLocal(input?.value || '');
   const valorAnterior = (display?.textContent || '').trim();
 
   if (valorNuevo && valorNuevo !== valorAnterior) {
@@ -2688,7 +2706,7 @@ async function cargarConversaciones() {
     const conversacionesLocal = convsApi.map(conv => {
       const contacto = conv.contacto || {};
       const cId = contacto._id || conv.contactoId;
-      const nombre = contacto.nombre || '';
+      const nombre = normalizarNombreLocal(contacto.nombre || '');
       const telefono = contacto.telefono || '';
 
       if (!contactosMap.has(cId)) {
